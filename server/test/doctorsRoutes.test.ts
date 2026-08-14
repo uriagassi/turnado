@@ -83,6 +83,14 @@ describe("/api/doctors", () => {
       expect(res.body).toHaveLength(1);
       expect(res.body[0]).toMatchObject({ name: "Dr. Jane Smith" });
     });
+
+    it("400s for a missing required field instead of crashing", async () => {
+      const agent = signedInAgent(tmpDb());
+
+      const res = await agent.post("/api/doctors").send({ name: "", notes: "Family physician" });
+
+      expect(res.status).toBe(400);
+    });
   });
 
   describe("GET /api/doctors/:id", () => {
@@ -125,6 +133,25 @@ describe("/api/doctors", () => {
         specialty: "Cardiology",
         notes: "Cardiology only",
       });
+    });
+
+    it("404s for an id that doesn't exist, instead of crashing", async () => {
+      const agent = signedInAgent(tmpDb());
+
+      const res = await agent.put("/api/doctors/999").send({ name: "Dr. Nobody", notes: "n/a" });
+
+      expect(res.status).toBe(404);
+    });
+
+    it("400s for a missing required field instead of crashing", async () => {
+      const agent = signedInAgent(tmpDb());
+      const created = await agent
+        .post("/api/doctors")
+        .send({ name: "Dr. Jane Smith", notes: "Family physician" });
+
+      const res = await agent.put(`/api/doctors/${created.body.id}`).send({ name: "", notes: "Family physician" });
+
+      expect(res.status).toBe(400);
     });
   });
 });

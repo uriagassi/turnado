@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import type { Database } from "better-sqlite3";
 import { createDb } from "../src/db.js";
-import { Doctors } from "../src/doctors/Doctors.js";
+import { Doctors, DoctorNotFoundError, InvalidDoctorInputError } from "../src/doctors/Doctors.js";
 
 const PARENT_TAG_NAME = "Physicians";
 
@@ -33,6 +33,20 @@ describe("Doctors", () => {
 
   function tmpDoctors() {
     return new Doctors(tmpDb(), PARENT_TAG_NAME);
+  }
+
+  /**
+   * `expect(fn).toThrow(SomeClass)` passes vacuously (matches *any* thrown
+   * error) if `SomeClass` isn't actually the constructor it looks like —
+   * this captures the real thrown value so `toBeInstanceOf` checks it for real.
+   */
+  function catchError(fn: () => void): unknown {
+    try {
+      fn();
+    } catch (e) {
+      return e;
+    }
+    return undefined;
   }
 
   describe("create", () => {
@@ -99,6 +113,41 @@ describe("Doctors", () => {
         notes: "Now sees cardiology patients only",
       });
       expect(doctors.list()).toHaveLength(1);
+    });
+
+    it("throws DoctorNotFoundError for an id that doesn't exist, instead of crashing", () => {
+      const doctors = tmpDoctors();
+
+      const thrown = catchError(() => doctors.update(999, { name: "Dr. Nobody", notes: "n/a" }));
+
+      expect(thrown).toBeInstanceOf(DoctorNotFoundError);
+    });
+  });
+
+  describe("validation", () => {
+    it("create rejects a missing name", () => {
+      const doctors = tmpDoctors();
+
+      const thrown = catchError(() => doctors.create({ name: "", notes: "Family physician" }));
+
+      expect(thrown).toBeInstanceOf(InvalidDoctorInputError);
+    });
+
+    it("create rejects missing notes", () => {
+      const doctors = tmpDoctors();
+
+      const thrown = catchError(() => doctors.create({ name: "Dr. Jane Smith", notes: "" }));
+
+      expect(thrown).toBeInstanceOf(InvalidDoctorInputError);
+    });
+
+    it("update rejects a missing name the same way", () => {
+      const doctors = tmpDoctors();
+      const created = doctors.create({ name: "Dr. Jane Smith", notes: "Family physician" });
+
+      const thrown = catchError(() => doctors.update(created.id, { name: "  ", notes: "Family physician" }));
+
+      expect(thrown).toBeInstanceOf(InvalidDoctorInputError);
     });
   });
 
