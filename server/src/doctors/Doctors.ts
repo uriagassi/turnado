@@ -1,4 +1,5 @@
 import type { Database, Statement } from "better-sqlite3";
+import { SharedTags } from "./SharedTags.js";
 
 export interface DoctorInput {
   name: string;
@@ -12,45 +13,47 @@ export interface DoctorInput {
 
 export interface Doctor extends DoctorInput {
   id: number;
-  /** The adopted/created row in the shared Tags table (see findOrCreateTag). */
+  /** The adopted/created row in the shared Tags table (see findOrCreateDoctorTag). */
   tagId: number;
+}
+
+export class DoctorNotFoundError extends Error {
+  constructor(id: number) {
+    super(`Doctor ${id} not found`);
+    this.name = "DoctorNotFoundError";
+  }
+}
+
+export class InvalidDoctorInputError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "InvalidDoctorInputError";
+  }
 }
 
 /**
  * The household's doctor directory. Owns the `Doctors` table outright (unlike
- * `Tags`, which the sibling document-archive app owns — see docs/agents/domain.md
- * on the shared DB) in the same physical DB file, so it follows that app's
- * existing table-naming style (`Tags`, `Notes`, ...) for consistency.
+ * the shared `Tags` table — see SharedTags.ts) in the same physical DB file,
+ * so it follows the sibling app's existing table-naming style (`Tags`,
+ * `Notes`, ...) for consistency.
  *
- * Every Doctor is backed by a row in the shared `Tags` table, so tagging a
- * document with a doctor's name in the sibling document-archive app links it
- * to that doctor transparently. `CREATE TABLE IF NOT EXISTS` for `Tags`
- * mirrors that app's own schema exactly (idempotent) so this app works even
- * if it's the first of the two to touch a fresh DB file.
+ * Every Doctor is backed by a row in the shared `Tags` table (via SharedTags),
+ * so tagging a document with a doctor's name in the sibling document-archive
+ * app links it to that doctor transparently.
  */
 export class Doctors {
+  private readonly tags: SharedTags;
   private readonly insertDoctor: Statement;
   private readonly getDoctor: Statement;
   private readonly listDoctors: Statement;
   private readonly updateDoctor: Statement;
-  private readonly findTagByName: Statement;
-  private readonly insertTag: Statement;
-  private readonly renameTag: Statement;
 
   private readonly parentTagName: string;
 
   constructor(db: Database, parentTagName: string) {
     this.parentTagName = parentTagName;
+    this.tags = new SharedTags(db);
     db.exec(`
-      CREATE TABLE IF NOT EXISTS "Tags" (
-        "tagId" INTEGER NOT NULL CONSTRAINT "PK_Tags" PRIMARY KEY AUTOINCREMENT,
-        "parentId" INTEGER NULL,
-        "name" TEXT NOT NULL,
-        "isExpanded" INTEGER NOT NULL,
-        CONSTRAINT "FK_Tags_Tags_ParentTagTagId" FOREIGN KEY ("parentId") REFERENCES "Tags" ("tagId") ON DELETE RESTRICT
-      );
-      CREATE UNIQUE INDEX IF NOT EXISTS "IX_Tags_Name" ON "Tags" ("name");
-
       CREATE TABLE IF NOT EXISTS Doctors (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
@@ -75,13 +78,11 @@ export class Doctors {
            address = $address, email = $email, notes = $notes
        WHERE id = $id`,
     );
-    this.findTagByName = db.prepare(`SELECT tagId FROM Tags WHERE name = ?`);
-    this.insertTag = db.prepare(`INSERT INTO Tags (name, parentId, isExpanded) VALUES ($name, $parentId, 0)`);
-    this.renameTag = db.prepare(`UPDATE Tags SET name = ? WHERE tagId = ?`);
   }
 
   create(input: DoctorInput): Doctor {
-    const tagId = this.findOrCreateTag(input.name);
+    this.validate(input);
+    const tagId = this.findOrCreateDoctorTag(input.name);
     const result = this.insertDoctor.run({
       name: input.name,
       specialty: input.specialty ?? null,
@@ -104,7 +105,9 @@ export class Doctors {
   }
 
   update(id: number, input: DoctorInput): Doctor {
-    const existing = this.getDoctor.get(id) as Doctor;
+    const existing = this.getDoctor.get(id) as Doctor | undefined;
+    if (!existing) throw new DoctorNotFoundError(id);
+    this.validate(input);
     this.updateDoctor.run({
       id,
       name: input.name,
@@ -118,8 +121,13 @@ export class Doctors {
     // Renames the adopted tag in place rather than adopting/creating a
     // different one for the new name, so existing tag links (e.g. from the
     // sibling document-archive app) never desync from this doctor.
-    this.renameTag.run(input.name, existing.tagId);
+    this.tags.rename(existing.tagId, input.name);
     return this.getDoctor.get(id) as Doctor;
+  }
+
+  private validate(input: DoctorInput): void {
+    if (!input.name?.trim()) throw new InvalidDoctorInputError("name is required");
+    if (!input.notes?.trim()) throw new InvalidDoctorInputError("notes is required");
   }
 
   /**
@@ -130,17 +138,17 @@ export class Doctors {
    * untouched — only a newly created tag is nested under the configured
    * parent tag.
    */
-  private findOrCreateTag(name: string): number {
-    const existing = this.findTagByName.get(name) as { tagId: number } | undefined;
+  private findOrCreateDoctorTag(name: string): number {
+    const existing = this.tags.findByName(name);
     if (existing) return existing.tagId;
-    const parentId = this.findOrCreateParentTag();
-    return this.insertTag.run({ name, parentId }).lastInsertRowid as number;
+    const parentId = this.findOrCreateParentTagId();
+    return this.tags.create(name, parentId);
   }
 
   /** Every newly created doctor tag nests under this shared parent tag (adopted-or-created the same way). */
-  private findOrCreateParentTag(): number {
-    const existing = this.findTagByName.get(this.parentTagName) as { tagId: number } | undefined;
+  private findOrCreateParentTagId(): number {
+    const existing = this.tags.findByName(this.parentTagName);
     if (existing) return existing.tagId;
-    return this.insertTag.run({ name: this.parentTagName, parentId: null }).lastInsertRowid as number;
+    return this.tags.create(this.parentTagName, null);
   }
 }

@@ -5,7 +5,7 @@ import type { Database } from "better-sqlite3";
 import { Auth, IAuthHandler } from "./auth/Auth.js";
 import { allowListMiddleware, AllowList, AllowListConfig } from "./auth/AllowList.js";
 import { resolveLocale } from "./i18n/locale.js";
-import { Doctors } from "./doctors/Doctors.js";
+import { Doctors, DoctorNotFoundError, InvalidDoctorInputError } from "./doctors/Doctors.js";
 
 export interface AppOptions {
   authHandler: IAuthHandler;
@@ -78,7 +78,12 @@ export function createApp(options: AppOptions): Express {
       res.json(doctors.list());
     });
     app.post("/api/doctors", (req, res) => {
-      res.status(201).json(doctors.create(req.body));
+      try {
+        res.status(201).json(doctors.create(req.body));
+      } catch (err) {
+        if (err instanceof InvalidDoctorInputError) return res.status(400).json({ error: err.message });
+        throw err;
+      }
     });
     app.get("/api/doctors/:id", (req, res) => {
       const doctor = doctors.get(Number(req.params.id));
@@ -86,7 +91,13 @@ export function createApp(options: AppOptions): Express {
       res.json(doctor);
     });
     app.put("/api/doctors/:id", (req, res) => {
-      res.json(doctors.update(Number(req.params.id), req.body));
+      try {
+        res.json(doctors.update(Number(req.params.id), req.body));
+      } catch (err) {
+        if (err instanceof DoctorNotFoundError) return res.status(404).json({ error: "Not found" });
+        if (err instanceof InvalidDoctorInputError) return res.status(400).json({ error: err.message });
+        throw err;
+      }
     });
   }
 
