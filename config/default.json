@@ -1,6 +1,5 @@
 {
   "server": {
-    "hostname": "localhost",
     "port": 4001,
     "localOnly": true
   },
@@ -30,7 +29,8 @@
     "allowList": {
       "user-one": "en",
       "user-two": "he"
-    }
+    },
+    "cookieSecret": "REPLACE_ME"
   },
   "i18n": {
     "fallbackLocale": "en",

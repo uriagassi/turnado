@@ -23,6 +23,9 @@ export function applyLocale(locale: string): void {
   void i18n.changeLanguage(locale);
   document.documentElement.lang = locale;
   document.documentElement.dir = RTL_LOCALES.has(locale) ? "rtl" : "ltr";
+  // { lng: locale } rather than relying on changeLanguage() above having
+  // taken effect yet — it's async and this call isn't awaited.
+  document.title = i18n.t("app.title", { lng: locale });
 }
 
 export default i18n;
