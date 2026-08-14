@@ -28,9 +28,10 @@ npm run start     # runs the server, which serves client/dist
 
 `config/default.json` is committed with generic placeholders. Real deployment
 values (hostnames, TLS cert paths, the shared-DB path, outbound-mail
-credentials, the shared Notebook id, and the two-username allow-list) go in
-`config/local.json`, which is gitignored and layered on top by the
-[`config`](https://www.npmjs.com/package/config) package.
+credentials, the shared Notebook id, the two-username allow-list, and the
+auth-cookie signing secret) go in `config/local.json`, which is gitignored
+and layered on top by the [`config`](https://www.npmjs.com/package/config)
+package.
 
 For local development without a real household-NAS SSO to talk to, leave
 `auth.handler` at its default (`EmptyAuth`) and set `auth.devUserName` in

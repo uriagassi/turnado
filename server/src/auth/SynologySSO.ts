@@ -7,28 +7,33 @@ import config from "../config.js";
  * config's `auth.handler` in deployment config (config/local.json).
  */
 export class AuthHandler extends SimpleOAuth {
-  clientData(): { handler: string; login_href: string; logout_href: string } {
+  // The hostname:port pair and the OAuth query params are each read from
+  // config in three places (login/logout href, token exchange); factored
+  // out once here instead of repeating the config.get() calls at each
+  // call site.
+  private baseUrl(): string {
+    return `https://${config.get("synology.hostname")}:${config.get("synology.port")}`;
+  }
+
+  private oAuthParams(): string {
+    return `scope=user_id&redirect_uri=${config.get("synology.redirect_uri")}&synossoJSSDK=false&app_id=${config.get(
+      "synology.appId"
+    )}`;
+  }
+
+  clientData(): { handler: string; loginHref: string; logoutHref: string } {
+    const ssoUrl = `${this.baseUrl()}/webman/sso/SSOOauth.cgi?${this.oAuthParams()}`;
     return {
       handler: "SynologySSO",
-      login_href: `https://${config.get("synology.hostname")}:${config.get(
-        "synology.port"
-      )}/webman/sso/SSOOauth.cgi?scope=user_id&redirect_uri=${config.get(
-        "synology.redirect_uri"
-      )}&synossoJSSDK=false&app_id=${config.get("synology.appId")}`,
-      logout_href: `https://${config.get("synology.hostname")}:${config.get(
-        "synology.port"
-      )}/webman/sso/SSOOauth.cgi?scope=user_id&redirect_uri=${config.get(
-        "synology.redirect_uri"
-      )}&synossoJSSDK=false&app_id=${config.get("synology.appId")}&method=logout`,
+      loginHref: ssoUrl,
+      logoutHref: `${ssoUrl}&method=logout`,
     };
   }
 
   oAuthUrl(token: string): string {
-    return `https://${config.get("synology.hostname")}:${config.get(
-      "synology.port"
-    )}/webman/sso/SSOAccessToken.cgi?action=exchange&app_id=${config.get(
+    return `${this.baseUrl()}/webman/sso/SSOAccessToken.cgi?action=exchange&app_id=${config.get(
       "synology.appId"
-    )}&access_token=${token}`;
+    )}&access_token=${encodeURIComponent(token)}`;
   }
 
   shouldRejectUnauthorized(): boolean {

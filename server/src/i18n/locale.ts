@@ -1,7 +1,9 @@
+import type { AllowList } from "../auth/AllowList.js";
+
 export interface ResolveLocaleParams {
   userName: string | undefined;
   queryLocale: string | undefined;
-  allowList: Record<string, string>;
+  allowList: AllowList;
   supportedLocales: string[];
   fallbackLocale: string;
 }
@@ -11,8 +13,9 @@ export function resolveLocale(params: ResolveLocaleParams): string {
   if (queryLocale && supportedLocales.includes(queryLocale)) {
     return queryLocale;
   }
-  if (userName && allowList[userName]) {
-    return allowList[userName];
+  const locale = allowList.localeFor(userName);
+  if (locale) {
+    return locale;
   }
   return params.fallbackLocale;
 }

@@ -6,6 +6,7 @@ import config from "./config.js";
 import { createDb } from "./db.js";
 import { createApp } from "./app.js";
 import type { IAuthHandler } from "./auth/Auth.js";
+import type { AllowListConfig } from "./auth/AllowList.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -18,7 +19,8 @@ const authHandler: IAuthHandler = new authHandlerModule.AuthHandler();
 
 const app = createApp({
   authHandler,
-  allowList: config.get<Record<string, string>>("security.allowList"),
+  allowList: config.get<AllowListConfig>("security.allowList"),
+  cookieSecret: config.get<string>("security.cookieSecret"),
   supportedLocales: config.get<string[]>("i18n.supportedLocales"),
   fallbackLocale: config.get<string>("i18n.fallbackLocale"),
   db,

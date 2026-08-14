@@ -1,13 +1,13 @@
 export interface UserInfo {
-  user_id: string;
-  user_name: string;
+  userId: string;
+  userName: string;
   locale: string;
 }
 
 export interface AuthClientData {
   handler: string;
-  login_href?: string;
-  logout_href?: string;
+  loginHref?: string;
+  logoutHref?: string;
 }
 
 export type UserResult = { status: "ok"; user: UserInfo } | { status: "not-authorized" } | { status: "unauthenticated" };

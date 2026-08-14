@@ -5,8 +5,8 @@ export function SignInScreen({ authInfo }: { authInfo: AuthClientData }) {
   const { t } = useTranslation();
   return (
     <main className="screen status-screen">
-      {authInfo.login_href ? (
-        <a className="sign-in-link" href={authInfo.login_href}>
+      {authInfo.loginHref ? (
+        <a className="sign-in-link" href={authInfo.loginHref}>
           {t("auth.signIn")}
         </a>
       ) : (
