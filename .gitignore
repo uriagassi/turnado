@@ -1,0 +1,15 @@
+node_modules
+/client/dist
+/server/dist
+/server/built
+coverage
+
+# local config (real deployment values)
+config/local.json
+
+# dev-only sqlite file (config/local.json's db.path default)
+/data
+/server/data
+
+.DS_Store
+*.log
