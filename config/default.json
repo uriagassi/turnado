@@ -1,0 +1,39 @@
+{
+  "server": {
+    "port": 4001,
+    "localOnly": true
+  },
+  "https": {
+    "use": false,
+    "keyPath": "/path/to/privkey.pem",
+    "certPath": "/path/to/fullchain.pem"
+  },
+  "db": {
+    "path": "~/paperless/paperless.sqlite",
+    "busyTimeoutMs": 5000
+  },
+  "notebook": {
+    "medicalNotebookId": 0
+  },
+  "mail": {
+    "host": "smtp.example.com",
+    "port": 587,
+    "user": "REPLACE_ME",
+    "pass": "REPLACE_ME",
+    "from": "REPLACE_ME"
+  },
+  "auth": {
+    "handler": "./auth/EmptyAuth.js"
+  },
+  "security": {
+    "allowList": {
+      "user-one": "en",
+      "user-two": "he"
+    },
+    "cookieSecret": "REPLACE_ME"
+  },
+  "i18n": {
+    "fallbackLocale": "en",
+    "supportedLocales": ["en", "he"]
+  }
+}
