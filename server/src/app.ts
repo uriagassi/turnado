@@ -5,6 +5,7 @@ import type { Database } from "better-sqlite3";
 import { Auth, IAuthHandler } from "./auth/Auth.js";
 import { allowListMiddleware, AllowList, AllowListConfig } from "./auth/AllowList.js";
 import { resolveLocale } from "./i18n/locale.js";
+import { Doctors, DoctorNotFoundError, InvalidDoctorInputError } from "./doctors/Doctors.js";
 
 export interface AppOptions {
   authHandler: IAuthHandler;
@@ -13,8 +14,10 @@ export interface AppOptions {
   cookieSecret: string;
   supportedLocales?: string[];
   fallbackLocale?: string;
-  /** The shared DB connection (WAL + busy_timeout already applied — see db.ts). Not queried by any route yet; later tickets build on it. */
+  /** The shared DB connection (WAL + busy_timeout already applied — see db.ts). Only used by /api/doctors so far. */
   db?: Database;
+  /** Shared tag every newly-created doctor tag nests under (see Doctors.ts). Only matters when db is set. */
+  doctorsParentTagName?: string;
   /** Built client (client/dist) to serve as the SPA shell. Omitted in tests that only exercise the API. */
   clientDistPath?: string;
 }
@@ -27,6 +30,7 @@ export function createApp(options: AppOptions): Express {
     supportedLocales = ["en", "he"],
     fallbackLocale = "en",
     db,
+    doctorsParentTagName = "Doctors",
     clientDistPath,
   } = options;
   const allowList = new AllowList(allowListConfig);
@@ -34,6 +38,7 @@ export function createApp(options: AppOptions): Express {
   const app = express();
   app.locals.db = db;
   app.use(helmet());
+  app.use(express.json());
   app.use(cookieParser(cookieSecret));
 
   const auth = new Auth(authHandler);
@@ -66,6 +71,35 @@ export function createApp(options: AppOptions): Express {
   app.get("/api/home", (_req, res) => {
     res.json({ nextAppointment: null, openItems: [], recentDocuments: [] });
   });
+
+  if (db) {
+    const doctors = new Doctors(db, doctorsParentTagName);
+    app.get("/api/doctors", (_req, res) => {
+      res.json(doctors.list());
+    });
+    app.post("/api/doctors", (req, res) => {
+      try {
+        res.status(201).json(doctors.create(req.body));
+      } catch (err) {
+        if (err instanceof InvalidDoctorInputError) return res.status(400).json({ error: err.message });
+        throw err;
+      }
+    });
+    app.get("/api/doctors/:id", (req, res) => {
+      const doctor = doctors.get(Number(req.params.id));
+      if (!doctor) return res.status(404).json({ error: "Not found" });
+      res.json(doctor);
+    });
+    app.put("/api/doctors/:id", (req, res) => {
+      try {
+        res.json(doctors.update(Number(req.params.id), req.body));
+      } catch (err) {
+        if (err instanceof DoctorNotFoundError) return res.status(404).json({ error: "Not found" });
+        if (err instanceof InvalidDoctorInputError) return res.status(400).json({ error: err.message });
+        throw err;
+      }
+    });
+  }
 
   app.get("/api/logout", (req, res) => {
     // Both stores: the auth cookies (x-token-user, x-access-token) are

@@ -24,6 +24,7 @@ const app = createApp({
   supportedLocales: config.get<string[]>("i18n.supportedLocales"),
   fallbackLocale: config.get<string>("i18n.fallbackLocale"),
   db,
+  doctorsParentTagName: config.get<string>("doctors.parentTagName"),
   clientDistPath: path.resolve(__dirname, "../../client/dist"),
 });
 

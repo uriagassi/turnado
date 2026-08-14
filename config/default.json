@@ -15,6 +15,9 @@
   "notebook": {
     "medicalNotebookId": 0
   },
+  "doctors": {
+    "parentTagName": "Doctors"
+  },
   "mail": {
     "host": "smtp.example.com",
     "port": 587,
