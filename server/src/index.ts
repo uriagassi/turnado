@@ -30,6 +30,9 @@ const app = createApp({
   documentTypeParentTagName: config.has("documents.documentTypeParentTagName")
     ? config.get<string>("documents.documentTypeParentTagName")
     : "medical/document-type",
+  specialtyParentTagName: config.has("documents.specialtyParentTagName")
+    ? config.get<string>("documents.specialtyParentTagName")
+    : "medical/specialty",
   photosDir: expandHome(config.get<string>("doctors.photosDir")),
   medicalNotebookId: config.has("notebook.medicalNotebookId") ? config.get<number>("notebook.medicalNotebookId") : 0,
   attachmentsDir: config.has("attachments.dir") ? expandHome(config.get<string>("attachments.dir")) : undefined,

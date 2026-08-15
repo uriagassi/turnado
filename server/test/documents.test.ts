@@ -181,14 +181,14 @@ describe("Documents", () => {
       expect(tagIds).toContain(drB.tagId);
     });
 
-    it("syncs doctor tags transitively when a linked appointment's doctor changes", () => {
+    it("syncs doctor tags and specialty tags transitively when a linked appointment's doctor changes", () => {
       const db = tmpDb();
       const doctors = new Doctors(db, "Doctors");
       const appointments = new Appointments(db);
       const documents = tmpDocuments(db);
 
-      const drA = doctors.create({ name: "Dr. Alice" });
-      const drB = doctors.create({ name: "Dr. Bob" });
+      const drA = doctors.create({ name: "Dr. Alice", specialty: "Cardiology" });
+      const drB = doctors.create({ name: "Dr. Bob", specialty: "Neurology" });
 
       const appt = appointments.create({
         doctorId: drA.id,
@@ -213,11 +213,17 @@ describe("Documents", () => {
         file,
       );
 
+      const cardiologyTag = db.prepare("SELECT tagId FROM Tags WHERE name = 'Cardiology'").get() as { tagId: number };
+      const neurologyTag = db.prepare("SELECT tagId FROM Tags WHERE name = 'Neurology'").get() as { tagId: number } | undefined;
+
+      expect(cardiologyTag).toBeDefined();
       let noteTags = db
         .prepare("SELECT tagId FROM NoteTags WHERE noteId = ?")
         .all(doc.id) as { tagId: number }[];
       let tagIds = noteTags.map((r) => r.tagId);
       expect(tagIds).toContain(drA.tagId);
+      expect(tagIds).toContain(cardiologyTag.tagId);
+      if (neurologyTag) expect(tagIds).not.toContain(neurologyTag.tagId);
       expect(tagIds).not.toContain(drB.tagId);
 
       // Now change appointment's doctor to Dr. Bob
@@ -230,12 +236,17 @@ describe("Documents", () => {
       // Trigger transitive sync
       documents.syncDoctorTags(doc.id);
 
+      const activeNeurologyTag = db.prepare("SELECT tagId FROM Tags WHERE name = 'Neurology'").get() as { tagId: number };
+      expect(activeNeurologyTag).toBeDefined();
+
       noteTags = db
         .prepare("SELECT tagId FROM NoteTags WHERE noteId = ?")
         .all(doc.id) as { tagId: number }[];
       tagIds = noteTags.map((r) => r.tagId);
       expect(tagIds).not.toContain(drA.tagId);
+      expect(tagIds).not.toContain(cardiologyTag.tagId);
       expect(tagIds).toContain(drB.tagId);
+      expect(tagIds).toContain(activeNeurologyTag.tagId);
     });
   });
 

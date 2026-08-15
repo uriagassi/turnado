@@ -23,7 +23,8 @@
     "photosDir": "~/paperless/doctor-photos"
   },
   "documents": {
-    "documentTypeParentTagName": "medical/document-type"
+    "documentTypeParentTagName": "medical/document-type",
+    "specialtyParentTagName": "medical/specialty"
   },
   "mail": {
     "host": "smtp.example.com",

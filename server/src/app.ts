@@ -66,6 +66,8 @@ export interface AppOptions {
   medicalNotebookId?: number;
   /** Parent tag for document types (e.g. medical/document-type). */
   documentTypeParentTagName?: string;
+  /** Parent tag for specialties (e.g. medical/specialty). */
+  specialtyParentTagName?: string;
   /** Directory where document attachments are stored. */
   attachmentsDir?: string;
   /** Built client (client/dist) to serve as the SPA shell. Omitted in tests that only exercise the API. */
@@ -323,6 +325,7 @@ export function createApp(options: AppOptions): Express {
     const {
       medicalNotebookId = 0,
       documentTypeParentTagName = "medical/document-type",
+      specialtyParentTagName = "medical/specialty",
       attachmentsDir,
     } = options;
 
@@ -336,6 +339,7 @@ export function createApp(options: AppOptions): Express {
       medicalNotebookId,
       documentTypeParentTagName,
       doctorsParentTagName,
+      specialtyParentTagName,
     });
 
     const docUpload = multer({

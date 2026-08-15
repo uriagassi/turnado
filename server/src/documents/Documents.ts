@@ -149,6 +149,7 @@ export interface DocumentsConfig {
   medicalNotebookId: number;
   documentTypeParentTagName?: string;
   doctorsParentTagName?: string;
+  specialtyParentTagName?: string;
 }
 
 export class Documents {
@@ -157,6 +158,7 @@ export class Documents {
   private readonly medicalNotebookId: number;
   private readonly docTypeParentTagName: string;
   private readonly doctorsParentTagName: string;
+  private readonly specialtyParentTagName: string;
 
   constructor(db: Database, config: DocumentsConfig) {
     this.db = db;
@@ -164,6 +166,7 @@ export class Documents {
     this.medicalNotebookId = config.medicalNotebookId;
     this.docTypeParentTagName = config.documentTypeParentTagName ?? "medical/document-type";
     this.doctorsParentTagName = config.doctorsParentTagName ?? "medical/doctors";
+    this.specialtyParentTagName = config.specialtyParentTagName ?? "medical/specialty";
 
     this.ensureTables();
   }
@@ -469,19 +472,25 @@ export class Documents {
     for (const r of apptDoctorRows) doctorIds.add(r.doctorId);
     for (const r of taskDoctorRows) doctorIds.add(r.doctorId);
 
-    // Get tag IDs for all these doctors
-    const targetTagIds = new Set<number>();
+    // Get doctor tags and specialty tags for all these doctors
+    const targetDoctorTagIds = new Set<number>();
+    const targetSpecialtyTagIds = new Set<number>();
+
     if (doctorIds.size > 0) {
       const placeholders = Array.from(doctorIds).map(() => "?").join(",");
       const doctorRows = this.db
-        .prepare(`SELECT tagId FROM Doctors WHERE id IN (${placeholders})`)
-        .all(...Array.from(doctorIds)) as DoctorTagRow[];
+        .prepare(`SELECT tagId, specialty FROM Doctors WHERE id IN (${placeholders})`)
+        .all(...Array.from(doctorIds)) as (DoctorTagRow & { specialty: string | null })[];
       for (const d of doctorRows) {
-        if (d.tagId) targetTagIds.add(d.tagId);
+        if (d.tagId) targetDoctorTagIds.add(d.tagId);
+        if (d.specialty && d.specialty.trim().length > 0) {
+          const specTagId = this.findOrCreateSpecialtyTag(d.specialty.trim());
+          targetSpecialtyTagIds.add(specTagId);
+        }
       }
     }
 
-    // Get all doctor tags currently associated with this note
+    // Doctor tags sync
     const existingDoctorTagRows = this.db
       .prepare(
         `SELECT nt.tagId FROM NoteTags nt
@@ -490,20 +499,41 @@ export class Documents {
       )
       .all(noteId) as DoctorTagRow[];
 
-    const existingTagIds = new Set<number>(existingDoctorTagRows.map((r) => r.tagId));
+    const existingDoctorTagIds = new Set<number>(existingDoctorTagRows.map((r) => r.tagId));
 
-    // Add missing tags
     const insertNoteTag = this.db.prepare(`INSERT OR IGNORE INTO NoteTags (noteId, tagId) VALUES (?, ?)`);
-    for (const tagId of targetTagIds) {
-      if (!existingTagIds.has(tagId)) {
+    const deleteNoteTag = this.db.prepare(`DELETE FROM NoteTags WHERE noteId = ? AND tagId = ?`);
+
+    for (const tagId of targetDoctorTagIds) {
+      if (!existingDoctorTagIds.has(tagId)) {
         insertNoteTag.run(noteId, tagId);
       }
     }
+    for (const tagId of existingDoctorTagIds) {
+      if (!targetDoctorTagIds.has(tagId)) {
+        deleteNoteTag.run(noteId, tagId);
+      }
+    }
 
-    // Remove tags no longer linked
-    const deleteNoteTag = this.db.prepare(`DELETE FROM NoteTags WHERE noteId = ? AND tagId = ?`);
-    for (const tagId of existingTagIds) {
-      if (!targetTagIds.has(tagId)) {
+    // Specialty tags sync
+    const specParentId = this.findOrCreateSpecialtyParentTagId();
+    const existingSpecialtyTagRows = this.db
+      .prepare(
+        `SELECT nt.tagId FROM NoteTags nt
+         JOIN Tags t ON t.tagId = nt.tagId
+         WHERE nt.noteId = ? AND t.parentId = ?`,
+      )
+      .all(noteId, specParentId) as { tagId: number }[];
+
+    const existingSpecialtyTagIds = new Set<number>(existingSpecialtyTagRows.map((r) => r.tagId));
+
+    for (const tagId of targetSpecialtyTagIds) {
+      if (!existingSpecialtyTagIds.has(tagId)) {
+        insertNoteTag.run(noteId, tagId);
+      }
+    }
+    for (const tagId of existingSpecialtyTagIds) {
+      if (!targetSpecialtyTagIds.has(tagId)) {
         deleteNoteTag.run(noteId, tagId);
       }
     }
@@ -524,6 +554,15 @@ export class Documents {
 
   syncDoctorTagsForTask(taskId: number): void {
     this.syncDoctorTagsForLinkedEntity("TaskDocuments", "taskId", taskId);
+  }
+
+  private findOrCreateSpecialtyTag(specialty: string): number {
+    const parentId = this.findOrCreateSpecialtyParentTagId();
+    return this.findOrCreateTag(specialty, parentId);
+  }
+
+  private findOrCreateSpecialtyParentTagId(): number {
+    return this.tags.findOrCreatePath(this.specialtyParentTagName);
   }
 
   private findOrCreateDocumentTypeTag(type: DocumentType): number {
