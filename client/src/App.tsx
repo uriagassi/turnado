@@ -69,15 +69,26 @@ function withSavedAppointment(session: Session, saved: Appointment, wasEdit: boo
 }
 
 /**
- * The soonest still-upcoming planned appointment for one doctor — the
- * client-side counterpart of the server's selectHeroAppointment (see
- * server/src/appointments/heroAppointment.ts), scoped to a single doctorId
- * for the doctor detail view's "next appointment" section.
+ * Every still-upcoming planned appointment for one doctor, soonest first —
+ * the client-side counterpart of the server's selectUpcomingAppointments
+ * (see server/src/appointments/heroAppointment.ts), scoped to a single
+ * doctorId for the doctor detail view's Appointments section. Bounded to
+ * upcoming (not the doctor's full history) so the section can't grow
+ * unboundedly long for a doctor seen for years.
+ */
+function upcomingAppointmentsForDoctor(appointments: Appointment[], doctorId: number, now: Date): Appointment[] {
+  return appointments
+    .filter((a) => a.doctorId === doctorId && a.status === "planned" && new Date(a.dateTime) >= now)
+    .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
+}
+
+/**
+ * The soonest still-upcoming planned appointment for one doctor — just the
+ * first entry of upcomingAppointmentsForDoctor, for previews (the doctors
+ * list's "next appointment" row) where only the soonest one matters.
  */
 function nextAppointmentForDoctor(appointments: Appointment[], doctorId: number, now: Date): Appointment | undefined {
-  const upcoming = appointments.filter((a) => a.doctorId === doctorId && a.status === "planned" && new Date(a.dateTime) >= now);
-  if (upcoming.length === 0) return undefined;
-  return upcoming.reduce((soonest, a) => (new Date(a.dateTime) < new Date(soonest.dateTime) ? a : soonest));
+  return upcomingAppointmentsForDoctor(appointments, doctorId, now)[0];
 }
 
 /** Past appointments, most recent first — the client-side counterpart of the server's selectPastAppointments (see server/src/appointments/appointmentHistory.ts), for the history/archive view. */
@@ -92,6 +103,25 @@ function upcomingAppointments(appointments: Appointment[], now: Date): Appointme
   return appointments
     .filter((a) => a.status === "planned" && new Date(a.dateTime) >= now)
     .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
+}
+
+/**
+ * Orders doctors by their soonest upcoming appointment (ascending) rather
+ * than the list's base name order — a doctor you're about to see should
+ * surface above one you have no appointment with. Doctors with no upcoming
+ * appointment sort after every doctor who has one, and fall back to name
+ * order among themselves so the tail of the list stays stable and matches
+ * how it read before this sort existed.
+ */
+function sortDoctorsByNextAppointment(doctors: Doctor[], nextAppointments: Map<number, Appointment | undefined>): Doctor[] {
+  return [...doctors].sort((a, b) => {
+    const aNext = nextAppointments.get(a.id);
+    const bNext = nextAppointments.get(b.id);
+    if (aNext && bNext) return new Date(aNext.dateTime).getTime() - new Date(bNext.dateTime).getTime();
+    if (aNext) return -1;
+    if (bNext) return 1;
+    return a.name.localeCompare(b.name);
+  });
 }
 
 type AppState =
@@ -198,7 +228,7 @@ export function App() {
       const nextAppointments = new Map(doctors.map((d) => [d.id, nextAppointmentForDoctor(session.appointments, d.id, now)]));
       return (
         <DoctorsScreen
-          doctors={doctors}
+          doctors={sortDoctorsByNextAppointment(doctors, nextAppointments)}
           nextAppointments={nextAppointments}
           onSelectDoctor={selectDoctor}
           onAddDoctor={addDoctor}
@@ -210,8 +240,8 @@ export function App() {
       const { session, doctors, doctor } = state;
       const back = () => setState({ phase: "doctors", session, doctors });
       const edit = () => setState({ phase: "doctor-form", session, doctors, doctor });
-      const nextAppointment = nextAppointmentForDoctor(session.appointments, doctor.id, new Date());
-      return <DoctorDetailScreen doctor={doctor} nextAppointment={nextAppointment} onBack={back} onEdit={edit} />;
+      const appointments = upcomingAppointmentsForDoctor(session.appointments, doctor.id, new Date());
+      return <DoctorDetailScreen doctor={doctor} appointments={appointments} onBack={back} onEdit={edit} />;
     }
     case "doctor-form": {
       const { session, doctors, doctor } = state;
