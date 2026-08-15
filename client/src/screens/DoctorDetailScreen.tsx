@@ -1,12 +1,16 @@
 import { useTranslation } from "react-i18next";
 import type { Doctor } from "../api";
+import { DoctorAvatar } from "../components/DoctorAvatar";
 
 export function DoctorDetailScreen({ doctor, onBack }: { doctor: Doctor; onBack: () => void }) {
   const { t } = useTranslation();
 
   return (
     <main className="screen doctor-detail-screen">
-      <h1>{doctor.name}</h1>
+      <div className="doctor-header">
+        <DoctorAvatar doctor={doctor} />
+        <h1>{doctor.name}</h1>
+      </div>
       {doctor.specialty && <p>{doctor.specialty}</p>}
       {doctor.clinic && <p>{doctor.clinic}</p>}
       {doctor.phone && <p>{doctor.phone}</p>}

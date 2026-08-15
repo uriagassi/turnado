@@ -40,6 +40,18 @@ describe("DoctorDetailScreen", () => {
     expect(screen.getByText("No documents.")).toBeInTheDocument();
   });
 
+  it("shows the doctor's avatar, same as the list view", () => {
+    render(<DoctorDetailScreen doctor={doctor({ name: "Dr. Jane Smith", photoPath: null })} onBack={() => {}} />);
+
+    expect(screen.getByTestId("doctor-avatar")).toHaveTextContent("JS");
+  });
+
+  it("shows the doctor's photo instead of initials in the avatar when photoPath is set", () => {
+    render(<DoctorDetailScreen doctor={doctor({ name: "Dr. Jane Smith", photoPath: "1-170000.jpg" })} onBack={() => {}} />);
+
+    expect(screen.getByTestId("doctor-avatar").querySelector("img")).toHaveAttribute("src", "/photos/1-170000.jpg");
+  });
+
   it("calls onBack when the back-to-doctor-list control is activated", async () => {
     const user = userEvent.setup();
     const onBack = vi.fn();
