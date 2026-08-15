@@ -28,6 +28,13 @@ export async function fetchCurrentUser(): Promise<UserResult> {
   return { status: "ok", user };
 }
 
+export interface Doctor {
+  id: number;
+  name: string;
+  specialty?: string;
+  photoPath: string | null;
+}
+
 export interface HomeData {
   nextAppointment: unknown;
   openItems: unknown[];
@@ -37,5 +44,11 @@ export interface HomeData {
 export async function fetchHome(): Promise<HomeData> {
   const res = await fetch("/api/home", { credentials: "same-origin" });
   if (!res.ok) throw new Error(`Unexpected /api/home status ${res.status}`);
+  return res.json();
+}
+
+export async function fetchDoctors(): Promise<Doctor[]> {
+  const res = await fetch("/api/doctors", { credentials: "same-origin" });
+  if (!res.ok) throw new Error(`Unexpected /api/doctors status ${res.status}`);
   return res.json();
 }
