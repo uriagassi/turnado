@@ -21,6 +21,33 @@ import {
   UploadedFile,
 } from "./documents/Documents.js";
 import crypto from "node:crypto";
+import convert from "heic-convert";
+
+async function normalizeImageBuffer(
+  buffer: Buffer,
+  filename: string,
+  mimetype: string,
+): Promise<{ buffer: Buffer; filename: string; mime: string }> {
+  if (/\.(heic|heif)$/i.test(filename) || mimetype === "image/heic" || mimetype === "image/heif") {
+    try {
+      const converted = await convert({
+        buffer,
+        format: "JPEG",
+        quality: 0.9,
+      });
+      const ext = path.extname(filename);
+      const base = ext ? filename.slice(0, -ext.length) : filename;
+      return {
+        buffer: Buffer.from(converted),
+        filename: `${base}.jpg`,
+        mime: "image/jpeg",
+      };
+    } catch {
+      // Fall back to original if conversion fails
+    }
+  }
+  return { buffer, filename, mime: mimetype };
+}
 
 export interface AppOptions {
   authHandler: IAuthHandler;
@@ -153,35 +180,33 @@ export function createApp(options: AppOptions): Express {
       // system — see Doctors.ts on why a doctor's photo is this app's own
       // file, not a shared-system one.
       const upload = multer({
-        storage: multer.diskStorage({
-          destination: (_req, _file, cb) => cb(null, photosDir),
-          filename: (req, file, cb) => cb(null, `${req.params.id}-${Date.now()}${path.extname(file.originalname)}`),
-        }),
+        storage: multer.memoryStorage(),
         limits: { fileSize: 8 * 1024 * 1024 },
         fileFilter: (_req, file, cb) => {
           const isImage =
             file.mimetype.startsWith("image/") ||
-            /\.(jpe?g|png|webp|gif|svg|avif|heic|bmp|tiff)$/i.test(file.originalname);
+            /\.(jpe?g|png|webp|gif|svg|avif|heic|heif|bmp|tiff)$/i.test(file.originalname);
           cb(null, isImage);
         },
       });
-      app.post("/api/doctors/:id/photo", upload.single("photo"), (req, res) => {
+      app.post("/api/doctors/:id/photo", upload.single("photo"), async (req, res) => {
         // fileFilter rejecting the file and no file being attached at all
         // both surface here as a missing req.file — both are "no valid
         // photo was uploaded" from the caller's point of view.
         if (!req.file) return res.status(400).json({ error: "photo is required" });
         try {
+          const normalized = await normalizeImageBuffer(req.file.buffer, req.file.originalname, req.file.mimetype);
+          const ext = path.extname(normalized.filename) || ".jpg";
+          const finalFilename = `${req.params.id}-${Date.now()}${ext}`;
+          fs.writeFileSync(path.join(photosDir, finalFilename), normalized.buffer);
+
           const previous = doctors.get(Number(req.params.id));
-          const updated = doctors.setPhoto(Number(req.params.id), req.file.filename);
+          const updated = doctors.setPhoto(Number(req.params.id), finalFilename);
           // Now that the new file is safely recorded, remove the one it
           // replaces so this app's disk storage doesn't accumulate orphans.
           if (previous?.photoPath) fs.rmSync(path.join(photosDir, previous.photoPath), { force: true });
           res.json(updated);
         } catch (err) {
-          // The file's already been written by multer before this handler
-          // runs — clean it up rather than leaving an orphan for a doctor
-          // that turned out not to exist.
-          fs.rmSync(req.file.path, { force: true });
           if (err instanceof DoctorNotFoundError) return res.status(404).json({ error: "Not found" });
           throw err;
         }
@@ -318,7 +343,7 @@ export function createApp(options: AppOptions): Express {
       limits: { fileSize: 20 * 1024 * 1024 },
     });
 
-    app.post("/api/documents", docUpload.single("file"), (req, res) => {
+    app.post("/api/documents", docUpload.single("file"), async (req, res) => {
       if (!req.file) {
         return res.status(400).json({ error: "file is required" });
       }
@@ -333,21 +358,23 @@ export function createApp(options: AppOptions): Express {
         // keep originalName
       }
 
-      const hash = crypto.createHash("sha256").update(req.file.buffer).digest("hex");
-      const ext = path.extname(originalName) || "";
-      const baseSafeName = path.basename(originalName, ext).replace(/[^a-zA-Z0-9_-]/g, "_");
+      const normalized = await normalizeImageBuffer(req.file.buffer, originalName, req.file.mimetype);
+
+      const hash = crypto.createHash("sha256").update(normalized.buffer).digest("hex");
+      const ext = path.extname(normalized.filename) || "";
+      const baseSafeName = path.basename(normalized.filename, ext).replace(/[^a-zA-Z0-9_-]/g, "_");
       const uniqueFilename = `${hash}_${baseSafeName}${ext}`;
 
       if (attachmentsDir) {
-        fs.writeFileSync(path.join(attachmentsDir, uniqueFilename), req.file.buffer);
+        fs.writeFileSync(path.join(attachmentsDir, uniqueFilename), normalized.buffer);
       }
 
       const uploadedFile: UploadedFile = {
-        fileName: originalName,
+        fileName: normalized.filename,
         uniqueFilename,
-        mime: req.file.mimetype || "application/octet-stream",
+        mime: normalized.mime || "application/octet-stream",
         hash,
-        size: req.file.size,
+        size: normalized.buffer.length,
       };
 
       const input: DocumentCreateInput = {
