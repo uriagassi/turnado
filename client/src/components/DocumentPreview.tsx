@@ -3,7 +3,7 @@ import type { UploadedFile } from "../api";
 
 export function DocumentPreview({ file }: { file: UploadedFile }) {
   const { t } = useTranslation();
-  const attachmentUrl = `/api/body/attachments/${file.uniqueFilename}`;
+  const attachmentUrl = `/api/body/attachments/${encodeURIComponent(file.uniqueFilename)}`;
 
   const isImage =
     file.mime?.toLowerCase().startsWith("image/") ||

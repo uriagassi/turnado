@@ -84,7 +84,8 @@ describe("Documents", () => {
       expect(noteRow).toBeDefined();
       expect(noteRow.notebookId).toBe(MEDICAL_NOTEBOOK_ID);
       expect(noteRow.title).toBe("Blood Test Results");
-      expect(noteRow.noteData).toBe("Normal cholesterol");
+      expect(noteRow.noteData).toContain("Normal cholesterol");
+      expect(noteRow.noteData).toContain("attachments/abc123_blood_test.pdf");
 
       // Verify Attachments table row
       const attachmentRow = db.prepare("SELECT * FROM Attachments WHERE noteId = ?").get(doc.id) as any;

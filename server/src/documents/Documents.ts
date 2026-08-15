@@ -53,6 +53,40 @@ export interface Document {
   updatedAt: string;
 }
 
+function buildNoteData(notesText: string | undefined | null, file: UploadedFile): string {
+  const mimeType = (file.mime || "").toLowerCase();
+  const fileName = (file.fileName || "").toLowerCase();
+  let attachmentHtml = "";
+
+  if (mimeType.startsWith("image") || /\.(jpe?g|png|webp|gif|svg|avif|heic|bmp|tiff)$/i.test(fileName)) {
+    attachmentHtml = `<img class='paperless-attachment' src='attachments/${file.uniqueFilename}' alt='${file.fileName}' hash='${file.hash}'/>`;
+  } else if (mimeType.includes("pdf") || fileName.endsWith(".pdf")) {
+    attachmentHtml = `<embed class='paperless-attachment' src='attachments/${file.uniqueFilename}' type='${file.mime || "application/pdf"}' hash='${file.hash}'/>`;
+  } else {
+    attachmentHtml = `<div class='paperless-attachment-file' data-src='attachments/${file.uniqueFilename}'><span>${file.fileName}</span></div>`;
+  }
+
+  const trimmed = notesText?.trim();
+  if (trimmed) {
+    return `${attachmentHtml}\n<div>${trimmed}</div>`;
+  }
+  return attachmentHtml;
+}
+
+function extractNotesText(noteData: string | null): string | null {
+  if (!noteData) return null;
+  const stripped = noteData
+    .replace(/<img\s+class=['"]paperless-attachment['"][^>]*>/gi, "")
+    .replace(/<embed\s+class=['"]paperless-attachment['"][^>]*>/gi, "")
+    .replace(/<div\s+class=['"]paperless-attachment-file['"][^>]*>[\s\S]*?<\/div>/gi, "")
+    .replace(/<div class=['"]paperless-merged-note['"][\s\S]*?<\/div>/gi, "")
+    .trim()
+    .replace(/^<div>([\s\S]*)<\/div>$/i, "$1")
+    .replace(/^<p>([\s\S]*)<\/p>$/i, "$1")
+    .trim();
+  return stripped.length > 0 ? stripped : null;
+}
+
 interface NoteRow {
   noteId: number;
   notebookId: number;
@@ -224,7 +258,7 @@ export class Documents {
       const noteResult = insertNote.run({
         notebookId: this.medicalNotebookId,
         title: input.title.trim(),
-        noteData: input.notes?.trim() || null,
+        noteData: buildNoteData(input.notes, file),
       });
 
       createdId = Number(noteResult.lastInsertRowid);
@@ -306,7 +340,7 @@ export class Documents {
       type: (typeTag?.name as DocumentType) || "other",
       documentDate: meta?.documentDate ?? null,
       doctorId: meta?.doctorId ?? null,
-      notes: note.noteData ?? null,
+      notes: extractNotesText(note.noteData),
       file: attachment
         ? {
             fileName: attachment.fileName,

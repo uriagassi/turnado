@@ -323,17 +323,29 @@ export function createApp(options: AppOptions): Express {
         return res.status(400).json({ error: "file is required" });
       }
 
+      let originalName = req.file.originalname;
+      try {
+        const decoded = Buffer.from(req.file.originalname, "latin1").toString("utf8");
+        if (!/[\uFFFD]/.test(decoded)) {
+          originalName = decoded;
+        }
+      } catch {
+        // keep originalName
+      }
+
       const hash = crypto.createHash("sha256").update(req.file.buffer).digest("hex");
-      const uniqueFilename = `${hash}_${req.file.originalname}`;
+      const ext = path.extname(originalName) || "";
+      const baseSafeName = path.basename(originalName, ext).replace(/[^a-zA-Z0-9_-]/g, "_");
+      const uniqueFilename = `${hash}_${baseSafeName}${ext}`;
 
       if (attachmentsDir) {
         fs.writeFileSync(path.join(attachmentsDir, uniqueFilename), req.file.buffer);
       }
 
       const uploadedFile: UploadedFile = {
-        fileName: req.file.originalname,
+        fileName: originalName,
         uniqueFilename,
-        mime: req.file.mimetype,
+        mime: req.file.mimetype || "application/octet-stream",
         hash,
         size: req.file.size,
       };
