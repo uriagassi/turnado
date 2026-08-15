@@ -45,7 +45,9 @@ export function AppointmentCard({
         <button type="button" className="edit-appointment" onClick={() => onEdit(appointment)}>
           {t("appointmentCard.edit")}
         </button>
-        <label className="appointment-status-field">
+        {/* status-<value> class picks the pill color from the prototypes'
+            shared badge palette (see index.css) — see appointment-status-field.status-*. */}
+        <label className={`appointment-status-field status-${appointment.status}`}>
           {t("appointmentCard.status.label")}
           <select
             value={appointment.status}

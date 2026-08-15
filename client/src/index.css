@@ -1,3 +1,10 @@
+/* Design tokens shared with the agreed-upon medical/ prototypes
+   (05-home-screen, 06-doctor-view, 07-document-search-filter,
+   08-appointment-document-folder, 12-completion-celebration — see
+   medical/.scratch/medical-app-spec/prototypes). Light-mode values are
+   copied verbatim from those prototypes' own `:root`; dark-mode values are
+   this app's own equivalents (the prototypes are light-only), paired via
+   light-dark() the same way the rest of this file already does. */
 :root {
   color-scheme: light dark;
   font-family:
@@ -5,6 +12,39 @@
     -apple-system,
     "Segoe UI",
     sans-serif;
+
+  --color-bg: light-dark(#f5f6f8, #101215);
+  --color-card-bg: light-dark(#ffffff, #1c1f26);
+  --color-border: light-dark(#e2e5ea, #343a45);
+  --color-text: light-dark(#1c2128, #e5e7eb);
+  --color-text-dim: light-dark(#6b7280, #9ca3af);
+  --color-primary: #2563eb;
+  --color-primary-dim: light-dark(#dbeafe, #1e293b);
+  --color-green: light-dark(#15803d, #4ade80);
+  --color-green-bg: light-dark(#dcfce7, #14532d);
+  --color-amber: light-dark(#b45309, #fbbf24);
+  --color-amber-bg: light-dark(#fef3c7, #78350f);
+  --color-gray: light-dark(#6b7280, #9ca3af);
+  --color-gray-bg: light-dark(#eef0f3, #262b34);
+  --color-red: light-dark(#b91c1c, #f87171);
+  --color-red-bg: light-dark(#fee2e2, #450a0a);
+  --color-purple: light-dark(#7e22ce, #c084fc);
+  --color-purple-bg: light-dark(#f3e8ff, #3b0764);
+  --radius: 10px;
+
+  /* One status→color mapping, shared by every place an appointment status
+     is shown — the interactive select in .appointment-status-field and the
+     read-only pill in .badge — instead of each defining its own copy of
+     the same four pairs. "postponed" is the prototypes' "deferred"
+     (purple); "cancelled" reuses the neutral gray. */
+  --status-planned-bg: var(--color-primary-dim);
+  --status-planned-fg: var(--color-primary);
+  --status-done-bg: var(--color-green-bg);
+  --status-done-fg: var(--color-green);
+  --status-cancelled-bg: var(--color-gray-bg);
+  --status-cancelled-fg: var(--color-text-dim);
+  --status-postponed-bg: var(--color-purple-bg);
+  --status-postponed-fg: var(--color-purple);
 }
 
 * {
@@ -21,6 +61,8 @@ body {
   margin-inline: auto;
   font-size: 1rem;
   line-height: 1.5;
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .screen {
@@ -41,9 +83,18 @@ h1 {
 }
 
 .empty-state {
-  color: light-dark(#666, #aaa);
+  color: var(--color-text-dim);
   text-align: center;
   padding-block: 2rem;
+}
+
+/* Small dim label above a block of content — matches the prototypes'
+   `.section-title` (see 05-home-screen.html / 06-doctor-view.html). */
+.section-title {
+  font-size: 0.875rem;
+  color: var(--color-text-dim);
+  font-weight: 600;
+  margin-block: 0 0.5rem;
 }
 
 .doctor-list {
@@ -55,16 +106,19 @@ h1 {
   gap: 0.75rem;
 }
 
+/* Doctor directory row as a tappable card, matching the prototype's
+   `.doctor-card` (06-doctor-view.html): bordered card at rest, a blue-tinted
+   border+background on hover/active so it's obvious the whole row is
+   tappable (round 2 feedback on that prototype flagged exactly this gap). */
 .doctor-row {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   width: 100%;
-  padding: 0.5rem;
-  margin-inline: -0.5rem;
-  border: none;
-  border-radius: 0.5rem;
-  background: none;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-card-bg);
   color: inherit;
   font: inherit;
   text-align: start;
@@ -72,29 +126,74 @@ h1 {
 }
 
 .doctor-row:hover {
-  background: light-dark(#f3f4f6, #1f2937);
+  border-color: var(--color-primary);
+  background: var(--color-primary-dim);
 }
 
 .doctor-row:active {
-  background: light-dark(#e5e7eb, #111827);
+  background: var(--color-primary-dim);
+  transform: scale(0.995);
 }
 
+.doctor-row-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.doctor-row-specialty {
+  font-size: 0.8125rem;
+  color: var(--color-text-dim);
+}
+
+/* Matches the prototype's `.next` line under a directory-row's specialty
+   (06-doctor-view.html) — primary-colored rather than dim, so a doctor with
+   something coming up stands out from one who doesn't. */
+.doctor-row-next {
+  font-size: 0.8125rem;
+  color: var(--color-primary);
+}
+
+/* Static tap-hint pill — always visible rather than hover-only, since touch
+   devices have no hover state to reveal it. */
+.doctor-row-hint {
+  flex-shrink: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: var(--color-primary-dim);
+  border-radius: 999px;
+  padding: 0.3rem 0.625rem;
+  white-space: nowrap;
+}
+
+.doctor-row:hover .doctor-row-hint,
+.doctor-row:active .doctor-row-hint {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+/* Base (list-row) size matches the prototype's `.doctor-card .avatar-photo`
+   exactly — 46px. Other contexts (detail header, form's current-photo
+   preview) override this with their own size below. */
 .doctor-avatar {
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.875rem;
+  height: 2.875rem;
   border-radius: 50%;
   overflow: hidden;
   /* Background color is set per-doctor inline (see DoctorAvatar in
      client/src/components/DoctorAvatar.tsx) — this is only a fallback
      before that renders. */
-  background: light-dark(#e5e7eb, #374151);
+  background: var(--color-gray-bg);
   color: #fff;
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: 1.0625rem;
 }
 
 .doctor-avatar img {
@@ -103,53 +202,121 @@ h1 {
   object-fit: cover;
 }
 
-/* ID-card layout: contact details on one side, a portrait-shaped photo (or
-   colored-initials fallback) on the other, sized to the details column's
-   own height rather than a small fixed icon. */
-.doctor-card {
-  display: flex;
-  align-items: stretch;
-  justify-content: space-between;
-  gap: 1rem;
+/* Generic bordered card, matching the prototypes' shared `.card`
+   (see medical/.scratch/medical-app-spec/prototypes) — used wherever a
+   block doesn't already have its own more specific card treatment. */
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-card-bg);
+  padding: 1rem;
 }
 
-.doctor-info {
+/* Compact avatar + name/specialty header, matching the prototype's
+   `.detail-head` (06-doctor-view.html) — a small round avatar sitting
+   tight next to the identity, not a large portrait spanning the card
+   (that read as a mismatched layout against the prototype). */
+.detail-head {
   display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-  min-width: 0;
+  align-items: center;
+  gap: 0.75rem;
 }
 
-.doctor-info h1 {
+.detail-head .doctor-avatar {
+  width: 2.75rem;
+  height: 2.75rem;
+  font-size: 1rem;
+}
+
+.detail-titles h1 {
   margin-block-end: 0.125rem;
 }
 
-.doctor-detail-screen .doctor-avatar {
-  flex-shrink: 0;
-  width: auto;
-  height: auto;
-  aspect-ratio: 3 / 4;
-  min-width: 5rem;
-  max-width: 8rem;
-  /* min/max-height mirror min/max-width via the same 3:4 ratio — without
-     these, align-items: stretch on .doctor-card keeps growing the box's
-     height to match a tall info column while only width gets capped,
-     silently breaking the declared ratio into something far taller than
-     wide. Matching both axes keeps it a true 3:4 profile-pic shape at
-     every size. */
-  min-height: calc(5rem * 4 / 3);
-  max-height: calc(8rem * 4 / 3);
-  border-radius: 0.75rem;
-  font-size: 1.5rem;
+.detail-specialty {
+  margin: 0;
+  color: var(--color-text-dim);
+  font-size: 0.875rem;
+}
+
+/* Contact details (clinic/phone/address/email) — the prototype's detail
+   view doesn't carry these (its mock data doesn't model them), so this is
+   turnado's own addition, styled with the same shared `.card` as everything
+   else rather than crammed into the header next to the avatar. */
+.doctor-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  color: var(--color-text-dim);
+  font-size: 0.9375rem;
+}
+
+.doctor-contact p {
+  margin: 0;
 }
 
 .doctor-detail-screen section {
   margin-block-start: 0.5rem;
 }
 
-.doctor-detail-screen h2 {
-  font-size: 1rem;
-  margin-block-end: 0.25rem;
+/* One line item inside a detail section (next appointment, open items,
+   documents) — matches the prototype's `.item-row`: a card with the name/
+   sub on one side and a status badge on the other. */
+.item-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.item-row-sub {
+  margin: 0.125rem 0 0;
+  font-size: 0.875rem;
+  color: var(--color-text-dim);
+}
+
+/* Read-only status pill — same palette as the interactive
+   .appointment-status-field.status-* select, for contexts (like this
+   next-appointment card) that only display a status rather than edit it. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.2rem 0.625rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.badge-planned {
+  background: var(--status-planned-bg);
+  color: var(--status-planned-fg);
+}
+
+.badge-done {
+  background: var(--status-done-bg);
+  color: var(--status-done-fg);
+}
+
+.badge-cancelled {
+  background: var(--status-cancelled-bg);
+  color: var(--status-cancelled-fg);
+  text-decoration: line-through;
+}
+
+.badge-postponed {
+  background: var(--status-postponed-bg);
+  color: var(--status-postponed-fg);
+}
+
+/* Quiet inline empty note for a sub-section within a detail page — smaller
+   and less padded than the whole-screen `.empty-state`, matching the
+   prototype's `.empty-note`. */
+.section-empty {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-text-dim);
+  padding-block: 0.25rem;
 }
 
 .back-to-list,
@@ -160,8 +327,8 @@ h1 {
   display: block;
   width: 100%;
   padding-block: 0.75rem;
-  border: 1px solid light-dark(#d1d5db, #374151);
-  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
   background: none;
   color: inherit;
   font: inherit;
@@ -173,7 +340,8 @@ h1 {
 .add-doctor:hover,
 .edit-doctor:hover,
 .home-nav-item:hover {
-  background: light-dark(#f3f4f6, #1f2937);
+  background: var(--color-primary-dim);
+  border-color: var(--color-primary);
 }
 
 /* Pinned to the bottom of the viewport so it's reachable without scrolling
@@ -185,8 +353,46 @@ h1 {
 .doctors-screen .back-to-list {
   position: sticky;
   bottom: 1.5rem;
-  background: light-dark(#fff, #0a0a0a);
+  background: var(--color-card-bg);
   box-shadow: 0 -4px 8px light-dark(rgb(17 24 39 / 8%), rgb(0 0 0 / 40%));
+}
+
+/* Labeled, full-width back-link at the top of a detail view — matches the
+   prototype's `.back-link` (06-doctor-view.html). That prototype's round-2
+   feedback flagged "from the detail view, not obvious how to get back to
+   the list" against a bare icon button; the fix there was a full-width,
+   labeled, primary-colored link at the top of the page, not a footer
+   button — mirrored here for the same reason. */
+.back-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  text-align: start;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-card-bg);
+  color: var(--color-primary);
+  font: inherit;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+}
+
+.back-link:hover {
+  background: var(--color-primary-dim);
+}
+
+.back-link .back-link-arrow {
+  font-size: 1.125rem;
+}
+
+/* The arrow glyph itself isn't translatable text — written pointing "back"
+   for LTR and mirrored for RTL locales via the `dir` i18n.ts already sets
+   on <html>, rather than shipping two glyphs through the locale files. */
+html[dir="rtl"] .back-link-arrow {
+  display: inline-block;
+  transform: scaleX(-1);
 }
 
 .doctor-form-screen form,
@@ -208,7 +414,7 @@ h1 {
   gap: 0.375rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: light-dark(#374151, #d1d5db);
+  color: var(--color-text-dim);
 }
 
 .form-field input,
@@ -218,15 +424,15 @@ h1 {
   font-weight: normal;
   color: inherit;
   padding: 0.625rem 0.75rem;
-  border: 1px solid light-dark(#d1d5db, #374151);
-  border-radius: 0.5rem;
-  background: light-dark(#fff, #111827);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-card-bg);
 }
 
 .form-field input:focus,
 .form-field select:focus,
 .form-field textarea:focus {
-  outline: 2px solid #2563eb;
+  outline: 2px solid var(--color-primary);
   outline-offset: -1px;
 }
 
@@ -241,7 +447,7 @@ h1 {
   gap: 0.75rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: light-dark(#374151, #d1d5db);
+  color: var(--color-text-dim);
 }
 
 .current-photo .doctor-avatar {
@@ -252,7 +458,7 @@ h1 {
 
 .field-error {
   margin: 0;
-  color: light-dark(#b91c1c, #f87171);
+  color: var(--color-red);
   font-size: 0.875rem;
 }
 
@@ -269,7 +475,7 @@ h1 {
   display: block;
   width: 100%;
   padding-block: 0.75rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius);
   font: inherit;
   cursor: pointer;
 }
@@ -277,13 +483,13 @@ h1 {
 .save-doctor,
 .save-appointment {
   border: none;
-  background: #2563eb;
+  background: var(--color-primary);
   color: white;
 }
 
 .cancel-doctor,
 .cancel-appointment {
-  border: 1px solid light-dark(#d1d5db, #374151);
+  border: 1px solid var(--color-border);
   background: none;
   color: inherit;
 }
@@ -305,8 +511,8 @@ h1 {
 .refresh-home {
   flex-shrink: 0;
   padding: 0.4rem 0.75rem;
-  border: 1px solid light-dark(#d1d5db, #374151);
-  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
   background: none;
   color: inherit;
   font: inherit;
@@ -315,52 +521,64 @@ h1 {
 }
 
 .refresh-home:hover {
-  background: light-dark(#f3f4f6, #1f2937);
+  background: var(--color-primary-dim);
+  border-color: var(--color-primary);
 }
 
 /* The "hero" card (AC: one prominent card for the next upcoming
-   appointment) — an accent left border and tinted background set it apart
-   from the plain-bordered rows/buttons elsewhere on the screen. */
+   appointment) — matches the prototype's winning hero treatment
+   (05-home-screen.html, variant A): a solid primary-color gradient card,
+   not just an accent border, so it reads as the one unmissable thing on
+   the screen. */
 .hero-card {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  padding: 1rem;
-  border-inline-start: 4px solid #2563eb;
-  border-radius: 0.5rem;
-  background: light-dark(#eff6ff, #1e293b);
+  padding: 1.125rem 1.25rem 1.25rem;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--color-primary), #1d4ed8);
+  color: #fff;
 }
 
 .hero-card h2 {
-  margin: 0;
+  margin: 0 0 0.375rem;
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: light-dark(#2563eb, #60a5fa);
+  color: rgb(255 255 255 / 85%);
+}
+
+.hero-doctor-line {
+  margin: 0 0 0.125rem;
+  font-size: 1.3125rem;
+  font-weight: 700;
 }
 
 .hero-doctor-link {
-  align-self: flex-start;
   margin: 0;
   padding: 0;
   border: none;
   background: none;
-  color: light-dark(#2563eb, #60a5fa);
+  color: inherit;
   font: inherit;
-  font-weight: 600;
+  font-weight: inherit;
   text-decoration: underline;
   cursor: pointer;
 }
 
+.hero-specialty {
+  font-weight: 400;
+}
+
 .hero-date {
   margin: 0;
-  font-size: 0.875rem;
-  color: light-dark(#666, #aaa);
+  font-size: 0.9375rem;
+  color: rgb(255 255 255 / 90%);
 }
 
 .hero-notes {
-  margin: 0;
+  margin: 0.25rem 0 0;
   font-size: 1.0625rem;
   font-weight: 600;
 }
@@ -369,18 +587,6 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-}
-
-.next-appointment {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-}
-
-.next-appointment-date {
-  margin: 0;
-  font-size: 0.875rem;
-  color: light-dark(#666, #aaa);
 }
 
 .next-appointment-notes {
@@ -402,13 +608,14 @@ h1 {
   flex-direction: column;
   gap: 0.125rem;
   padding: 0.75rem;
-  border: 1px solid light-dark(#e5e7eb, #374151);
-  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-card-bg);
 }
 
 .appointment-date {
   font-size: 0.8125rem;
-  color: light-dark(#666, #aaa);
+  color: var(--color-text-dim);
 }
 
 .appointment-notes {
@@ -417,7 +624,7 @@ h1 {
 
 .appointment-location {
   font-size: 0.8125rem;
-  color: light-dark(#666, #aaa);
+  color: var(--color-text-dim);
 }
 
 .appointment-doctor-link {
@@ -426,7 +633,7 @@ h1 {
   padding: 0;
   border: none;
   background: none;
-  color: light-dark(#2563eb, #60a5fa);
+  color: var(--color-primary);
   font: inherit;
   font-weight: 600;
   text-decoration: underline;
@@ -444,8 +651,8 @@ h1 {
 
 .edit-appointment {
   padding: 0.4rem 0.75rem;
-  border: 1px solid light-dark(#d1d5db, #374151);
-  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
   background: none;
   color: inherit;
   font: inherit;
@@ -454,7 +661,8 @@ h1 {
 }
 
 .edit-appointment:hover {
-  background: light-dark(#f3f4f6, #1f2937);
+  background: var(--color-primary-dim);
+  border-color: var(--color-primary);
 }
 
 .appointment-status-field {
@@ -463,17 +671,46 @@ h1 {
   gap: 0.375rem;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: light-dark(#374151, #d1d5db);
+  color: var(--color-text-dim);
 }
 
 .appointment-status-field select {
   font: inherit;
   font-weight: normal;
-  padding: 0.3rem 0.5rem;
-  border: 1px solid light-dark(#d1d5db, #374151);
-  border-radius: 0.375rem;
-  background: light-dark(#fff, #111827);
+  padding: 0.3rem 0.625rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-card-bg);
   color: inherit;
+}
+
+/* Status pill colors — the shared --status-*-bg/-fg tokens (see :root),
+   applied to the live <select> itself (rather than a separate read-only
+   badge) so it still functions as the status control, not just a display.
+   Same mapping .badge-* uses for read-only status display elsewhere. */
+.appointment-status-field.status-planned select {
+  background: var(--status-planned-bg);
+  color: var(--status-planned-fg);
+  border-color: transparent;
+}
+
+.appointment-status-field.status-done select {
+  background: var(--status-done-bg);
+  color: var(--status-done-fg);
+  border-color: transparent;
+}
+
+.appointment-status-field.status-cancelled select {
+  background: var(--status-cancelled-bg);
+  color: var(--status-cancelled-fg);
+  border-color: transparent;
+  text-decoration: line-through;
+}
+
+.appointment-status-field.status-postponed select {
+  background: var(--status-postponed-bg);
+  color: var(--status-postponed-fg);
+  border-color: transparent;
 }
 
 /* Only rendered once an appointment is marked "done" (see AppointmentCard)
@@ -484,7 +721,7 @@ h1 {
   gap: 0.375rem;
   margin-block-start: 0.5rem;
   padding-block-start: 0.5rem;
-  border-block-start: 1px solid light-dark(#e5e7eb, #374151);
+  border-block-start: 1px solid var(--color-border);
 }
 
 .appointment-summary-field label {
@@ -493,16 +730,16 @@ h1 {
   gap: 0.375rem;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: light-dark(#374151, #d1d5db);
+  color: var(--color-text-dim);
 }
 
 .appointment-summary-field textarea {
   font: inherit;
   font-weight: normal;
   padding: 0.5rem 0.625rem;
-  border: 1px solid light-dark(#d1d5db, #374151);
-  border-radius: 0.5rem;
-  background: light-dark(#fff, #111827);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-card-bg);
   min-height: 4rem;
   resize: vertical;
 }
@@ -511,8 +748,8 @@ h1 {
   align-self: flex-start;
   padding: 0.4rem 0.75rem;
   border: none;
-  border-radius: 0.5rem;
-  background: #2563eb;
+  border-radius: var(--radius);
+  background: var(--color-primary);
   color: white;
   font: inherit;
   font-size: 0.8125rem;
@@ -528,8 +765,8 @@ h1 {
   display: inline-block;
   padding-inline: 1.5rem;
   padding-block: 0.75rem;
-  background: #2563eb;
+  background: var(--color-primary);
   color: white;
   text-decoration: none;
-  border-radius: 0.5rem;
+  border-radius: var(--radius);
 }

@@ -191,7 +191,20 @@ export function App() {
       const selectDoctor = (doctor: Doctor) => setState({ phase: "doctor-detail", session, doctors, doctor });
       const addDoctor = () => setState({ phase: "doctor-form", session, doctors });
       const backHome = () => setState({ phase: "home", session });
-      return <DoctorsScreen doctors={doctors} onSelectDoctor={selectDoctor} onAddDoctor={addDoctor} onBackHome={backHome} />;
+      // Same nextAppointmentForDoctor used by doctor-detail, just precomputed
+      // per doctor for the list's own "next appointment" preview (see
+      // DoctorsScreen — matches the prototype's directory-row preview).
+      const now = new Date();
+      const nextAppointments = new Map(doctors.map((d) => [d.id, nextAppointmentForDoctor(session.appointments, d.id, now)]));
+      return (
+        <DoctorsScreen
+          doctors={doctors}
+          nextAppointments={nextAppointments}
+          onSelectDoctor={selectDoctor}
+          onAddDoctor={addDoctor}
+          onBackHome={backHome}
+        />
+      );
     }
     case "doctor-detail": {
       const { session, doctors, doctor } = state;

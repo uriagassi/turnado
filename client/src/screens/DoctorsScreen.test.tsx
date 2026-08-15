@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DoctorsScreen } from "./DoctorsScreen";
-import type { Doctor } from "../api";
+import type { Appointment, Doctor } from "../api";
 
 function doctor(overrides: Partial<Doctor> = {}): Doctor {
   return {
@@ -15,16 +15,34 @@ function doctor(overrides: Partial<Doctor> = {}): Doctor {
   };
 }
 
-// onSelectDoctor/onAddDoctor are required by the component but irrelevant to
-// most of these tests — defaulting them here keeps each test's render call
-// focused on what it's actually asserting.
+// The callbacks and nextAppointments are all required by the component but
+// irrelevant to most of these tests — defaulting them here (as one options
+// object, so a test only names what it actually cares about) keeps each
+// render call focused on what it's asserting.
 function renderScreen(
   doctors: Doctor[],
-  onSelectDoctor: (doctor: Doctor) => void = () => {},
-  onAddDoctor: () => void = () => {},
-  onBackHome: () => void = () => {},
+  options: {
+    onSelectDoctor?: (doctor: Doctor) => void;
+    onAddDoctor?: () => void;
+    onBackHome?: () => void;
+    nextAppointments?: Map<number, Appointment | undefined>;
+  } = {},
 ) {
-  return render(<DoctorsScreen doctors={doctors} onSelectDoctor={onSelectDoctor} onAddDoctor={onAddDoctor} onBackHome={onBackHome} />);
+  const {
+    onSelectDoctor = () => {},
+    onAddDoctor = () => {},
+    onBackHome = () => {},
+    nextAppointments = new Map(),
+  } = options;
+  return render(
+    <DoctorsScreen
+      doctors={doctors}
+      nextAppointments={nextAppointments}
+      onSelectDoctor={onSelectDoctor}
+      onAddDoctor={onAddDoctor}
+      onBackHome={onBackHome}
+    />,
+  );
 }
 
 describe("DoctorsScreen", () => {
@@ -84,7 +102,7 @@ describe("DoctorsScreen", () => {
     const user = userEvent.setup();
     const onSelectDoctor = vi.fn();
     const selected = doctor({ id: 42, name: "Dr. Jane Smith" });
-    renderScreen([selected], onSelectDoctor);
+    renderScreen([selected], { onSelectDoctor });
 
     await user.click(screen.getByRole("button", { name: /Dr\. Jane Smith/ }));
 
@@ -95,7 +113,7 @@ describe("DoctorsScreen", () => {
   it("calls onAddDoctor when the add-doctor control is activated", async () => {
     const user = userEvent.setup();
     const onAddDoctor = vi.fn();
-    renderScreen([], () => {}, onAddDoctor);
+    renderScreen([], { onAddDoctor });
 
     await user.click(screen.getByRole("button", { name: "Add doctor" }));
 
@@ -105,10 +123,32 @@ describe("DoctorsScreen", () => {
   it("calls onBackHome when the home control is activated", async () => {
     const user = userEvent.setup();
     const onBackHome = vi.fn();
-    renderScreen([], () => {}, () => {}, onBackHome);
+    renderScreen([], { onBackHome });
 
     await user.click(screen.getByRole("button", { name: "Home" }));
 
     expect(onBackHome).toHaveBeenCalledOnce();
+  });
+
+  it("shows a doctor's next appointment when they have one, matching the directory-row prototype", () => {
+    const jane = doctor({ id: 1, name: "Dr. Jane Smith" });
+    const appointment: Appointment = {
+      id: 1,
+      doctorId: 1,
+      dateTime: "2026-09-01T10:00:00Z",
+      location: undefined,
+      notes: "Checkup",
+      status: "planned",
+      summary: null,
+    };
+    renderScreen([jane], { nextAppointments: new Map([[1, appointment]]) });
+
+    expect(screen.getByText(/Next:/)).toBeInTheDocument();
+  });
+
+  it("omits the next-appointment line when a doctor has none", () => {
+    renderScreen([doctor({ id: 1, name: "Dr. Jane Smith" })]);
+
+    expect(screen.queryByText(/Next:/)).not.toBeInTheDocument();
   });
 });

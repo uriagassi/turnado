@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import type { Doctor, HomeData } from "../api";
-import { formatDateTime } from "../formatDateTime";
+import { useRelativeDateTime } from "../hooks/useRelativeDateTime";
 
 export function HomeScreen({
   home,
@@ -22,7 +22,8 @@ export function HomeScreen({
   onViewHistory: () => void;
   onRefresh: () => void;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const formatRelative = useRelativeDateTime();
   const isEmpty = !home.nextAppointment && home.openItems.length === 0 && home.recentDocuments.length === 0;
   const heroDoctor = home.nextAppointment?.doctorId
     ? doctors.find((d) => d.id === home.nextAppointment?.doctorId)
@@ -38,15 +39,26 @@ export function HomeScreen({
       </div>
       {home.nextAppointment && (
         // Single-column, phone-legible per the AC — no side-by-side layout
-        // to squeeze on a narrow viewport.
+        // to squeeze on a narrow viewport. Structure follows the winning
+        // hero-card prototype (05-home-screen.html, variant A): a label,
+        // then doctor + specialty on one line, then a date/location meta
+        // line — see medical/.scratch/medical-app-spec/prototypes.
         <section className="hero-card">
           <h2>{t("home.hero.title")}</h2>
           {heroDoctor && (
-            <button type="button" className="hero-doctor-link" onClick={() => onSelectDoctor(heroDoctor)}>
-              {heroDoctor.name}
-            </button>
+            <p className="hero-doctor-line">
+              <button type="button" className="hero-doctor-link" onClick={() => onSelectDoctor(heroDoctor)}>
+                {heroDoctor.name}
+              </button>
+              {heroDoctor.specialty && <span className="hero-specialty"> — {heroDoctor.specialty}</span>}
+            </p>
           )}
-          <p className="hero-date">{formatDateTime(home.nextAppointment.dateTime, i18n.language)}</p>
+          <p className="hero-date">
+            {/* "Tomorrow, 10:00 AM" while the appointment is near, matching
+                the prototype's "מחר" treatment — see useRelativeDateTime. */}
+            {formatRelative(home.nextAppointment.dateTime)}
+            {home.nextAppointment.location ? ` · ${home.nextAppointment.location}` : ""}
+          </p>
           <p className="hero-notes">{home.nextAppointment.notes}</p>
         </section>
       )}
