@@ -9,6 +9,8 @@ import { Auth, IAuthHandler } from "./auth/Auth.js";
 import { allowListMiddleware, AllowList, AllowListConfig } from "./auth/AllowList.js";
 import { resolveLocale } from "./i18n/locale.js";
 import { Doctors, DoctorNotFoundError, InvalidDoctorInputError } from "./doctors/Doctors.js";
+import { Appointments, AppointmentNotFoundError, InvalidAppointmentInputError } from "./appointments/Appointments.js";
+import { selectHeroAppointment } from "./appointments/heroAppointment.js";
 
 export interface AppOptions {
   authHandler: IAuthHandler;
@@ -72,11 +74,13 @@ export function createApp(options: AppOptions): Express {
     });
   });
 
-  // Empty home screen: no appointments/tasks/documents exist yet at this
-  // stage of the build (issues #4/#5/#6 populate these).
-  app.get("/api/home", (_req, res) => {
-    res.json({ nextAppointment: null, openItems: [], recentDocuments: [] });
-  });
+  if (!db) {
+    // No shared DB configured: openItems/recentDocuments still await
+    // issues #5/#6, and there's nowhere to read an appointment from either.
+    app.get("/api/home", (_req, res) => {
+      res.json({ nextAppointment: null, openItems: [], recentDocuments: [] });
+    });
+  }
 
   if (db) {
     const doctors = new Doctors(db, doctorsParentTagName);
@@ -158,6 +162,54 @@ export function createApp(options: AppOptions): Express {
         next(err);
       });
     }
+
+    const appointments = new Appointments(db);
+    app.get("/api/appointments", (_req, res) => {
+      res.json(appointments.list());
+    });
+    app.post("/api/appointments", (req, res) => {
+      try {
+        res.status(201).json(appointments.create(req.body));
+      } catch (err) {
+        if (err instanceof InvalidAppointmentInputError) return res.status(400).json({ error: err.message });
+        throw err;
+      }
+    });
+    app.get("/api/appointments/:id", (req, res) => {
+      const appointment = appointments.get(Number(req.params.id));
+      if (!appointment) return res.status(404).json({ error: "Not found" });
+      res.json(appointment);
+    });
+    app.put("/api/appointments/:id", (req, res) => {
+      try {
+        res.json(appointments.update(Number(req.params.id), req.body));
+      } catch (err) {
+        if (err instanceof AppointmentNotFoundError) return res.status(404).json({ error: "Not found" });
+        if (err instanceof InvalidAppointmentInputError) return res.status(400).json({ error: err.message });
+        throw err;
+      }
+    });
+    app.put("/api/appointments/:id/status", (req, res) => {
+      try {
+        res.json(appointments.setStatus(Number(req.params.id), req.body.status));
+      } catch (err) {
+        if (err instanceof AppointmentNotFoundError) return res.status(404).json({ error: "Not found" });
+        throw err;
+      }
+    });
+    app.put("/api/appointments/:id/summary", (req, res) => {
+      try {
+        res.json(appointments.setSummary(Number(req.params.id), req.body.summary));
+      } catch (err) {
+        if (err instanceof AppointmentNotFoundError) return res.status(404).json({ error: "Not found" });
+        throw err;
+      }
+    });
+
+    // openItems/recentDocuments still await issues #5/#6.
+    app.get("/api/home", (_req, res) => {
+      res.json({ nextAppointment: selectHeroAppointment(appointments.list(), new Date()), openItems: [], recentDocuments: [] });
+    });
   }
 
   app.get("/api/logout", (req, res) => {

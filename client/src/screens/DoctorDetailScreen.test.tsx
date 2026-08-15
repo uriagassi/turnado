@@ -46,6 +46,23 @@ describe("DoctorDetailScreen", () => {
     expect(screen.getByText("No documents.")).toBeInTheDocument();
   });
 
+  it("shows the doctor's next upcoming appointment instead of the empty placeholder when there is one", () => {
+    const nextAppointment = {
+      id: 1,
+      doctorId: 1,
+      dateTime: "2026-09-01T10:00:00Z",
+      location: undefined,
+      notes: "Annual checkup",
+      status: "planned" as const,
+      summary: null,
+    };
+
+    render(<DoctorDetailScreen doctor={doctor()} nextAppointment={nextAppointment} onBack={() => {}} onEdit={() => {}} />);
+
+    expect(screen.getByText("Annual checkup")).toBeInTheDocument();
+    expect(screen.queryByText("No upcoming appointment.")).not.toBeInTheDocument();
+  });
+
   it("shows the doctor's avatar, same as the list view", () => {
     render(<DoctorDetailScreen doctor={doctor({ name: "Dr. Jane Smith", photoPath: null })} onBack={() => {}} onEdit={() => {}} />);
 
