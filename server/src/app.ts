@@ -158,7 +158,12 @@ export function createApp(options: AppOptions): Express {
           filename: (req, file, cb) => cb(null, `${req.params.id}-${Date.now()}${path.extname(file.originalname)}`),
         }),
         limits: { fileSize: 8 * 1024 * 1024 },
-        fileFilter: (_req, file, cb) => cb(null, file.mimetype.startsWith("image/")),
+        fileFilter: (_req, file, cb) => {
+          const isImage =
+            file.mimetype.startsWith("image/") ||
+            /\.(jpe?g|png|webp|gif|svg|avif|heic|bmp|tiff)$/i.test(file.originalname);
+          cb(null, isImage);
+        },
       });
       app.post("/api/doctors/:id/photo", upload.single("photo"), (req, res) => {
         // fileFilter rejecting the file and no file being attached at all
