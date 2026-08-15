@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import type { Doctor, DoctorInput } from "../api";
 import { DoctorAvatar } from "../components/DoctorAvatar";
 
+import { createPreviewUrl } from "../utils/filePreview";
+
 // The plain single-line text fields — every DoctorInput key except name
 // (which gets its own required-field validation/error slot below) and
 // notes (its own textarea), and photo, which isn't part of DoctorInput at
@@ -57,19 +59,31 @@ export function DoctorFormScreen({
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   useEffect(() => {
+    let isCancelled = false;
+    let urlToRevoke: string | null = null;
+
     if (!photo) {
       setPhotoPreview(null);
       return;
     }
-    if (typeof URL !== "undefined" && typeof URL.createObjectURL === "function") {
-      const objectUrl = URL.createObjectURL(photo);
-      setPhotoPreview(objectUrl);
-      return () => {
-        if (typeof URL.revokeObjectURL === "function") {
-          URL.revokeObjectURL(objectUrl);
+
+    createPreviewUrl(photo).then((url) => {
+      if (isCancelled) {
+        if (url && typeof URL !== "undefined" && typeof URL.revokeObjectURL === "function") {
+          URL.revokeObjectURL(url);
         }
-      };
-    }
+        return;
+      }
+      urlToRevoke = url;
+      setPhotoPreview(url);
+    });
+
+    return () => {
+      isCancelled = true;
+      if (urlToRevoke && typeof URL !== "undefined" && typeof URL.revokeObjectURL === "function") {
+        URL.revokeObjectURL(urlToRevoke);
+      }
+    };
   }, [photo]);
 
   const setField = <K extends keyof DoctorInput>(key: K, value: DoctorInput[K]) =>

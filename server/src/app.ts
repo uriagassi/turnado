@@ -97,8 +97,8 @@ export function createApp(options: AppOptions): Express {
       contentSecurityPolicy: {
         directives: {
           ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-          "object-src": ["'self'"],
-          "frame-src": ["'self'"],
+          "object-src": ["'self'", "blob:"],
+          "frame-src": ["'self'", "blob:"],
           "img-src": ["'self'", "data:", "blob:"],
         },
       },

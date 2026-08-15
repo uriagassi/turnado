@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Appointment, Doctor, DocumentType, Task, TaskType } from "../api";
+import { createPreviewUrl } from "../utils/filePreview";
 
 export const DOCUMENT_TYPES: DocumentType[] = [
   "test result",
@@ -62,19 +63,31 @@ export function DocumentFormScreen({
   const [filePreview, setFilePreview] = useState<string | null>(null);
 
   useEffect(() => {
+    let isCancelled = false;
+    let urlToRevoke: string | null = null;
+
     if (!file) {
       setFilePreview(null);
       return;
     }
-    if (typeof URL !== "undefined" && typeof URL.createObjectURL === "function") {
-      const objectUrl = URL.createObjectURL(file);
-      setFilePreview(objectUrl);
-      return () => {
-        if (typeof URL.revokeObjectURL === "function") {
-          URL.revokeObjectURL(objectUrl);
+
+    createPreviewUrl(file).then((url) => {
+      if (isCancelled) {
+        if (url && typeof URL !== "undefined" && typeof URL.revokeObjectURL === "function") {
+          URL.revokeObjectURL(url);
         }
-      };
-    }
+        return;
+      }
+      urlToRevoke = url;
+      setFilePreview(url);
+    });
+
+    return () => {
+      isCancelled = true;
+      if (urlToRevoke && typeof URL !== "undefined" && typeof URL.revokeObjectURL === "function") {
+        URL.revokeObjectURL(urlToRevoke);
+      }
+    };
   }, [file]);
 
   const [title, setTitle] = useState("");
