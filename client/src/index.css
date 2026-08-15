@@ -131,6 +131,14 @@ h1 {
   aspect-ratio: 3 / 4;
   min-width: 5rem;
   max-width: 8rem;
+  /* min/max-height mirror min/max-width via the same 3:4 ratio — without
+     these, align-items: stretch on .doctor-card keeps growing the box's
+     height to match a tall info column while only width gets capped,
+     silently breaking the declared ratio into something far taller than
+     wide. Matching both axes keeps it a true 3:4 profile-pic shape at
+     every size. */
+  min-height: calc(5rem * 4 / 3);
+  max-height: calc(8rem * 4 / 3);
   border-radius: 0.75rem;
   font-size: 1.5rem;
 }
