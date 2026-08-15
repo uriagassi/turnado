@@ -46,4 +46,23 @@ describe("DoctorsScreen", () => {
 
     expect(screen.getByText("No doctors yet — add one to get started.")).toBeInTheDocument();
   });
+
+  it("gives each initials avatar a distinct color instead of the same flat background", () => {
+    render(<DoctorsScreen doctors={[doctor({ id: 1, name: "Dr. Jane Smith" }), doctor({ id: 2, name: "Dr. Amy Lee" })]} />);
+
+    const [first, second] = screen.getAllByTestId("doctor-avatar").map((el) => el.style.backgroundColor);
+    expect(first).not.toBe("");
+    expect(second).not.toBe("");
+    expect(first).not.toBe(second);
+  });
+
+  it("gives the same doctor the same avatar color every render", () => {
+    const { unmount } = render(<DoctorsScreen doctors={[doctor({ id: 7, name: "Dr. Jane Smith" })]} />);
+    const first = screen.getByTestId("doctor-avatar").style.backgroundColor;
+    unmount();
+
+    render(<DoctorsScreen doctors={[doctor({ id: 7, name: "Dr. Jane Smith" })]} />);
+
+    expect(screen.getByTestId("doctor-avatar").style.backgroundColor).toBe(first);
+  });
 });
