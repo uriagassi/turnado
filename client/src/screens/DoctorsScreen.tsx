@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import type { Doctor } from "../api";
 import { DoctorAvatar } from "../components/DoctorAvatar";
 
-export function DoctorsScreen({ doctors, onSelectDoctor }: { doctors: Doctor[]; onSelectDoctor: (id: number) => void }) {
+export function DoctorsScreen({ doctors, onSelectDoctor }: { doctors: Doctor[]; onSelectDoctor: (doctor: Doctor) => void }) {
   const { t } = useTranslation();
 
   return (
@@ -17,7 +17,7 @@ export function DoctorsScreen({ doctors, onSelectDoctor }: { doctors: Doctor[]; 
               {/* The whole row is the "details" affordance (AC: "list cards
                   with a clear details affordance") — a button rather than a
                   link since there's no URL routing in this app (see App.tsx). */}
-              <button type="button" className="doctor-row" onClick={() => onSelectDoctor(doctor.id)}>
+              <button type="button" className="doctor-row" onClick={() => onSelectDoctor(doctor)}>
                 <DoctorAvatar doctor={doctor} />
                 <span className="doctor-name">{doctor.name}</span>
               </button>

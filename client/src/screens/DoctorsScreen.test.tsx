@@ -18,7 +18,7 @@ function doctor(overrides: Partial<Doctor> = {}): Doctor {
 // onSelectDoctor is required by the component but irrelevant to most of
 // these tests — defaulting it here keeps each test's render call focused on
 // what it's actually asserting.
-function renderScreen(doctors: Doctor[], onSelectDoctor: (id: number) => void = () => {}) {
+function renderScreen(doctors: Doctor[], onSelectDoctor: (doctor: Doctor) => void = () => {}) {
   return render(<DoctorsScreen doctors={doctors} onSelectDoctor={onSelectDoctor} />);
 }
 
@@ -75,14 +75,15 @@ describe("DoctorsScreen", () => {
     expect(screen.getByTestId("doctor-avatar").style.backgroundColor).toBe(first);
   });
 
-  it("calls onSelectDoctor with the doctor's id when a row's details affordance is activated", async () => {
+  it("calls onSelectDoctor with the doctor when a row's details affordance is activated", async () => {
     const user = userEvent.setup();
     const onSelectDoctor = vi.fn();
-    renderScreen([doctor({ id: 42, name: "Dr. Jane Smith" })], onSelectDoctor);
+    const selected = doctor({ id: 42, name: "Dr. Jane Smith" });
+    renderScreen([selected], onSelectDoctor);
 
     await user.click(screen.getByRole("button", { name: /Dr\. Jane Smith/ }));
 
     expect(onSelectDoctor).toHaveBeenCalledTimes(1);
-    expect(onSelectDoctor).toHaveBeenCalledWith(42);
+    expect(onSelectDoctor).toHaveBeenCalledWith(selected);
   });
 });
