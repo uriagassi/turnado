@@ -15,6 +15,7 @@ describe("DoctorFormScreen", () => {
     expect(screen.getByLabelText("Address")).toBeInTheDocument();
     expect(screen.getByLabelText("Email")).toBeInTheDocument();
     expect(screen.getByLabelText("Notes")).toBeInTheDocument();
+    expect(screen.getByLabelText("Photo")).toBeInTheDocument();
   });
 
   it("submits the filled-in fields as a DoctorInput", async () => {
@@ -32,15 +33,33 @@ describe("DoctorFormScreen", () => {
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(onSubmit).toHaveBeenCalledOnce();
-    expect(onSubmit).toHaveBeenCalledWith({
-      name: "Dr. Jane Smith",
-      specialty: "Cardiology",
-      clinic: "Riverside Clinic",
-      phone: "555-1234",
-      address: "12 Elm St",
-      email: "jane.smith@example.com",
-      notes: "Prefers morning appointments",
-    });
+    expect(onSubmit).toHaveBeenCalledWith(
+      {
+        name: "Dr. Jane Smith",
+        specialty: "Cardiology",
+        clinic: "Riverside Clinic",
+        phone: "555-1234",
+        address: "12 Elm St",
+        email: "jane.smith@example.com",
+        notes: "Prefers morning appointments",
+      },
+      null,
+    );
+  });
+
+  it("submits the selected photo file alongside the fields", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<DoctorFormScreen onSubmit={onSubmit} onCancel={() => {}} />);
+    const photo = new File(["fake-image-bytes"], "portrait.jpg", { type: "image/jpeg" });
+
+    await user.type(screen.getByLabelText("Name"), "Dr. Jane Smith");
+    await user.type(screen.getByLabelText("Notes"), "Prefers morning appointments");
+    await user.upload(screen.getByLabelText("Photo"), photo);
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(onSubmit).toHaveBeenCalledOnce();
+    expect(onSubmit.mock.calls[0][1]).toBe(photo);
   });
 
   it("blocks submission and shows an error when required fields are left blank", async () => {
@@ -77,6 +96,19 @@ describe("DoctorFormScreen", () => {
     expect(screen.getByLabelText("Address")).toHaveValue("12 Elm St");
     expect(screen.getByLabelText("Email")).toHaveValue("jane.smith@example.com");
     expect(screen.getByLabelText("Notes")).toHaveValue("Prefers morning appointments");
+  });
+
+  it("shows the doctor's current photo when editing one that already has a photo", () => {
+    const doctor: Doctor = {
+      id: 1,
+      name: "Dr. Jane Smith",
+      notes: "Prefers morning appointments",
+      photoPath: "1-1700000000000.jpg",
+    };
+
+    render(<DoctorFormScreen doctor={doctor} onSubmit={() => {}} onCancel={() => {}} />);
+
+    expect(screen.getByTestId("doctor-avatar").querySelector("img")).toHaveAttribute("src", "/photos/1-1700000000000.jpg");
   });
 
   it("calls onCancel when the cancel control is activated", async () => {

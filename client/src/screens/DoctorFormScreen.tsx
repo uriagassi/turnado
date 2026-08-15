@@ -1,6 +1,36 @@
 import { FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Doctor, DoctorInput } from "../api";
+import { DoctorAvatar } from "../components/DoctorAvatar";
+
+// The plain single-line text fields — every DoctorInput key except name and
+// notes, which get their own required-field validation/error slot below,
+// and photo, which isn't part of DoctorInput at all (see setPhoto/Doctors.ts
+// header comment on why it's a separate upload, not a create/update field).
+const OPTIONAL_TEXT_FIELDS = ["specialty", "clinic", "phone", "address", "email"] as const;
+
+type RequiredFieldErrors = { name?: string; notes?: string };
+
+function TextField({
+  label,
+  type = "text",
+  value,
+  onChange,
+}: {
+  label: string;
+  type?: "text" | "email";
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="form-field">
+      <label>
+        {label}
+        <input type={type} value={value} onChange={(e) => onChange(e.target.value)} />
+      </label>
+    </div>
+  );
+}
 
 export function DoctorFormScreen({
   doctor,
@@ -8,30 +38,36 @@ export function DoctorFormScreen({
   onCancel,
 }: {
   doctor?: Doctor;
-  onSubmit: (input: DoctorInput) => void;
+  onSubmit: (input: DoctorInput, photo: File | null) => void;
   onCancel: () => void;
 }) {
   const { t } = useTranslation();
-  const [name, setName] = useState(doctor?.name ?? "");
-  const [specialty, setSpecialty] = useState(doctor?.specialty ?? "");
-  const [clinic, setClinic] = useState(doctor?.clinic ?? "");
-  const [phone, setPhone] = useState(doctor?.phone ?? "");
-  const [address, setAddress] = useState(doctor?.address ?? "");
-  const [email, setEmail] = useState(doctor?.email ?? "");
-  const [notes, setNotes] = useState(doctor?.notes ?? "");
-  const [errors, setErrors] = useState<{ name?: string; notes?: string }>({});
+  const [formData, setFormData] = useState<DoctorInput>({
+    name: doctor?.name ?? "",
+    specialty: doctor?.specialty ?? "",
+    clinic: doctor?.clinic ?? "",
+    phone: doctor?.phone ?? "",
+    address: doctor?.address ?? "",
+    email: doctor?.email ?? "",
+    notes: doctor?.notes ?? "",
+  });
+  const [errors, setErrors] = useState<RequiredFieldErrors>({});
+  const [photo, setPhoto] = useState<File | null>(null);
+
+  const setField = <K extends keyof DoctorInput>(key: K, value: DoctorInput[K]) =>
+    setFormData((prev) => ({ ...prev, [key]: value }));
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     // Mirrors the server's own required-field check (Doctors.validate) so the
     // user sees the problem immediately instead of round-tripping to find out.
-    const nextErrors: { name?: string; notes?: string } = {};
-    if (!name.trim()) nextErrors.name = t("doctorForm.name.required");
-    if (!notes.trim()) nextErrors.notes = t("doctorForm.notes.required");
+    const nextErrors: RequiredFieldErrors = {};
+    if (!formData.name.trim()) nextErrors.name = t("doctorForm.name.required");
+    if (!formData.notes.trim()) nextErrors.notes = t("doctorForm.notes.required");
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    onSubmit({ name, specialty, clinic, phone, address, email, notes });
+    onSubmit(formData, photo);
   };
 
   return (
@@ -40,46 +76,40 @@ export function DoctorFormScreen({
         <div className="form-field">
           <label>
             {t("doctorForm.name.label")}
-            <input type="text" name="name" value={name} onChange={(e) => setName(e.target.value)} />
+            <input type="text" value={formData.name} onChange={(e) => setField("name", e.target.value)} />
           </label>
           {errors.name && <p className="field-error">{errors.name}</p>}
         </div>
-        <div className="form-field">
-          <label>
-            {t("doctorForm.specialty.label")}
-            <input type="text" name="specialty" value={specialty} onChange={(e) => setSpecialty(e.target.value)} />
-          </label>
-        </div>
-        <div className="form-field">
-          <label>
-            {t("doctorForm.clinic.label")}
-            <input type="text" name="clinic" value={clinic} onChange={(e) => setClinic(e.target.value)} />
-          </label>
-        </div>
-        <div className="form-field">
-          <label>
-            {t("doctorForm.phone.label")}
-            <input type="text" name="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
-          </label>
-        </div>
-        <div className="form-field">
-          <label>
-            {t("doctorForm.address.label")}
-            <input type="text" name="address" value={address} onChange={(e) => setAddress(e.target.value)} />
-          </label>
-        </div>
-        <div className="form-field">
-          <label>
-            {t("doctorForm.email.label")}
-            <input type="email" name="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </label>
-        </div>
+        {OPTIONAL_TEXT_FIELDS.map((field) => (
+          <TextField
+            key={field}
+            label={t(`doctorForm.${field}.label`)}
+            type={field === "email" ? "email" : "text"}
+            value={formData[field] ?? ""}
+            onChange={(value) => setField(field, value)}
+          />
+        ))}
         <div className="form-field">
           <label>
             {t("doctorForm.notes.label")}
-            <textarea name="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <textarea value={formData.notes} onChange={(e) => setField("notes", e.target.value)} />
           </label>
           {errors.notes && <p className="field-error">{errors.notes}</p>}
+        </div>
+        <div className="form-field">
+          {doctor && (
+            // Shows what's already on file (photo or the initials fallback)
+            // so the user knows what a blank file input would leave in
+            // place, before deciding whether to replace it.
+            <div className="current-photo">
+              <span>{t("doctorForm.currentPhoto.label")}</span>
+              <DoctorAvatar doctor={doctor} />
+            </div>
+          )}
+          <label>
+            {t("doctorForm.photo.label")}
+            <input type="file" accept="image/*" onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} />
+          </label>
         </div>
         <div className="form-actions">
           <button type="submit" className="save-doctor">

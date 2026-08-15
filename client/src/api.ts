@@ -82,3 +82,11 @@ export async function updateDoctor(id: number, input: DoctorInput): Promise<Doct
   if (!res.ok) throw new Error(`Unexpected PUT /api/doctors/${id} status ${res.status}`);
   return res.json();
 }
+
+export async function uploadDoctorPhoto(id: number, photo: File): Promise<Doctor> {
+  const body = new FormData();
+  body.append("photo", photo);
+  const res = await fetch(`/api/doctors/${id}/photo`, { method: "POST", credentials: "same-origin", body });
+  if (!res.ok) throw new Error(`Unexpected POST /api/doctors/${id}/photo status ${res.status}`);
+  return res.json();
+}

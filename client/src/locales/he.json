@@ -20,6 +20,8 @@
   "doctorForm.address.label": "כתובת",
   "doctorForm.email.label": "אימייל",
   "doctorForm.notes.label": "הערות",
+  "doctorForm.photo.label": "תמונה",
+  "doctorForm.currentPhoto.label": "התמונה הנוכחית",
   "doctorForm.save": "שמירה",
   "doctorForm.cancel": "ביטול",
   "doctorForm.name.required": "שם הוא שדה חובה.",

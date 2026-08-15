@@ -8,6 +8,7 @@ import {
   fetchDoctors,
   createDoctor,
   updateDoctor,
+  uploadDoctorPhoto,
   AuthClientData,
   Doctor,
   DoctorInput,
@@ -22,6 +23,25 @@ import { DoctorDetailScreen } from "./screens/DoctorDetailScreen";
 import { DoctorFormScreen } from "./screens/DoctorFormScreen";
 
 type Session = { user: UserInfo; home: HomeData };
+
+/**
+ * Creates a new Doctor, or updates an existing one when `doctor` is set —
+ * the same create-vs-edit branch DoctorFormScreen itself renders around.
+ * Uploading a selected photo is a separate request (see uploadDoctorPhoto /
+ * the server's own POST /api/doctors/:id/photo route) since photoPath isn't
+ * part of DoctorInput — it needs the id this call itself produces on
+ * create, so it always runs after, never merged into the same request.
+ */
+async function saveDoctor(doctor: Doctor | undefined, input: DoctorInput, photo: File | null): Promise<Doctor> {
+  const saved = doctor ? await updateDoctor(doctor.id, input) : await createDoctor(input);
+  return photo ? uploadDoctorPhoto(saved.id, photo) : saved;
+}
+
+/** Folds a just-saved Doctor into the in-memory list: replaces it in place on edit, or inserts it in name order on create (list order matches the server's own `ORDER BY name`, see Doctors.ts). */
+function withSavedDoctor(doctors: Doctor[], wasEdit: boolean, saved: Doctor): Doctor[] {
+  if (wasEdit) return doctors.map((d) => (d.id === saved.id ? saved : d));
+  return [...doctors, saved].sort((a, b) => a.name.localeCompare(b.name));
+}
 
 type AppState =
   | { phase: "loading" }
@@ -97,11 +117,9 @@ export function App() {
         doctor
           ? setState({ phase: "doctor-detail", session, doctors, doctor })
           : setState({ phase: "doctors", session, doctors });
-      const submit = async (input: DoctorInput) => {
-        const saved = doctor ? await updateDoctor(doctor.id, input) : await createDoctor(input);
-        const nextDoctors = doctor
-          ? doctors.map((d) => (d.id === saved.id ? saved : d))
-          : [...doctors, saved].sort((a, b) => a.name.localeCompare(b.name));
+      const submit = async (input: DoctorInput, photo: File | null) => {
+        const saved = await saveDoctor(doctor, input, photo);
+        const nextDoctors = withSavedDoctor(doctors, doctor !== undefined, saved);
         setState({ phase: "doctor-detail", session, doctors: nextDoctors, doctor: saved });
       };
       return <DoctorFormScreen doctor={doctor} onSubmit={submit} onCancel={cancel} />;

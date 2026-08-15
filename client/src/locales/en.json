@@ -20,6 +20,8 @@
   "doctorForm.address.label": "Address",
   "doctorForm.email.label": "Email",
   "doctorForm.notes.label": "Notes",
+  "doctorForm.photo.label": "Photo",
+  "doctorForm.currentPhoto.label": "Current photo",
   "doctorForm.save": "Save",
   "doctorForm.cancel": "Cancel",
   "doctorForm.name.required": "Name is required.",
