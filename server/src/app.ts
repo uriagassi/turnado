@@ -11,6 +11,7 @@ import { resolveLocale } from "./i18n/locale.js";
 import { Doctors, DoctorNotFoundError, InvalidDoctorInputError } from "./doctors/Doctors.js";
 import { Appointments, AppointmentNotFoundError, InvalidAppointmentInputError } from "./appointments/Appointments.js";
 import { selectHeroAppointment } from "./appointments/heroAppointment.js";
+import { Tasks, TaskNotFoundError, InvalidTaskInputError, TaskStatus } from "./tasks/Tasks.js";
 
 export interface AppOptions {
   authHandler: IAuthHandler;
@@ -206,9 +207,67 @@ export function createApp(options: AppOptions): Express {
       }
     });
 
-    // openItems/recentDocuments still await issues #5/#6.
+    const tasks = new Tasks(db);
+    app.get("/api/tasks", (req, res) => {
+      const doctorId = req.query.doctorId !== undefined ? Number(req.query.doctorId) : undefined;
+      const status = req.query.status as TaskStatus | undefined;
+      res.json(tasks.list({ doctorId, status }));
+    });
+    app.post("/api/tasks", (req, res) => {
+      try {
+        res.status(201).json(tasks.create(req.body));
+      } catch (err) {
+        if (err instanceof InvalidTaskInputError) return res.status(400).json({ error: err.message });
+        throw err;
+      }
+    });
+    app.get("/api/tasks/:id", (req, res) => {
+      const task = tasks.get(Number(req.params.id));
+      if (!task) return res.status(404).json({ error: "Not found" });
+      res.json(task);
+    });
+    app.put("/api/tasks/:id", (req, res) => {
+      try {
+        res.json(tasks.update(Number(req.params.id), req.body));
+      } catch (err) {
+        if (err instanceof TaskNotFoundError) return res.status(404).json({ error: "Not found" });
+        if (err instanceof InvalidTaskInputError) return res.status(400).json({ error: err.message });
+        throw err;
+      }
+    });
+    app.put("/api/tasks/:id/status", (req, res) => {
+      try {
+        res.json(tasks.setStatus(Number(req.params.id), req.body.status));
+      } catch (err) {
+        if (err instanceof TaskNotFoundError) return res.status(404).json({ error: "Not found" });
+        if (err instanceof InvalidTaskInputError) return res.status(400).json({ error: err.message });
+        throw err;
+      }
+    });
+    app.put("/api/tasks/:id/pending-appointment", (req, res) => {
+      try {
+        const taskId = Number(req.params.id);
+        const pendingAppointmentId =
+          req.body.pendingAppointmentId !== undefined && req.body.pendingAppointmentId !== null
+            ? Number(req.body.pendingAppointmentId)
+            : null;
+
+        const appt = pendingAppointmentId ? appointments.get(pendingAppointmentId) ?? null : null;
+        res.json(tasks.resolveWithAppointment(taskId, appt));
+      } catch (err) {
+        if (err instanceof TaskNotFoundError) return res.status(404).json({ error: "Not found" });
+        throw err;
+      }
+    });
+
+    // recentDocuments still awaits issue #6.
     app.get("/api/home", (_req, res) => {
-      res.json({ nextAppointment: selectHeroAppointment(appointments.list(), new Date()), openItems: [], recentDocuments: [] });
+      const openItems = tasks.list().filter((t) => t.status !== "done");
+      res.json({
+        nextAppointment: selectHeroAppointment(appointments.list(), new Date()),
+        openItems,
+        recentDocuments: [],
+      });
     });
   }
 

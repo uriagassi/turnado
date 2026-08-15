@@ -136,4 +136,103 @@ describe("HomeScreen", () => {
 
     expect(screen.queryByRole("button", { name: /Dr\./ })).not.toBeInTheDocument();
   });
+
+  it("renders open items in the feed with status badges and triggers onSelectTask", async () => {
+    const user = userEvent.setup();
+    const onSelectTask = vi.fn();
+    const home: HomeData = {
+      nextAppointment: null,
+      openItems: [
+        {
+          id: 101,
+          type: "form_17",
+          title: "Get Form 17 for Neurology",
+          status: "in-progress",
+          dueDate: "2026-09-01",
+          doctorId: null,
+          sourceAppointmentId: null,
+          pendingAppointmentId: null,
+          requiresAdvanceScheduling: false,
+          recurrenceWindow: null,
+          approximateDateWindow: null,
+          institution: "Assuta",
+          department: "Neurology",
+          healthFund: "Maccabi",
+          codeNumber: null,
+          codeName: null,
+          issuingBody: null,
+          purpose: null,
+          createdAt: "2026-08-01",
+          updatedAt: "2026-08-01",
+        },
+      ],
+      recentDocuments: [],
+    };
+
+    render(<HomeScreen home={home} {...noopProps} onSelectTask={onSelectTask} />);
+
+    expect(screen.getByText("Get Form 17 for Neurology")).toBeInTheDocument();
+    expect(screen.getByText("In progress")).toBeInTheDocument();
+
+    await user.click(screen.getByText("Get Form 17 for Neurology"));
+    expect(onSelectTask).toHaveBeenCalledWith(home.openItems[0]);
+  });
+
+  it("displays pending-appointment tag on an open item linked to an appointment", () => {
+    const home: HomeData = {
+      nextAppointment: null,
+      openItems: [
+        {
+          id: 102,
+          type: "test",
+          title: "Blood test (CBC)",
+          status: "open",
+          dueDate: null,
+          doctorId: null,
+          sourceAppointmentId: null,
+          pendingAppointmentId: 55,
+          requiresAdvanceScheduling: false,
+          recurrenceWindow: null,
+          approximateDateWindow: "Late August",
+          institution: null,
+          department: null,
+          healthFund: null,
+          codeNumber: null,
+          codeName: null,
+          issuingBody: null,
+          purpose: null,
+          createdAt: "2026-08-01",
+          updatedAt: "2026-08-01",
+        },
+      ],
+      recentDocuments: [],
+    };
+
+    const appointments = [
+      {
+        id: 55,
+        doctorId: 7,
+        dateTime: "2026-09-05T10:00:00Z",
+        location: "Assuta",
+        notes: "Neurologist visit",
+        status: "planned" as const,
+        summary: null,
+      },
+    ];
+    const doctors: Doctor[] = [
+      { id: 7, name: "Dr. Jane Smith", specialty: "Neurology", photoPath: null },
+    ];
+
+    render(
+      <HomeScreen
+        home={home}
+        {...noopProps}
+        appointments={appointments}
+        doctors={doctors}
+      />
+    );
+
+    expect(screen.getByText("Blood test (CBC)")).toBeInTheDocument();
+    expect(screen.getByText(/Dr\. Jane Smith|Neurologist visit/)).toBeInTheDocument();
+  });
 });
