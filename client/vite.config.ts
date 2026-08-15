@@ -10,6 +10,10 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   server: {
+    // Respect an assigned PORT (e.g. from the dev harness's autoPort) so the
+    // client doesn't collide with another instance already on the default
+    // 5173 — falls back to Vite's usual default when PORT isn't set.
+    port: process.env.PORT ? Number(process.env.PORT) : 5173,
     proxy: {
       "/api": "http://localhost:4001",
       "/auth": "http://localhost:4001",

@@ -5,13 +5,19 @@ import { useRelativeDateTime } from "../hooks/useRelativeDateTime";
 
 export function DoctorDetailScreen({
   doctor,
-  nextAppointment,
+  appointments = [],
   onBack,
   onEdit,
 }: {
   doctor: Doctor;
-  /** This doctor's soonest upcoming appointment, if any — populated by App.tsx via selectHeroAppointment-style filtering over this doctor's appointments (see issue #4 AC: doctor detail shows their next appointment). */
-  nextAppointment?: Appointment;
+  /**
+   * This doctor's still-upcoming planned appointments, soonest first —
+   * populated by App.tsx via upcomingAppointmentsForDoctor (the client-side
+   * counterpart of the server's selectUpcomingAppointments). Matches the
+   * accepted prototype 06-doctor-view.html's plural "תורים" heading, which
+   * lists every upcoming appointment rather than just the soonest one.
+   */
+  appointments?: Appointment[];
   onBack: () => void;
   onEdit: () => void;
 }) {
@@ -58,18 +64,23 @@ export function DoctorDetailScreen({
 
       <section>
         <h2 className="section-title">{t("doctorDetail.appointment.title")}</h2>
-        {nextAppointment ? (
-          // Card + status badge, matching the prototype's `.item-row` —
-          // same treatment as the appointments/tasks/documents rows in its
-          // detail view (06-doctor-view.html).
-          <div className="card item-row">
-            <div>
-              <p className="next-appointment-notes">{nextAppointment.notes}</p>
-              <p className="item-row-sub">{formatRelative(nextAppointment.dateTime)}</p>
-            </div>
-            <span className={`badge badge-${nextAppointment.status}`}>
-              {t(`appointmentCard.status.${nextAppointment.status}`)}
-            </span>
+        {appointments.length > 0 ? (
+          // Card + status badge per appointment, matching the prototype's
+          // `.item-row` — same treatment as the tasks/documents rows in its
+          // detail view (06-doctor-view.html), one row per upcoming
+          // appointment rather than just the soonest.
+          <div className="item-row-list">
+            {appointments.map((appointment) => (
+              <div className="card item-row" key={appointment.id}>
+                <div>
+                  <p className="item-row-notes">{appointment.notes}</p>
+                  <p className="item-row-sub">{formatRelative(appointment.dateTime)}</p>
+                </div>
+                <span className={`badge badge-${appointment.status}`}>
+                  {t(`appointmentCard.status.${appointment.status}`)}
+                </span>
+              </div>
+            ))}
           </div>
         ) : (
           <p className="section-empty">{t("doctorDetail.appointment.empty")}</p>

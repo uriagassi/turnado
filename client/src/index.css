@@ -258,13 +258,21 @@ h1 {
   margin-block-start: 0.5rem;
 }
 
-/* One line item inside a detail section (next appointment, open items,
+/* One line item inside a detail section (appointments, open items,
    documents) — matches the prototype's `.item-row`: a card with the name/
    sub on one side and a status badge on the other. */
 .item-row {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* Stacks multiple .item-row cards within one section (e.g. every upcoming
+   appointment for a doctor) with breathing room between them. */
+.item-row-list {
+  display: flex;
+  flex-direction: column;
   gap: 0.5rem;
 }
 
@@ -589,7 +597,7 @@ html[dir="rtl"] .back-link-arrow {
   gap: 0.75rem;
 }
 
-.next-appointment-notes {
+.item-row-notes {
   margin: 0;
   font-weight: 600;
 }
