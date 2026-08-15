@@ -120,4 +120,42 @@ describe("DoctorDetailScreen", () => {
 
     expect(onEdit).toHaveBeenCalledOnce();
   });
+
+  it("shows related open items for the doctor when provided", () => {
+    const task = {
+      id: 10,
+      type: "form_17" as const,
+      title: "Get Form 17 for Cardiology",
+      status: "open" as const,
+      dueDate: "2026-09-01",
+      doctorId: 1,
+      sourceAppointmentId: null,
+      pendingAppointmentId: null,
+      requiresAdvanceScheduling: false,
+      recurrenceWindow: null,
+      approximateDateWindow: null,
+      institution: "Riverside",
+      department: "Cardiology",
+      healthFund: "Maccabi",
+      codeNumber: null,
+      codeName: null,
+      issuingBody: null,
+      purpose: null,
+      createdAt: "2026-08-01",
+      updatedAt: "2026-08-01",
+    };
+
+    render(
+      <DoctorDetailScreen
+        doctor={doctor()}
+        openItems={[task]}
+        onBack={() => {}}
+        onEdit={() => {}}
+      />
+    );
+
+    expect(screen.getByText("Get Form 17 for Cardiology")).toBeInTheDocument();
+    expect(screen.queryByText("No open items.")).not.toBeInTheDocument();
+  });
 });
+

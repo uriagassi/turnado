@@ -59,15 +59,113 @@ export interface Appointment extends AppointmentInput {
   summary: string | null;
 }
 
+export type TaskType = "test" | "doctor_visit" | "form_17" | "general_approval";
+export type TaskStatus = "open" | "in-progress" | "done";
+
+export interface TaskInput {
+  type: TaskType;
+  title: string;
+  status?: TaskStatus;
+  dueDate?: string | null;
+  doctorId?: number | null;
+  sourceAppointmentId?: number | null;
+  pendingAppointmentId?: number | null;
+  requiresAdvanceScheduling?: boolean;
+  recurrenceWindow?: string | null;
+  approximateDateWindow?: string | null;
+  institution?: string | null;
+  department?: string | null;
+  healthFund?: string | null;
+  codeNumber?: string | null;
+  codeName?: string | null;
+  issuingBody?: string | null;
+  purpose?: string | null;
+}
+
+export interface Task extends TaskInput {
+  id: number;
+  status: TaskStatus;
+  doctorId: number | null;
+  dueDate: string | null;
+  sourceAppointmentId: number | null;
+  pendingAppointmentId: number | null;
+  requiresAdvanceScheduling: boolean;
+  recurrenceWindow: string | null;
+  approximateDateWindow: string | null;
+  institution: string | null;
+  department: string | null;
+  healthFund: string | null;
+  codeNumber: string | null;
+  codeName: string | null;
+  issuingBody: string | null;
+  purpose: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface HomeData {
   nextAppointment: Appointment | null;
-  openItems: unknown[];
+  openItems: Task[];
   recentDocuments: unknown[];
 }
 
 export async function fetchHome(): Promise<HomeData> {
   const res = await fetch("/api/home", { credentials: "same-origin" });
   if (!res.ok) throw new Error(`Unexpected /api/home status ${res.status}`);
+  return res.json();
+}
+
+export async function fetchTasks(filter?: { doctorId?: number; status?: TaskStatus }): Promise<Task[]> {
+  const params = new URLSearchParams();
+  if (filter?.doctorId !== undefined) params.set("doctorId", String(filter.doctorId));
+  if (filter?.status !== undefined) params.set("status", filter.status);
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  const res = await fetch(`/api/tasks${qs}`, { credentials: "same-origin" });
+  if (!res.ok) throw new Error(`Unexpected /api/tasks status ${res.status}`);
+  return res.json();
+}
+
+export async function createTask(input: TaskInput): Promise<Task> {
+  const res = await fetch("/api/tasks", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(`Unexpected POST /api/tasks status ${res.status}`);
+  return res.json();
+}
+
+export async function updateTask(id: number, input: TaskInput): Promise<Task> {
+  const res = await fetch(`/api/tasks/${id}`, {
+    method: "PUT",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(`Unexpected PUT /api/tasks/${id} status ${res.status}`);
+  return res.json();
+}
+
+export async function setTaskStatus(id: number, status: TaskStatus): Promise<Task> {
+  const res = await fetch(`/api/tasks/${id}/status`, {
+    method: "PUT",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) throw new Error(`Unexpected PUT /api/tasks/${id}/status status ${res.status}`);
+  return res.json();
+}
+
+export async function setTaskPendingAppointment(id: number, pendingAppointmentId: number | null): Promise<Task> {
+  const res = await fetch(`/api/tasks/${id}/pending-appointment`, {
+    method: "PUT",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pendingAppointmentId }),
+  });
+  if (!res.ok) throw new Error(`Unexpected PUT /api/tasks/${id}/pending-appointment status ${res.status}`);
   return res.json();
 }
 
