@@ -277,7 +277,7 @@ export function App() {
       const { session } = state;
       const openDoctors = async () => {
         const doctors = await fetchDoctors();
-        setState({ phase: "doctors", session, doctors });
+        setState({ phase: "doctors", session: { ...session, doctors }, doctors });
       };
       const selectDoctor = (doctor: Doctor) => setState({ phase: "doctor-detail", session, doctors: session.doctors, doctor });
       const addAppointment = () => setState({ phase: "appointment-form", session, returnTo: "home" });
@@ -437,8 +437,9 @@ export function App() {
           : setState({ phase: "doctors", session, doctors });
       const submit = async (input: DoctorInput, photo: File | null) => {
         const saved = await saveDoctor(doctor, input, photo);
-        const nextDoctors = withSavedDoctor(doctors, doctor !== undefined, saved);
-        setState({ phase: "doctor-detail", session, doctors: nextDoctors, doctor: saved });
+        const nextDoctors = withSavedDoctor(session.doctors, doctor !== undefined, saved);
+        const nextSession = { ...session, doctors: nextDoctors };
+        setState({ phase: "doctor-detail", session: nextSession, doctors: nextDoctors, doctor: saved });
       };
       return <DoctorFormScreen doctor={doctor} onSubmit={submit} onCancel={cancel} />;
     }

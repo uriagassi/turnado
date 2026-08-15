@@ -5,8 +5,15 @@ export function DocumentPreview({ file }: { file: UploadedFile }) {
   const { t } = useTranslation();
   const attachmentUrl = `/api/body/attachments/${file.uniqueFilename}`;
 
-  const isImage = file.mime.startsWith("image/");
-  const isPdf = file.mime.includes("pdf");
+  const isImage =
+    file.mime?.toLowerCase().startsWith("image/") ||
+    /\.(jpe?g|png|webp|gif|svg|avif|heic|bmp|tiff)$/i.test(file.fileName || "") ||
+    /\.(jpe?g|png|webp|gif|svg|avif|heic|bmp|tiff)$/i.test(file.uniqueFilename || "");
+
+  const isPdf =
+    file.mime?.toLowerCase().includes("pdf") ||
+    (file.fileName || "").toLowerCase().endsWith(".pdf") ||
+    (file.uniqueFilename || "").toLowerCase().endsWith(".pdf");
 
   return (
     <div className="document-preview">
