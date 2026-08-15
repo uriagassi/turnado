@@ -15,11 +15,15 @@ function doctor(overrides: Partial<Doctor> = {}): Doctor {
   };
 }
 
-// onSelectDoctor is required by the component but irrelevant to most of
-// these tests — defaulting it here keeps each test's render call focused on
-// what it's actually asserting.
-function renderScreen(doctors: Doctor[], onSelectDoctor: (doctor: Doctor) => void = () => {}) {
-  return render(<DoctorsScreen doctors={doctors} onSelectDoctor={onSelectDoctor} />);
+// onSelectDoctor/onAddDoctor are required by the component but irrelevant to
+// most of these tests — defaulting them here keeps each test's render call
+// focused on what it's actually asserting.
+function renderScreen(
+  doctors: Doctor[],
+  onSelectDoctor: (doctor: Doctor) => void = () => {},
+  onAddDoctor: () => void = () => {},
+) {
+  return render(<DoctorsScreen doctors={doctors} onSelectDoctor={onSelectDoctor} onAddDoctor={onAddDoctor} />);
 }
 
 describe("DoctorsScreen", () => {
@@ -85,5 +89,15 @@ describe("DoctorsScreen", () => {
 
     expect(onSelectDoctor).toHaveBeenCalledTimes(1);
     expect(onSelectDoctor).toHaveBeenCalledWith(selected);
+  });
+
+  it("calls onAddDoctor when the add-doctor control is activated", async () => {
+    const user = userEvent.setup();
+    const onAddDoctor = vi.fn();
+    renderScreen([], () => {}, onAddDoctor);
+
+    await user.click(screen.getByRole("button", { name: "Add doctor" }));
+
+    expect(onAddDoctor).toHaveBeenCalledOnce();
   });
 });

@@ -2,12 +2,23 @@ import { useTranslation } from "react-i18next";
 import type { Doctor } from "../api";
 import { DoctorAvatar } from "../components/DoctorAvatar";
 
-export function DoctorsScreen({ doctors, onSelectDoctor }: { doctors: Doctor[]; onSelectDoctor: (doctor: Doctor) => void }) {
+export function DoctorsScreen({
+  doctors,
+  onSelectDoctor,
+  onAddDoctor,
+}: {
+  doctors: Doctor[];
+  onSelectDoctor: (doctor: Doctor) => void;
+  onAddDoctor: () => void;
+}) {
   const { t } = useTranslation();
 
   return (
     <main className="screen doctors-screen">
       <h1>{t("doctors.title")}</h1>
+      <button type="button" className="add-doctor" onClick={onAddDoctor}>
+        {t("doctors.add")}
+      </button>
       {doctors.length === 0 ? (
         <p className="empty-state">{t("doctors.empty")}</p>
       ) : (

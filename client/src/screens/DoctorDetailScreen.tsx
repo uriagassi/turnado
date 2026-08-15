@@ -2,7 +2,15 @@ import { useTranslation } from "react-i18next";
 import type { Doctor } from "../api";
 import { DoctorAvatar } from "../components/DoctorAvatar";
 
-export function DoctorDetailScreen({ doctor, onBack }: { doctor: Doctor; onBack: () => void }) {
+export function DoctorDetailScreen({
+  doctor,
+  onBack,
+  onEdit,
+}: {
+  doctor: Doctor;
+  onBack: () => void;
+  onEdit: () => void;
+}) {
   const { t } = useTranslation();
 
   return (
@@ -18,7 +26,10 @@ export function DoctorDetailScreen({ doctor, onBack }: { doctor: Doctor; onBack:
         </div>
         <DoctorAvatar doctor={doctor} />
       </div>
-      <p>{doctor.notes}</p>
+      <button type="button" className="edit-doctor" onClick={onEdit}>
+        {t("doctorDetail.edit")}
+      </button>
+      {doctor.notes && <p className="doctor-notes">{doctor.notes}</p>}
 
       <section>
         <h2>{t("doctorDetail.appointment.title")}</h2>
