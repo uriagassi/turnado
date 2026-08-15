@@ -1,5 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { DoctorsScreen } from "./DoctorsScreen";
 import type { Doctor } from "../api";
 
@@ -8,21 +9,29 @@ function doctor(overrides: Partial<Doctor> = {}): Doctor {
     id: 1,
     name: "Dr. Jane Smith",
     specialty: "Cardiology",
+    notes: "Family physician",
     photoPath: null,
     ...overrides,
   };
 }
 
+// onSelectDoctor is required by the component but irrelevant to most of
+// these tests — defaulting it here keeps each test's render call focused on
+// what it's actually asserting.
+function renderScreen(doctors: Doctor[], onSelectDoctor: (id: number) => void = () => {}) {
+  return render(<DoctorsScreen doctors={doctors} onSelectDoctor={onSelectDoctor} />);
+}
+
 describe("DoctorsScreen", () => {
   it("renders each doctor's name", () => {
-    render(<DoctorsScreen doctors={[doctor({ id: 1, name: "Dr. Jane Smith" }), doctor({ id: 2, name: "Dr. Amy Lee" })]} />);
+    renderScreen([doctor({ id: 1, name: "Dr. Jane Smith" }), doctor({ id: 2, name: "Dr. Amy Lee" })]);
 
     expect(screen.getByText("Dr. Jane Smith")).toBeInTheDocument();
     expect(screen.getByText("Dr. Amy Lee")).toBeInTheDocument();
   });
 
   it("shows a colored-initials avatar instead of a blank placeholder when a doctor has no photo", () => {
-    render(<DoctorsScreen doctors={[doctor({ name: "Dr. Jane Smith", photoPath: null })]} />);
+    renderScreen([doctor({ name: "Dr. Jane Smith", photoPath: null })]);
 
     const avatar = screen.getByTestId("doctor-avatar");
     expect(avatar).toHaveTextContent("JS");
@@ -32,7 +41,7 @@ describe("DoctorsScreen", () => {
   it("shows the doctor's photo instead of initials when photoPath is set", () => {
     // photoPath is the bare filename multer wrote under the server's
     // photosDir (see server/src/app.ts) — the client builds the /photos URL.
-    render(<DoctorsScreen doctors={[doctor({ name: "Dr. Jane Smith", photoPath: "1-1700000000000.jpg" })]} />);
+    renderScreen([doctor({ name: "Dr. Jane Smith", photoPath: "1-1700000000000.jpg" })]);
 
     const avatar = screen.getByTestId("doctor-avatar");
     const img = avatar.querySelector("img");
@@ -42,13 +51,13 @@ describe("DoctorsScreen", () => {
   });
 
   it("shows an empty state when there are no doctors yet", () => {
-    render(<DoctorsScreen doctors={[]} />);
+    renderScreen([]);
 
     expect(screen.getByText("No doctors yet — add one to get started.")).toBeInTheDocument();
   });
 
   it("gives each initials avatar a distinct color instead of the same flat background", () => {
-    render(<DoctorsScreen doctors={[doctor({ id: 1, name: "Dr. Jane Smith" }), doctor({ id: 2, name: "Dr. Amy Lee" })]} />);
+    renderScreen([doctor({ id: 1, name: "Dr. Jane Smith" }), doctor({ id: 2, name: "Dr. Amy Lee" })]);
 
     const [first, second] = screen.getAllByTestId("doctor-avatar").map((el) => el.style.backgroundColor);
     expect(first).not.toBe("");
@@ -57,12 +66,23 @@ describe("DoctorsScreen", () => {
   });
 
   it("gives the same doctor the same avatar color every render", () => {
-    const { unmount } = render(<DoctorsScreen doctors={[doctor({ id: 7, name: "Dr. Jane Smith" })]} />);
+    const { unmount } = renderScreen([doctor({ id: 7, name: "Dr. Jane Smith" })]);
     const first = screen.getByTestId("doctor-avatar").style.backgroundColor;
     unmount();
 
-    render(<DoctorsScreen doctors={[doctor({ id: 7, name: "Dr. Jane Smith" })]} />);
+    renderScreen([doctor({ id: 7, name: "Dr. Jane Smith" })]);
 
     expect(screen.getByTestId("doctor-avatar").style.backgroundColor).toBe(first);
+  });
+
+  it("calls onSelectDoctor with the doctor's id when a row's details affordance is activated", async () => {
+    const user = userEvent.setup();
+    const onSelectDoctor = vi.fn();
+    renderScreen([doctor({ id: 42, name: "Dr. Jane Smith" })], onSelectDoctor);
+
+    await user.click(screen.getByRole("button", { name: /Dr\. Jane Smith/ }));
+
+    expect(onSelectDoctor).toHaveBeenCalledTimes(1);
+    expect(onSelectDoctor).toHaveBeenCalledWith(42);
   });
 });
