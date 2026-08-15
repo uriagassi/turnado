@@ -133,12 +133,12 @@ describe("Doctors", () => {
       expect(thrown).toBeInstanceOf(InvalidDoctorInputError);
     });
 
-    it("create rejects missing notes", () => {
+    it("create allows a Doctor with no notes", () => {
       const doctors = tmpDoctors();
 
-      const thrown = catchError(() => doctors.create({ name: "Dr. Jane Smith", notes: "" }));
+      const created = doctors.create({ name: "Dr. Jane Smith" });
 
-      expect(thrown).toBeInstanceOf(InvalidDoctorInputError);
+      expect(created.notes).toBeNull();
     });
 
     it("update rejects a missing name the same way", () => {

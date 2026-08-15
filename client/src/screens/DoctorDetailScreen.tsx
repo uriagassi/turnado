@@ -29,7 +29,7 @@ export function DoctorDetailScreen({
       <button type="button" className="edit-doctor" onClick={onEdit}>
         {t("doctorDetail.edit")}
       </button>
-      <p>{doctor.notes}</p>
+      {doctor.notes && <p className="doctor-notes">{doctor.notes}</p>}
 
       <section>
         <h2>{t("doctorDetail.appointment.title")}</h2>

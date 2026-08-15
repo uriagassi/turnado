@@ -35,7 +35,7 @@ export interface DoctorInput {
   phone?: string;
   address?: string;
   email?: string;
-  notes: string;
+  notes?: string;
 }
 
 export interface Doctor extends DoctorInput {

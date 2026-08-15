@@ -62,7 +62,7 @@ describe("DoctorFormScreen", () => {
     expect(onSubmit.mock.calls[0][1]).toBe(photo);
   });
 
-  it("blocks submission and shows an error when required fields are left blank", async () => {
+  it("blocks submission and shows an error when the name is left blank", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
     render(<DoctorFormScreen onSubmit={onSubmit} onCancel={() => {}} />);
@@ -71,7 +71,18 @@ describe("DoctorFormScreen", () => {
 
     expect(onSubmit).not.toHaveBeenCalled();
     expect(screen.getByText("Name is required.")).toBeInTheDocument();
-    expect(screen.getByText("Notes is required.")).toBeInTheDocument();
+  });
+
+  it("submits successfully with notes left blank, since only the name is required", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<DoctorFormScreen onSubmit={onSubmit} onCancel={() => {}} />);
+
+    await user.type(screen.getByLabelText("Name"), "Dr. Jane Smith");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(onSubmit).toHaveBeenCalledOnce();
+    expect(screen.queryByText("Notes is required.")).not.toBeInTheDocument();
   });
 
   it("pre-fills the fields from an existing doctor when editing", () => {

@@ -32,6 +32,12 @@ describe("DoctorDetailScreen", () => {
     expect(screen.getByText("Prefers morning appointments")).toBeInTheDocument();
   });
 
+  it("omits the notes paragraph entirely when the doctor has no notes", () => {
+    const { container } = render(<DoctorDetailScreen doctor={doctor({ notes: undefined })} onBack={() => {}} onEdit={() => {}} />);
+
+    expect(container.querySelector(".doctor-notes")).not.toBeInTheDocument();
+  });
+
   it("shows empty placeholder sections for appointments, open items, and documents", () => {
     render(<DoctorDetailScreen doctor={doctor()} onBack={() => {}} onEdit={() => {}} />);
 

@@ -3,13 +3,14 @@ import { useTranslation } from "react-i18next";
 import type { Doctor, DoctorInput } from "../api";
 import { DoctorAvatar } from "../components/DoctorAvatar";
 
-// The plain single-line text fields — every DoctorInput key except name and
-// notes, which get their own required-field validation/error slot below,
-// and photo, which isn't part of DoctorInput at all (see setPhoto/Doctors.ts
-// header comment on why it's a separate upload, not a create/update field).
+// The plain single-line text fields — every DoctorInput key except name
+// (which gets its own required-field validation/error slot below) and
+// notes (its own textarea), and photo, which isn't part of DoctorInput at
+// all (see setPhoto/Doctors.ts header comment on why it's a separate
+// upload, not a create/update field).
 const OPTIONAL_TEXT_FIELDS = ["specialty", "clinic", "phone", "address", "email"] as const;
 
-type RequiredFieldErrors = { name?: string; notes?: string };
+type RequiredFieldErrors = { name?: string };
 
 function TextField({
   label,
@@ -63,7 +64,6 @@ export function DoctorFormScreen({
     // user sees the problem immediately instead of round-tripping to find out.
     const nextErrors: RequiredFieldErrors = {};
     if (!formData.name.trim()) nextErrors.name = t("doctorForm.name.required");
-    if (!formData.notes.trim()) nextErrors.notes = t("doctorForm.notes.required");
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
@@ -92,9 +92,8 @@ export function DoctorFormScreen({
         <div className="form-field">
           <label>
             {t("doctorForm.notes.label")}
-            <textarea value={formData.notes} onChange={(e) => setField("notes", e.target.value)} />
+            <textarea value={formData.notes ?? ""} onChange={(e) => setField("notes", e.target.value)} />
           </label>
-          {errors.notes && <p className="field-error">{errors.notes}</p>}
         </div>
         <div className="form-field">
           {doctor && (

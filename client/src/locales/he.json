@@ -25,7 +25,6 @@
   "doctorForm.save": "שמירה",
   "doctorForm.cancel": "ביטול",
   "doctorForm.name.required": "שם הוא שדה חובה.",
-  "doctorForm.notes.required": "הערות הוא שדה חובה.",
   "auth.loading": "טוען…",
   "auth.notAuthorized": "חשבון זה אינו מורשה להשתמש באפליקציה זו.",
   "auth.signIn": "התחברות"

@@ -25,7 +25,6 @@
   "doctorForm.save": "Save",
   "doctorForm.cancel": "Cancel",
   "doctorForm.name.required": "Name is required.",
-  "doctorForm.notes.required": "Notes is required.",
   "auth.loading": "Loading…",
   "auth.notAuthorized": "This account is not authorized to use this app.",
   "auth.signIn": "Sign in"
