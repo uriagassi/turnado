@@ -1,13 +1,16 @@
 import { useTranslation } from "react-i18next";
-import type { Appointment, Doctor } from "../api";
+import type { Appointment, Doctor, Task } from "../api";
 import { DoctorAvatar } from "../components/DoctorAvatar";
 import { useRelativeDateTime } from "../hooks/useRelativeDateTime";
+import { TaskStatusBadge } from "../components/TaskStatusBadge";
 
 export function DoctorDetailScreen({
   doctor,
   appointments = [],
+  openItems = [],
   onBack,
   onEdit,
+  onSelectTask,
 }: {
   doctor: Doctor;
   /**
@@ -18,8 +21,10 @@ export function DoctorDetailScreen({
    * lists every upcoming appointment rather than just the soonest one.
    */
   appointments?: Appointment[];
+  openItems?: Task[];
   onBack: () => void;
   onEdit: () => void;
+  onSelectTask?: (task: Task) => void;
 }) {
   const { t } = useTranslation();
   const formatRelative = useRelativeDateTime();
@@ -89,7 +94,35 @@ export function DoctorDetailScreen({
 
       <section>
         <h2 className="section-title">{t("doctorDetail.openItems.title")}</h2>
-        <p className="section-empty">{t("doctorDetail.openItems.empty")}</p>
+        {openItems.length > 0 ? (
+          <div className="item-row-list">
+            {openItems.map((task) => (
+              <div
+                className="card item-row clickable"
+                key={task.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => onSelectTask?.(task)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onSelectTask?.(task);
+                  }
+                }}
+              >
+                <div>
+                  <p className="item-row-notes">{task.title}</p>
+                  <p className="item-row-sub">
+                    {task.dueDate ? formatRelative(task.dueDate) : (task.approximateDateWindow ?? t("task.due.noDate"))}
+                  </p>
+                </div>
+                <TaskStatusBadge status={task.status} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="section-empty">{t("doctorDetail.openItems.empty")}</p>
+        )}
       </section>
 
       <section>

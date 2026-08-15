@@ -15,6 +15,11 @@ import {
   updateAppointment,
   setAppointmentStatus,
   setAppointmentSummary,
+  fetchTasks,
+  createTask,
+  updateTask,
+  setTaskStatus,
+  setTaskPendingAppointment,
   AuthClientData,
   Appointment,
   AppointmentInput,
@@ -22,6 +27,9 @@ import {
   Doctor,
   DoctorInput,
   HomeData,
+  Task,
+  TaskInput,
+  TaskStatus,
   UserInfo,
 } from "./api";
 import { HomeScreen } from "./screens/HomeScreen";
@@ -33,8 +41,10 @@ import { DoctorFormScreen } from "./screens/DoctorFormScreen";
 import { AppointmentFormScreen } from "./screens/AppointmentFormScreen";
 import { AppointmentHistoryScreen } from "./screens/AppointmentHistoryScreen";
 import { UpcomingAppointmentsScreen } from "./screens/UpcomingAppointmentsScreen";
+import { TaskFormScreen } from "./screens/TaskFormScreen";
+import { TaskDetailScreen } from "./screens/TaskDetailScreen";
 
-type Session = { user: UserInfo; home: HomeData; doctors: Doctor[]; appointments: Appointment[] };
+type Session = { user: UserInfo; home: HomeData; doctors: Doctor[]; appointments: Appointment[]; tasks?: Task[] };
 
 /**
  * Creates a new Doctor, or updates an existing one when `doctor` is set —
@@ -105,6 +115,10 @@ function upcomingAppointments(appointments: Appointment[], now: Date): Appointme
     .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
 }
 
+function openItemsForDoctor(openItems: Task[], doctorId: number): Task[] {
+  return openItems.filter((t) => t.doctorId === doctorId && t.status !== "done");
+}
+
 /**
  * Orders doctors by their soonest upcoming appointment (ascending) rather
  * than the list's base name order — a doctor you're about to see should
@@ -136,9 +150,29 @@ type AppState =
   // `appointment` is undefined when adding; `returnTo` is where Save/Cancel lands —
   // wherever the user opened the form from (home's "Add appointment", or an
   // Edit on an Upcoming/History card).
-  | { phase: "appointment-form"; session: Session; appointment?: Appointment; returnTo: "home" | "appointment-upcoming" | "appointment-history" }
+  | {
+      phase: "appointment-form";
+      session: Session;
+      appointment?: Appointment | (Partial<AppointmentInput> & { id?: number });
+      returnTo: "home" | "appointment-upcoming" | "appointment-history";
+      resolvingTaskId?: number;
+    }
   | { phase: "appointment-upcoming"; session: Session }
-  | { phase: "appointment-history"; session: Session };
+  | { phase: "appointment-history"; session: Session }
+  | {
+      phase: "task-detail";
+      session: Session;
+      task: Task;
+      returnTo: "home" | "doctor-detail";
+      doctor?: Doctor;
+    }
+  | {
+      phase: "task-form";
+      session: Session;
+      task?: Task;
+      returnTo: "home" | "doctor-detail" | "task-detail";
+      doctor?: Doctor;
+    };
 
 /** How often the home screen's data refreshes itself in the background, absent a manual refresh or a window-focus event (see useAutoRefresh). */
 const HOME_REFRESH_INTERVAL_MS = 45_000;
@@ -186,6 +220,21 @@ export function App() {
     };
   }, []);
 
+  const navigateToResolveAppointment = (session: Session, t: Task) => {
+    setState({
+      phase: "appointment-form",
+      session,
+      appointment: {
+        doctorId: t.doctorId,
+        notes: t.title,
+        dateTime: "",
+        location: "",
+      },
+      resolvingTaskId: t.id,
+      returnTo: "home",
+    });
+  };
+
   switch (state.phase) {
     case "loading":
       return <p className="status">{t("auth.loading")}</p>;
@@ -203,15 +252,20 @@ export function App() {
       const addAppointment = () => setState({ phase: "appointment-form", session, returnTo: "home" });
       const viewUpcoming = () => setState({ phase: "appointment-upcoming", session });
       const viewHistory = () => setState({ phase: "appointment-history", session });
+      const addTask = () => setState({ phase: "task-form", session, returnTo: "home" });
+      const selectTask = (task: Task) => setState({ phase: "task-detail", session, task, returnTo: "home" });
       return (
         <HomeScreen
           home={session.home}
           doctors={session.doctors}
+          appointments={session.appointments}
           onOpenDoctors={openDoctors}
           onSelectDoctor={selectDoctor}
           onAddAppointment={addAppointment}
           onViewUpcoming={viewUpcoming}
           onViewHistory={viewHistory}
+          onSelectTask={selectTask}
+          onAddTask={addTask}
           onRefresh={refreshHome}
         />
       );
@@ -241,7 +295,18 @@ export function App() {
       const back = () => setState({ phase: "doctors", session, doctors });
       const edit = () => setState({ phase: "doctor-form", session, doctors, doctor });
       const appointments = upcomingAppointmentsForDoctor(session.appointments, doctor.id, new Date());
-      return <DoctorDetailScreen doctor={doctor} appointments={appointments} onBack={back} onEdit={edit} />;
+      const doctorOpenItems = openItemsForDoctor(session.home.openItems, doctor.id);
+      const selectTask = (task: Task) => setState({ phase: "task-detail", session, task, returnTo: "doctor-detail", doctor });
+      return (
+        <DoctorDetailScreen
+          doctor={doctor}
+          appointments={appointments}
+          openItems={doctorOpenItems}
+          onBack={back}
+          onEdit={edit}
+          onSelectTask={selectTask}
+        />
+      );
     }
     case "doctor-form": {
       const { session, doctors, doctor } = state;
@@ -257,19 +322,82 @@ export function App() {
       return <DoctorFormScreen doctor={doctor} onSubmit={submit} onCancel={cancel} />;
     }
     case "appointment-form": {
-      const { session, appointment, returnTo } = state;
+      const { session, appointment, returnTo, resolvingTaskId } = state;
       const cancel = () => setState({ phase: returnTo, session });
       const submit = async (input: AppointmentInput) => {
-        const saved = appointment ? await updateAppointment(appointment.id, input) : await createAppointment(input);
+        const saved = appointment?.id ? await updateAppointment(appointment.id, input) : await createAppointment(input);
+        if (resolvingTaskId) {
+          await setTaskPendingAppointment(resolvingTaskId, saved.id);
+        }
         // Also re-fetches home, not just folding `saved` into the
         // appointments list — home.nextAppointment is computed server-side
         // (selectHeroAppointment) and a created/edited appointment can
         // become (or stop being) that hero card, which the fold alone
         // wouldn't reflect.
         const home = await fetchHome();
-        setState({ phase: returnTo, session: withSavedAppointment(session, saved, appointment !== undefined, home) });
+        const appointments = await fetchAppointments();
+        setState({ phase: returnTo, session: { ...session, appointments, home } });
       };
-      return <AppointmentFormScreen appointment={appointment} doctors={session.doctors} onSubmit={submit} onCancel={cancel} />;
+      return <AppointmentFormScreen appointment={appointment as Appointment | undefined} doctors={session.doctors} onSubmit={submit} onCancel={cancel} />;
+    }
+    case "task-detail": {
+      const { session, task, returnTo, doctor } = state;
+      const back = () =>
+        returnTo === "doctor-detail" && doctor
+          ? setState({ phase: "doctor-detail", session, doctors: session.doctors, doctor })
+          : setState({ phase: "home", session });
+      const edit = (t: Task) =>
+        setState({ phase: "task-form", session, task: t, returnTo: "task-detail", doctor });
+      const changeStatus = async (t: Task, status: TaskStatus) => {
+        const updated = await setTaskStatus(t.id, status);
+        const home = await fetchHome();
+        const nextSession = { ...session, home };
+        setState({ phase: "task-detail", session: nextSession, task: updated, returnTo, doctor });
+      };
+      return (
+        <TaskDetailScreen
+          task={task}
+          doctors={session.doctors}
+          appointments={session.appointments}
+          onBack={back}
+          onEdit={edit}
+          onStatusChange={changeStatus}
+          onResolveToAppointment={(t) => navigateToResolveAppointment(session, t)}
+        />
+      );
+    }
+    case "task-form": {
+      const { session, task, returnTo, doctor } = state;
+      const cancel = () => {
+        if (returnTo === "task-detail" && task) {
+          setState({ phase: "task-detail", session, task, returnTo: doctor ? "doctor-detail" : "home", doctor });
+        } else if (returnTo === "doctor-detail" && doctor) {
+          setState({ phase: "doctor-detail", session, doctors: session.doctors, doctor });
+        } else {
+          setState({ phase: "home", session });
+        }
+      };
+      const submit = async (input: TaskInput) => {
+        const saved = task ? await updateTask(task.id, input) : await createTask(input);
+        const home = await fetchHome();
+        const nextSession = { ...session, home };
+        if (returnTo === "task-detail") {
+          setState({ phase: "task-detail", session: nextSession, task: saved, returnTo: doctor ? "doctor-detail" : "home", doctor });
+        } else if (returnTo === "doctor-detail" && doctor) {
+          setState({ phase: "doctor-detail", session: nextSession, doctors: session.doctors, doctor });
+        } else {
+          setState({ phase: "home", session: nextSession });
+        }
+      };
+      return (
+        <TaskFormScreen
+          task={task}
+          doctors={session.doctors}
+          onSubmit={submit}
+          onCancel={cancel}
+          onResolveToAppointment={(t) => navigateToResolveAppointment(session, t)}
+        />
+      );
     }
     case "appointment-upcoming": {
       const { session } = state;
