@@ -229,6 +229,23 @@ export class Tasks {
     return this.getOrThrow(id);
   }
 
+  resolveWithAppointment(id: number, appointment: { id: number; dateTime: string } | null): Task {
+    const task = this.getOrThrow(id);
+    if (!appointment) {
+      this.setPendingAppointmentStmt.run({ id, pendingAppointmentId: null });
+      return this.getOrThrow(id);
+    }
+    const apptDate = appointment.dateTime.slice(0, 10);
+    const newStatus: TaskStatus =
+      task.type === "doctor_visit" ? "done" : task.status === "open" ? "in-progress" : task.status;
+    return this.update(id, {
+      ...task,
+      pendingAppointmentId: appointment.id,
+      dueDate: apptDate,
+      status: newStatus,
+    });
+  }
+
   private getOrThrow(id: number): Task {
     const task = this.get(id);
     if (!task) throw new TaskNotFoundError(id);

@@ -1,21 +1,8 @@
 import { useTranslation } from "react-i18next";
-import type { Appointment, Doctor, Task, TaskStatus, TaskType } from "../api";
+import type { Appointment, Doctor, Task, TaskStatus } from "../api";
 import { useRelativeDateTime } from "../hooks/useRelativeDateTime";
-
-function getTaskIcon(type: TaskType): string {
-  switch (type) {
-    case "test":
-      return "🩸";
-    case "doctor_visit":
-      return "🩺";
-    case "form_17":
-      return "📄";
-    case "general_approval":
-      return "✅";
-    default:
-      return "📌";
-  }
-}
+import { getTaskIcon, isResolvableTask } from "../tasks/taskUtils";
+import { TaskStatusBadge } from "../components/TaskStatusBadge";
 
 export function TaskDetailScreen({
   task,
@@ -41,15 +28,7 @@ export function TaskDetailScreen({
   const pendingAppointment = task.pendingAppointmentId
     ? appointments.find((a) => a.id === task.pendingAppointmentId)
     : undefined;
-  const isResolvable =
-    task.type === "doctor_visit" || (task.type === "test" && task.requiresAdvanceScheduling);
-
-  const statusClass =
-    task.status === "in-progress"
-      ? "badge status-inprogress"
-      : task.status === "done"
-      ? "badge status-done"
-      : "badge status-open";
+  const isResolvable = isResolvableTask(task);
 
   return (
     <main className="screen task-detail-screen">
@@ -71,13 +50,7 @@ export function TaskDetailScreen({
           </div>
         </div>
         <div className="task-detail-meta">
-          <span className={statusClass}>
-            {task.status === "in-progress"
-              ? t("task.status.inprogress")
-              : task.status === "done"
-              ? t("task.status.done")
-              : t("task.status.open")}
-          </span>
+          <TaskStatusBadge status={task.status} />
           {task.requiresAdvanceScheduling && (
             <span className="badge type-tag">{t("taskDetail.advanceSchedulingNotice")}</span>
           )}

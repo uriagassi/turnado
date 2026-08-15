@@ -220,6 +220,21 @@ export function App() {
     };
   }, []);
 
+  const navigateToResolveAppointment = (session: Session, t: Task) => {
+    setState({
+      phase: "appointment-form",
+      session,
+      appointment: {
+        doctorId: t.doctorId,
+        notes: t.title,
+        dateTime: "",
+        location: "",
+      },
+      resolvingTaskId: t.id,
+      returnTo: "home",
+    });
+  };
+
   switch (state.phase) {
     case "loading":
       return <p className="status">{t("auth.loading")}</p>;
@@ -339,20 +354,6 @@ export function App() {
         const nextSession = { ...session, home };
         setState({ phase: "task-detail", session: nextSession, task: updated, returnTo, doctor });
       };
-      const resolveToAppointment = (t: Task) => {
-        setState({
-          phase: "appointment-form",
-          session,
-          appointment: {
-            doctorId: t.doctorId,
-            notes: t.title,
-            dateTime: "",
-            location: "",
-          },
-          resolvingTaskId: t.id,
-          returnTo: "home",
-        });
-      };
       return (
         <TaskDetailScreen
           task={task}
@@ -361,7 +362,7 @@ export function App() {
           onBack={back}
           onEdit={edit}
           onStatusChange={changeStatus}
-          onResolveToAppointment={resolveToAppointment}
+          onResolveToAppointment={(t) => navigateToResolveAppointment(session, t)}
         />
       );
     }
@@ -388,27 +389,13 @@ export function App() {
           setState({ phase: "home", session: nextSession });
         }
       };
-      const resolveToAppointment = (t: Task) => {
-        setState({
-          phase: "appointment-form",
-          session,
-          appointment: {
-            doctorId: t.doctorId,
-            notes: t.title,
-            dateTime: "",
-            location: "",
-          },
-          resolvingTaskId: t.id,
-          returnTo: "home",
-        });
-      };
       return (
         <TaskFormScreen
           task={task}
           doctors={session.doctors}
           onSubmit={submit}
           onCancel={cancel}
-          onResolveToAppointment={resolveToAppointment}
+          onResolveToAppointment={(t) => navigateToResolveAppointment(session, t)}
         />
       );
     }

@@ -252,27 +252,8 @@ export function createApp(options: AppOptions): Express {
             ? Number(req.body.pendingAppointmentId)
             : null;
 
-        let task = tasks.setPendingAppointment(taskId, pendingAppointmentId);
-        if (pendingAppointmentId) {
-          const appt = appointments.get(pendingAppointmentId);
-          if (appt) {
-            const apptDate = appt.dateTime.slice(0, 10);
-            if (task.type === "doctor_visit") {
-              task = tasks.update(task.id, {
-                ...task,
-                dueDate: apptDate,
-                status: "done",
-              });
-            } else {
-              task = tasks.update(task.id, {
-                ...task,
-                dueDate: apptDate,
-                status: task.status === "open" ? "in-progress" : task.status,
-              });
-            }
-          }
-        }
-        res.json(task);
+        const appt = pendingAppointmentId ? appointments.get(pendingAppointmentId) ?? null : null;
+        res.json(tasks.resolveWithAppointment(taskId, appt));
       } catch (err) {
         if (err instanceof TaskNotFoundError) return res.status(404).json({ error: "Not found" });
         throw err;

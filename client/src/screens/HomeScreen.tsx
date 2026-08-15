@@ -1,21 +1,8 @@
 import { useTranslation } from "react-i18next";
-import type { Appointment, Doctor, HomeData, Task, TaskType } from "../api";
+import type { Appointment, Doctor, HomeData, Task } from "../api";
 import { useRelativeDateTime } from "../hooks/useRelativeDateTime";
-
-function getTaskIcon(type: TaskType): string {
-  switch (type) {
-    case "test":
-      return "🩸";
-    case "doctor_visit":
-      return "🩺";
-    case "form_17":
-      return "📄";
-    case "general_approval":
-      return "✅";
-    default:
-      return "📌";
-  }
-}
+import { getTaskIcon } from "../tasks/taskUtils";
+import { TaskStatusBadge } from "../components/TaskStatusBadge";
 
 function sortOpenItems(tasks: Task[], appointments: Appointment[] = []): Task[] {
   return [...tasks].sort((a, b) => {
@@ -131,12 +118,6 @@ export function HomeScreen({
           <div className="feed">
             {sortedOpenItems.map((task) => {
               const pendingLabel = getPendingAppointmentLabel(task.pendingAppointmentId);
-              const statusClass =
-                task.status === "in-progress"
-                  ? "badge status-inprogress"
-                  : task.status === "done"
-                  ? "badge status-done"
-                  : "badge status-open";
 
               return (
                 <div
@@ -161,13 +142,7 @@ export function HomeScreen({
                       <span className="feed-when">{formatTaskDue(task)}</span>
                     </div>
                     <div className="feed-meta">
-                      <span className={statusClass}>
-                        {task.status === "in-progress"
-                          ? t("task.status.inprogress")
-                          : task.status === "done"
-                          ? t("task.status.done")
-                          : t("task.status.open")}
-                      </span>
+                      <TaskStatusBadge status={task.status} />
                       {pendingLabel && <span className="badge type-tag">{pendingLabel}</span>}
                     </div>
                   </div>

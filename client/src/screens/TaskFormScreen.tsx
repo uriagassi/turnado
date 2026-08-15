@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Doctor, Task, TaskInput, TaskStatus, TaskType } from "../api";
+import { isResolvableTask } from "../tasks/taskUtils";
 
 type RequiredFieldErrors = { title?: string; doctorId?: string };
 
@@ -39,8 +40,12 @@ export function TaskFormScreen({
   });
   const [errors, setErrors] = useState<RequiredFieldErrors>({});
 
-  const setField = <K extends keyof TaskInput>(key: K, value: TaskInput[K]) =>
-    setFormData((prev) => ({ ...prev, [key]: value }));
+  const setField = <K extends keyof TaskInput>(field: K, value: TaskInput[K]) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field as keyof RequiredFieldErrors]) {
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+  };
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -68,9 +73,7 @@ export function TaskFormScreen({
     });
   };
 
-  const isResolvable =
-    Boolean(task) &&
-    (formData.type === "doctor_visit" || (formData.type === "test" && formData.requiresAdvanceScheduling));
+  const isResolvable = Boolean(task) && isResolvableTask(formData);
 
   return (
     <main className="screen task-form-screen">

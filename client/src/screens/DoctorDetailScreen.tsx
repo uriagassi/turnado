@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import type { Appointment, Doctor, Task } from "../api";
 import { DoctorAvatar } from "../components/DoctorAvatar";
 import { useRelativeDateTime } from "../hooks/useRelativeDateTime";
+import { TaskStatusBadge } from "../components/TaskStatusBadge";
 
 export function DoctorDetailScreen({
   doctor,
@@ -115,13 +116,7 @@ export function DoctorDetailScreen({
                     {task.dueDate ? formatRelative(task.dueDate) : (task.approximateDateWindow ?? t("task.due.noDate"))}
                   </p>
                 </div>
-                <span className={`badge status-${task.status === "in-progress" ? "inprogress" : task.status}`}>
-                  {task.status === "in-progress"
-                    ? t("task.status.inprogress")
-                    : task.status === "done"
-                    ? t("task.status.done")
-                    : t("task.status.open")}
-                </span>
+                <TaskStatusBadge status={task.status} />
               </div>
             ))}
           </div>
