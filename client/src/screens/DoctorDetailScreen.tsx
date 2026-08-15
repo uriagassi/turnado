@@ -7,15 +7,17 @@ export function DoctorDetailScreen({ doctor, onBack }: { doctor: Doctor; onBack:
 
   return (
     <main className="screen doctor-detail-screen">
-      <div className="doctor-header">
-        <h1>{doctor.name}</h1>
+      <div className="doctor-card">
+        <div className="doctor-info">
+          <h1>{doctor.name}</h1>
+          {doctor.specialty && <p>{doctor.specialty}</p>}
+          {doctor.clinic && <p>{doctor.clinic}</p>}
+          {doctor.phone && <p>{doctor.phone}</p>}
+          {doctor.address && <p>{doctor.address}</p>}
+          {doctor.email && <p>{doctor.email}</p>}
+        </div>
         <DoctorAvatar doctor={doctor} />
       </div>
-      {doctor.specialty && <p>{doctor.specialty}</p>}
-      {doctor.clinic && <p>{doctor.clinic}</p>}
-      {doctor.phone && <p>{doctor.phone}</p>}
-      {doctor.address && <p>{doctor.address}</p>}
-      {doctor.email && <p>{doctor.email}</p>}
       <p>{doctor.notes}</p>
 
       <section>
