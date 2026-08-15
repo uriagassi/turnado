@@ -2,6 +2,8 @@
   "app.title": "Turnado",
   "home.title": "Home",
   "home.empty": "Nothing here yet — appointments, open items, and documents will show up as you add them.",
+  "doctors.title": "Doctors",
+  "doctors.empty": "No doctors yet — add one to get started.",
   "auth.loading": "Loading…",
   "auth.notAuthorized": "This account is not authorized to use this app.",
   "auth.signIn": "Sign in"
