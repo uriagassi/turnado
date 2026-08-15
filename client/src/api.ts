@@ -32,6 +32,11 @@ export interface Doctor {
   id: number;
   name: string;
   specialty?: string;
+  clinic?: string;
+  phone?: string;
+  address?: string;
+  email?: string;
+  notes: string;
   photoPath: string | null;
 }
 

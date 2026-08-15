@@ -4,6 +4,13 @@
   "home.empty": "עדיין אין כאן כלום — תורים, משימות פתוחות ומסמכים יופיעו כאן לאחר שיתווספו.",
   "doctors.title": "רופאים",
   "doctors.empty": "אין עדיין רופאים — הוסיפו רופא כדי להתחיל.",
+  "doctorDetail.appointment.title": "התור הבא",
+  "doctorDetail.appointment.empty": "אין תור קרוב.",
+  "doctorDetail.openItems.title": "משימות פתוחות",
+  "doctorDetail.openItems.empty": "אין משימות פתוחות.",
+  "doctorDetail.documents.title": "מסמכים",
+  "doctorDetail.documents.empty": "אין מסמכים.",
+  "doctorDetail.back": "חזרה לרשימת הרופאים",
   "auth.loading": "טוען…",
   "auth.notAuthorized": "חשבון זה אינו מורשה להשתמש באפליקציה זו.",
   "auth.signIn": "התחברות"
