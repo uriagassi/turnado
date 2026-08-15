@@ -262,4 +262,29 @@ describe("/api/doctors", () => {
       expect(res.status).toBe(404);
     });
   });
+
+  describe("GET /photos/:filename", () => {
+    it("serves back the bytes of a previously uploaded photo", async () => {
+      const agent = signedInAgent(tmpDb());
+      const created = await agent
+        .post("/api/doctors")
+        .send({ name: "Dr. Jane Smith", notes: "Family physician" });
+      const uploaded = await agent
+        .post(`/api/doctors/${created.body.id}/photo`)
+        .attach("photo", Buffer.from("fake-jpeg-bytes"), "portrait.jpg");
+
+      const res = await agent.get(`/photos/${uploaded.body.photoPath}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(Buffer.from("fake-jpeg-bytes"));
+    });
+
+    it("404s for a filename that was never uploaded", async () => {
+      const agent = signedInAgent(tmpDb());
+
+      const res = await agent.get("/photos/does-not-exist.jpg");
+
+      expect(res.status).toBe(404);
+    });
+  });
 });

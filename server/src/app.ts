@@ -112,6 +112,10 @@ export function createApp(options: AppOptions): Express {
     // process's cwd.
     if (photosDir) {
       fs.mkdirSync(photosDir, { recursive: true });
+      // Serves back what the route below stores — "managed directly by this
+      // app on disk" means this app is also the one returning the bytes,
+      // not just recording where they went.
+      app.use("/photos", express.static(photosDir));
       // Writes straight to disk under photosDir; the doctor's photoPath
       // column (set below) just remembers the resulting filename.
       // Deliberately not routed through the sibling app's shared Attachment
