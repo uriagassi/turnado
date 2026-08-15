@@ -12,6 +12,15 @@ import { Doctors, DoctorNotFoundError, InvalidDoctorInputError } from "./doctors
 import { Appointments, AppointmentNotFoundError, InvalidAppointmentInputError } from "./appointments/Appointments.js";
 import { selectHeroAppointment } from "./appointments/heroAppointment.js";
 import { Tasks, TaskNotFoundError, InvalidTaskInputError, TaskStatus } from "./tasks/Tasks.js";
+import {
+  Documents,
+  DocumentNotFoundError,
+  InvalidDocumentInputError,
+  DocumentCreateInput,
+  DocumentType,
+  UploadedFile,
+} from "./documents/Documents.js";
+import crypto from "node:crypto";
 
 export interface AppOptions {
   authHandler: IAuthHandler;
@@ -20,12 +29,18 @@ export interface AppOptions {
   cookieSecret: string;
   supportedLocales?: string[];
   fallbackLocale?: string;
-  /** The shared DB connection (WAL + busy_timeout already applied — see db.ts). Only used by /api/doctors so far. */
+  /** The shared DB connection (WAL + busy_timeout already applied — see db.ts). */
   db?: Database;
   /** Shared tag every newly-created doctor tag nests under (see Doctors.ts). Only matters when db is set. */
   doctorsParentTagName?: string;
   /** Directory doctor photo uploads are written to (see POST /api/doctors/:id/photo). Only matters when db is set. */
   photosDir?: string;
+  /** Dedicated notebook ID for medical documents in the shared DB. */
+  medicalNotebookId?: number;
+  /** Parent tag for document types (e.g. medical/document-type). */
+  documentTypeParentTagName?: string;
+  /** Directory where document attachments are stored. */
+  attachmentsDir?: string;
   /** Built client (client/dist) to serve as the SPA shell. Omitted in tests that only exercise the API. */
   clientDistPath?: string;
 }
@@ -46,7 +61,18 @@ export function createApp(options: AppOptions): Express {
 
   const app = express();
   app.locals.db = db;
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+          "object-src": ["'self'"],
+          "frame-src": ["'self'"],
+          "img-src": ["'self'", "data:", "blob:"],
+        },
+      },
+    }),
+  );
   app.use(express.json());
   app.use(cookieParser(cookieSecret));
 
@@ -183,7 +209,9 @@ export function createApp(options: AppOptions): Express {
     });
     app.put("/api/appointments/:id", (req, res) => {
       try {
-        res.json(appointments.update(Number(req.params.id), req.body));
+        const updated = appointments.update(Number(req.params.id), req.body);
+        documents.syncDoctorTagsForAppointment(Number(req.params.id));
+        res.json(updated);
       } catch (err) {
         if (err instanceof AppointmentNotFoundError) return res.status(404).json({ error: "Not found" });
         if (err instanceof InvalidAppointmentInputError) return res.status(400).json({ error: err.message });
@@ -228,7 +256,9 @@ export function createApp(options: AppOptions): Express {
     });
     app.put("/api/tasks/:id", (req, res) => {
       try {
-        res.json(tasks.update(Number(req.params.id), req.body));
+        const updated = tasks.update(Number(req.params.id), req.body);
+        documents.syncDoctorTagsForTask(Number(req.params.id));
+        res.json(updated);
       } catch (err) {
         if (err instanceof TaskNotFoundError) return res.status(404).json({ error: "Not found" });
         if (err instanceof InvalidTaskInputError) return res.status(400).json({ error: err.message });
@@ -260,13 +290,123 @@ export function createApp(options: AppOptions): Express {
       }
     });
 
-    // recentDocuments still awaits issue #6.
+    const {
+      medicalNotebookId = 0,
+      documentTypeParentTagName = "medical/document-type",
+      attachmentsDir,
+    } = options;
+
+    if (attachmentsDir) {
+      fs.mkdirSync(attachmentsDir, { recursive: true });
+      app.use("/api/body/attachments", express.static(attachmentsDir));
+      app.use("/attachments", express.static(attachmentsDir));
+    }
+
+    const documents = new Documents(db, {
+      medicalNotebookId,
+      documentTypeParentTagName,
+      doctorsParentTagName,
+    });
+
+    const docUpload = multer({
+      storage: multer.memoryStorage(),
+      limits: { fileSize: 20 * 1024 * 1024 },
+    });
+
+    app.post("/api/documents", docUpload.single("file"), (req, res) => {
+      if (!req.file) {
+        return res.status(400).json({ error: "file is required" });
+      }
+
+      const hash = crypto.createHash("sha256").update(req.file.buffer).digest("hex");
+      const uniqueFilename = `${hash}_${req.file.originalname}`;
+
+      if (attachmentsDir) {
+        fs.mkdirSync(attachmentsDir, { recursive: true });
+        fs.writeFileSync(path.join(attachmentsDir, uniqueFilename), req.file.buffer);
+      }
+
+      const uploadedFile: UploadedFile = {
+        fileName: req.file.originalname,
+        uniqueFilename,
+        mime: req.file.mimetype,
+        hash,
+        size: req.file.size,
+      };
+
+      let appointmentIds: number[] | undefined;
+      if (req.body.appointmentIds) {
+        if (Array.isArray(req.body.appointmentIds)) {
+          appointmentIds = req.body.appointmentIds.map(Number);
+        } else if (typeof req.body.appointmentIds === "string") {
+          try {
+            const parsed = JSON.parse(req.body.appointmentIds);
+            if (Array.isArray(parsed)) appointmentIds = parsed.map(Number);
+            else appointmentIds = req.body.appointmentIds.split(",").map((s: string) => Number(s.trim())).filter(Boolean);
+          } catch {
+            appointmentIds = req.body.appointmentIds.split(",").map((s: string) => Number(s.trim())).filter(Boolean);
+          }
+        }
+      }
+
+      let taskIds: number[] | undefined;
+      if (req.body.taskIds) {
+        if (Array.isArray(req.body.taskIds)) {
+          taskIds = req.body.taskIds.map(Number);
+        } else if (typeof req.body.taskIds === "string") {
+          try {
+            const parsed = JSON.parse(req.body.taskIds);
+            if (Array.isArray(parsed)) taskIds = parsed.map(Number);
+            else taskIds = req.body.taskIds.split(",").map((s: string) => Number(s.trim())).filter(Boolean);
+          } catch {
+            taskIds = req.body.taskIds.split(",").map((s: string) => Number(s.trim())).filter(Boolean);
+          }
+        }
+      }
+
+      const input: DocumentCreateInput = {
+        title: req.body.title,
+        type: req.body.type as DocumentType,
+        documentDate: req.body.documentDate || null,
+        doctorId: req.body.doctorId ? Number(req.body.doctorId) : null,
+        notes: req.body.notes || null,
+        appointmentIds,
+        taskIds,
+      };
+
+      try {
+        const created = documents.create(input, uploadedFile);
+        res.status(201).json(created);
+      } catch (err) {
+        if (err instanceof InvalidDocumentInputError) return res.status(400).json({ error: err.message });
+        throw err;
+      }
+    });
+
+    app.get("/api/documents", (req, res) => {
+      if (req.query.doctorId !== undefined) {
+        res.json(documents.listByDoctor(Number(req.query.doctorId)));
+      } else if (req.query.taskId !== undefined) {
+        res.json(documents.listByTask(Number(req.query.taskId)));
+      } else if (req.query.appointmentId !== undefined) {
+        res.json(documents.listByAppointment(Number(req.query.appointmentId)));
+      } else {
+        res.json(documents.list());
+      }
+    });
+
+    app.get("/api/documents/:id", (req, res) => {
+      const doc = documents.get(Number(req.params.id));
+      if (!doc) return res.status(404).json({ error: "Not found" });
+      res.json(doc);
+    });
+
     app.get("/api/home", (_req, res) => {
       const openItems = tasks.list().filter((t) => t.status !== "done");
       res.json({
         nextAppointment: selectHeroAppointment(appointments.list(), new Date()),
         openItems,
-        recentDocuments: [],
+        recentDocuments: documents.listRecent(5),
       });
     });
   }

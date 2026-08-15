@@ -1,25 +1,32 @@
 import { useTranslation } from "react-i18next";
-import type { Appointment, Doctor, Task, TaskStatus } from "../api";
+import type { Appointment, Doctor, MedicalDocument, Task, TaskStatus } from "../api";
 import { useRelativeDateTime } from "../hooks/useRelativeDateTime";
 import { getTaskIcon, isResolvableTask } from "../tasks/taskUtils";
+import { getDocumentIcon } from "./HomeScreen";
 import { TaskStatusBadge } from "../components/TaskStatusBadge";
 
 export function TaskDetailScreen({
   task,
   doctors,
   appointments = [],
+  documents = [],
   onBack,
   onEdit,
   onStatusChange,
   onResolveToAppointment,
+  onAddDocument,
+  onSelectDocument,
 }: {
   task: Task;
   doctors: Doctor[];
   appointments?: Appointment[];
+  documents?: MedicalDocument[];
   onBack: () => void;
   onEdit: (task: Task) => void;
   onStatusChange: (task: Task, status: TaskStatus) => void;
   onResolveToAppointment?: (task: Task) => void;
+  onAddDocument?: (task: Task) => void;
+  onSelectDocument?: (doc: MedicalDocument) => void;
 }) {
   const { t } = useTranslation();
   const formatRelative = useRelativeDateTime();
@@ -150,6 +157,42 @@ export function TaskDetailScreen({
             )}
           </div>
         )}
+
+        {documents.length > 0 && (
+          <div className="card task-detail-section">
+            <h2 className="section-title">{t("doctorDetail.documents.title")}</h2>
+            <div className="task-documents-list">
+              {documents.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="card feed-row clickable"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => onSelectDocument?.(doc)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onSelectDocument?.(doc);
+                    }
+                  }}
+                >
+                  <div className="feed-icon" aria-hidden="true">
+                    {getDocumentIcon(doc.type)}
+                  </div>
+                  <div className="feed-body">
+                    <div className="feed-top">
+                      <span className="feed-name">{doc.title}</span>
+                      {doc.documentDate && <span className="feed-when">{doc.documentDate}</span>}
+                    </div>
+                    <div className="feed-meta">
+                      <span className="badge type-tag">{t(`document.type.${doc.type}`)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="task-detail-actions">
@@ -178,6 +221,16 @@ export function TaskDetailScreen({
             onClick={() => onResolveToAppointment(task)}
           >
             📅 {t("taskForm.resolveToAppointment")}
+          </button>
+        )}
+
+        {onAddDocument && (
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => onAddDocument(task)}
+          >
+            📎 {t("taskDetail.addDocument")}
           </button>
         )}
 

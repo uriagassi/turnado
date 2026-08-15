@@ -15,6 +15,9 @@
   "notebook": {
     "medicalNotebookId": 0
   },
+  "attachments": {
+    "dir": "~/paperless/attachments"
+  },
   "doctors": {
     "parentTagName": "Doctors",
     "photosDir": "~/paperless/doctor-photos"
@@ -27,7 +30,8 @@
     "from": "REPLACE_ME"
   },
   "auth": {
-    "handler": "./auth/EmptyAuth.js"
+    "handler": "./auth/EmptyAuth.js",
+    "devUserName": "user-one"
   },
   "security": {
     "allowList": {
