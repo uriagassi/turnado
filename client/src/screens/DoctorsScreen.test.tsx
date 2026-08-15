@@ -22,8 +22,9 @@ function renderScreen(
   doctors: Doctor[],
   onSelectDoctor: (doctor: Doctor) => void = () => {},
   onAddDoctor: () => void = () => {},
+  onBackHome: () => void = () => {},
 ) {
-  return render(<DoctorsScreen doctors={doctors} onSelectDoctor={onSelectDoctor} onAddDoctor={onAddDoctor} />);
+  return render(<DoctorsScreen doctors={doctors} onSelectDoctor={onSelectDoctor} onAddDoctor={onAddDoctor} onBackHome={onBackHome} />);
 }
 
 describe("DoctorsScreen", () => {
@@ -99,5 +100,15 @@ describe("DoctorsScreen", () => {
     await user.click(screen.getByRole("button", { name: "Add doctor" }));
 
     expect(onAddDoctor).toHaveBeenCalledOnce();
+  });
+
+  it("calls onBackHome when the home control is activated", async () => {
+    const user = userEvent.setup();
+    const onBackHome = vi.fn();
+    renderScreen([], () => {}, () => {}, onBackHome);
+
+    await user.click(screen.getByRole("button", { name: "Home" }));
+
+    expect(onBackHome).toHaveBeenCalledOnce();
   });
 });

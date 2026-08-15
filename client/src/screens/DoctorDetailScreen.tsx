@@ -1,17 +1,21 @@
 import { useTranslation } from "react-i18next";
-import type { Doctor } from "../api";
+import type { Appointment, Doctor } from "../api";
 import { DoctorAvatar } from "../components/DoctorAvatar";
+import { formatDateTime } from "../formatDateTime";
 
 export function DoctorDetailScreen({
   doctor,
+  nextAppointment,
   onBack,
   onEdit,
 }: {
   doctor: Doctor;
+  /** This doctor's soonest upcoming appointment, if any — populated by App.tsx via selectHeroAppointment-style filtering over this doctor's appointments (see issue #4 AC: doctor detail shows their next appointment). */
+  nextAppointment?: Appointment;
   onBack: () => void;
   onEdit: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   return (
     <main className="screen doctor-detail-screen">
@@ -33,7 +37,14 @@ export function DoctorDetailScreen({
 
       <section>
         <h2>{t("doctorDetail.appointment.title")}</h2>
-        <p className="empty-state">{t("doctorDetail.appointment.empty")}</p>
+        {nextAppointment ? (
+          <div className="next-appointment">
+            <p className="next-appointment-date">{formatDateTime(nextAppointment.dateTime, i18n.language)}</p>
+            <p className="next-appointment-notes">{nextAppointment.notes}</p>
+          </div>
+        ) : (
+          <p className="empty-state">{t("doctorDetail.appointment.empty")}</p>
+        )}
       </section>
 
       <section>

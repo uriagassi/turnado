@@ -6,10 +6,12 @@ export function DoctorsScreen({
   doctors,
   onSelectDoctor,
   onAddDoctor,
+  onBackHome,
 }: {
   doctors: Doctor[];
   onSelectDoctor: (doctor: Doctor) => void;
   onAddDoctor: () => void;
+  onBackHome: () => void;
 }) {
   const { t } = useTranslation();
 
@@ -36,6 +38,9 @@ export function DoctorsScreen({
           ))}
         </ul>
       )}
+      <button type="button" className="back-to-list" onClick={onBackHome}>
+        {t("doctors.backHome")}
+      </button>
     </main>
   );
 }

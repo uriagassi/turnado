@@ -43,8 +43,24 @@ export interface Doctor extends DoctorInput {
   photoPath: string | null;
 }
 
+export type AppointmentStatus = "planned" | "done" | "cancelled" | "postponed";
+
+export interface AppointmentInput {
+  doctorId?: number | null;
+  dateTime: string;
+  location?: string;
+  notes: string;
+}
+
+export interface Appointment extends AppointmentInput {
+  id: number;
+  doctorId: number | null;
+  status: AppointmentStatus;
+  summary: string | null;
+}
+
 export interface HomeData {
-  nextAppointment: unknown;
+  nextAppointment: Appointment | null;
   openItems: unknown[];
   recentDocuments: unknown[];
 }
@@ -88,5 +104,55 @@ export async function uploadDoctorPhoto(id: number, photo: File): Promise<Doctor
   body.append("photo", photo);
   const res = await fetch(`/api/doctors/${id}/photo`, { method: "POST", credentials: "same-origin", body });
   if (!res.ok) throw new Error(`Unexpected POST /api/doctors/${id}/photo status ${res.status}`);
+  return res.json();
+}
+
+export async function fetchAppointments(): Promise<Appointment[]> {
+  const res = await fetch("/api/appointments", { credentials: "same-origin" });
+  if (!res.ok) throw new Error(`Unexpected /api/appointments status ${res.status}`);
+  return res.json();
+}
+
+export async function createAppointment(input: AppointmentInput): Promise<Appointment> {
+  const res = await fetch("/api/appointments", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(`Unexpected POST /api/appointments status ${res.status}`);
+  return res.json();
+}
+
+export async function updateAppointment(id: number, input: AppointmentInput): Promise<Appointment> {
+  const res = await fetch(`/api/appointments/${id}`, {
+    method: "PUT",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(`Unexpected PUT /api/appointments/${id} status ${res.status}`);
+  return res.json();
+}
+
+export async function setAppointmentStatus(id: number, status: AppointmentStatus): Promise<Appointment> {
+  const res = await fetch(`/api/appointments/${id}/status`, {
+    method: "PUT",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) throw new Error(`Unexpected PUT /api/appointments/${id}/status status ${res.status}`);
+  return res.json();
+}
+
+export async function setAppointmentSummary(id: number, summary: string): Promise<Appointment> {
+  const res = await fetch(`/api/appointments/${id}/summary`, {
+    method: "PUT",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ summary }),
+  });
+  if (!res.ok) throw new Error(`Unexpected PUT /api/appointments/${id}/summary status ${res.status}`);
   return res.json();
 }
