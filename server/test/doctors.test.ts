@@ -239,4 +239,25 @@ describe("Doctors", () => {
       expect(tag).toEqual({ tagId: created.tagId, name: "Dr. Jane A. Smith" });
     });
   });
+
+  describe("setPhoto", () => {
+    it("sets the doctor's photoPath and returns the updated doctor", () => {
+      const doctors = tmpDoctors();
+      const created = doctors.create({ name: "Dr. Jane Smith", notes: "Family physician" });
+      expect(created.photoPath).toBeNull();
+
+      const updated = doctors.setPhoto(created.id, "photos/1-smith.jpg");
+
+      expect(updated).toMatchObject({ id: created.id, photoPath: "photos/1-smith.jpg" });
+      expect(doctors.get(created.id)!.photoPath).toBe("photos/1-smith.jpg");
+    });
+
+    it("throws DoctorNotFoundError for an id that doesn't exist, instead of crashing", () => {
+      const doctors = tmpDoctors();
+
+      const thrown = catchError(() => doctors.setPhoto(999, "photos/ghost.jpg"));
+
+      expect(thrown).toBeInstanceOf(DoctorNotFoundError);
+    });
+  });
 });
