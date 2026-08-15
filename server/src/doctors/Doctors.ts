@@ -15,6 +15,14 @@ export interface Doctor extends DoctorInput {
   id: number;
   /** The adopted/created row in the shared Tags table (see findOrCreateDoctorTag). */
   tagId: number;
+  /**
+   * Path to the doctor's photo on disk, relative to the configured photos
+   * directory (see setPhoto / the /api/doctors/:id/photo route) — null until
+   * one's been uploaded. Deliberately separate from DoctorInput: unlike the
+   * shared-system Attachments the sibling app manages, this app owns the
+   * file directly, so it's set only via setPhoto, not create/update.
+   */
+  photoPath: string | null;
 }
 
 export class DoctorNotFoundError extends Error {
@@ -47,6 +55,7 @@ export class Doctors {
   private readonly getDoctor: Statement;
   private readonly listDoctors: Statement;
   private readonly updateDoctor: Statement;
+  private readonly updatePhotoStmt: Statement;
 
   private readonly parentTagName: string;
 
@@ -63,7 +72,8 @@ export class Doctors {
         address TEXT,
         email TEXT,
         notes TEXT NOT NULL,
-        tagId INTEGER NOT NULL REFERENCES Tags(tagId)
+        tagId INTEGER NOT NULL REFERENCES Tags(tagId),
+        photoPath TEXT
       )
     `);
     this.insertDoctor = db.prepare(
@@ -78,6 +88,7 @@ export class Doctors {
            address = $address, email = $email, notes = $notes
        WHERE id = $id`,
     );
+    this.updatePhotoStmt = db.prepare(`UPDATE Doctors SET photoPath = $photoPath WHERE id = $id`);
   }
 
   create(input: DoctorInput): Doctor {
@@ -105,8 +116,7 @@ export class Doctors {
   }
 
   update(id: number, input: DoctorInput): Doctor {
-    const existing = this.getDoctor.get(id) as Doctor | undefined;
-    if (!existing) throw new DoctorNotFoundError(id);
+    const existing = this.getOrThrow(id);
     this.validate(input);
     this.updateDoctor.run({
       id,
@@ -123,6 +133,19 @@ export class Doctors {
     // sibling document-archive app) never desync from this doctor.
     this.tags.rename(existing.tagId, input.name);
     return this.getDoctor.get(id) as Doctor;
+  }
+
+  /** Records where this doctor's uploaded photo lives on disk (see the /api/doctors/:id/photo route, which owns the actual file write, including removing the previous file). */
+  setPhoto(id: number, photoPath: string): Doctor {
+    this.getOrThrow(id);
+    this.updatePhotoStmt.run({ id, photoPath });
+    return this.getDoctor.get(id) as Doctor;
+  }
+
+  private getOrThrow(id: number): Doctor {
+    const existing = this.getDoctor.get(id) as Doctor | undefined;
+    if (!existing) throw new DoctorNotFoundError(id);
+    return existing;
   }
 
   private validate(input: DoctorInput): void {

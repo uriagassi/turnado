@@ -25,6 +25,7 @@ const app = createApp({
   fallbackLocale: config.get<string>("i18n.fallbackLocale"),
   db,
   doctorsParentTagName: config.get<string>("doctors.parentTagName"),
+  photosDir: expandHome(config.get<string>("doctors.photosDir")),
   clientDistPath: path.resolve(__dirname, "../../client/dist"),
 });
 
