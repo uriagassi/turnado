@@ -13,6 +13,7 @@
     "busyTimeoutMs": 5000
   },
   "notebook": {
+    "medicalNotebookName": "Medical",
     "medicalNotebookId": 0
   },
   "attachments": {

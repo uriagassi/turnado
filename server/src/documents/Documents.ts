@@ -146,7 +146,8 @@ export class InvalidDocumentInputError extends Error {
 }
 
 export interface DocumentsConfig {
-  medicalNotebookId: number;
+  medicalNotebookId?: number;
+  medicalNotebookName?: string;
   documentTypeParentTagName?: string;
   doctorsParentTagName?: string;
   specialtyParentTagName?: string;
@@ -163,16 +164,43 @@ export class Documents {
   constructor(db: Database, config: DocumentsConfig) {
     this.db = db;
     this.tags = new SharedTags(db);
-    this.medicalNotebookId = config.medicalNotebookId;
+    this.ensureTables();
+    this.medicalNotebookId = this.resolveNotebookId(config);
     this.docTypeParentTagName = config.documentTypeParentTagName ?? "medical/document-type";
     this.doctorsParentTagName = config.doctorsParentTagName ?? "medical/doctors";
     this.specialtyParentTagName = config.specialtyParentTagName ?? "medical/specialty";
+  }
 
-    this.ensureTables();
+  private resolveNotebookId(config: DocumentsConfig): number {
+    if (config.medicalNotebookName) {
+      const row = this.db
+        .prepare(`SELECT notebookId FROM Notebooks WHERE name = ?`)
+        .get(config.medicalNotebookName) as { notebookId: number } | undefined;
+      if (row) return row.notebookId;
+
+      try {
+        const res = this.db
+          .prepare(`INSERT INTO Notebooks (name, type) VALUES (?, NULL)`)
+          .run(config.medicalNotebookName);
+        return res.lastInsertRowid as number;
+      } catch {
+        // Fall through
+      }
+    }
+    if (config.medicalNotebookId !== undefined && config.medicalNotebookId !== null) {
+      return config.medicalNotebookId;
+    }
+    return 0;
   }
 
   private ensureTables(): void {
     this.db.exec(`
+      CREATE TABLE IF NOT EXISTS Notebooks (
+        notebookId INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        type TEXT
+      );
+
       CREATE TABLE IF NOT EXISTS Notes (
         noteId INTEGER PRIMARY KEY AUTOINCREMENT,
         notebookId INTEGER NOT NULL,

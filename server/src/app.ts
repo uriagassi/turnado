@@ -64,6 +64,8 @@ export interface AppOptions {
   photosDir?: string;
   /** Dedicated notebook ID for medical documents in the shared DB. */
   medicalNotebookId?: number;
+  /** Dedicated notebook name (e.g. "Medical") for medical documents in the shared DB. */
+  medicalNotebookName?: string;
   /** Parent tag for document types (e.g. medical/document-type). */
   documentTypeParentTagName?: string;
   /** Parent tag for specialties (e.g. medical/specialty). */
@@ -324,6 +326,7 @@ export function createApp(options: AppOptions): Express {
 
     const {
       medicalNotebookId = 0,
+      medicalNotebookName,
       documentTypeParentTagName = "medical/document-type",
       specialtyParentTagName = "medical/specialty",
       attachmentsDir,
@@ -337,6 +340,7 @@ export function createApp(options: AppOptions): Express {
 
     const documents = new Documents(db, {
       medicalNotebookId,
+      medicalNotebookName,
       documentTypeParentTagName,
       doctorsParentTagName,
       specialtyParentTagName,
