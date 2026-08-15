@@ -313,7 +313,10 @@ export class Documents {
       .prepare(`SELECT * FROM DocumentMeta WHERE noteId = ?`)
       .get(id) as DocumentMetaRow | undefined;
     const attachment = this.db
-      .prepare(`SELECT * FROM Attachments WHERE noteId = ? ORDER BY attachmentId DESC LIMIT 1`)
+      .prepare(
+        `SELECT attachmentId, noteId, fileName, coalesce(uniqueFileName, uniqueFilename) AS uniqueFilename, mime, hash, size
+         FROM Attachments WHERE noteId = ? ORDER BY attachmentId DESC LIMIT 1`,
+      )
       .get(id) as AttachmentRow | undefined;
 
     const typeTag = this.db
@@ -344,7 +347,7 @@ export class Documents {
       file: attachment
         ? {
             fileName: attachment.fileName,
-            uniqueFilename: attachment.uniqueFilename,
+            uniqueFilename: attachment.uniqueFilename || (attachment as any).uniqueFileName || "",
             mime: attachment.mime,
             hash: attachment.hash,
             size: attachment.size,
