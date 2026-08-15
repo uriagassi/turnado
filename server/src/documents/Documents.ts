@@ -1,4 +1,4 @@
-import type { Database, Statement } from "better-sqlite3";
+import type { Database } from "better-sqlite3";
 import { SharedTags } from "../doctors/SharedTags.js";
 
 export type DocumentType =
@@ -53,6 +53,50 @@ export interface Document {
   updatedAt: string;
 }
 
+interface NoteRow {
+  noteId: number;
+  notebookId: number;
+  title: string;
+  noteData: string | null;
+  createTime: string;
+  updateTime: string;
+  updatedBy: string | null;
+}
+
+interface DocumentMetaRow {
+  noteId: number;
+  documentDate: string | null;
+  doctorId: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface AttachmentRow {
+  attachmentId: number;
+  noteId: number;
+  fileName: string;
+  uniqueFilename: string;
+  mime: string;
+  hash: string;
+  size: number;
+}
+
+interface TagNameRow {
+  name: string;
+}
+
+interface DoctorTagRow {
+  tagId: number;
+}
+
+interface DoctorIdRow {
+  doctorId: number;
+}
+
+interface NoteIdRow {
+  noteId: number;
+}
+
 export class DocumentNotFoundError extends Error {
   constructor(id: number) {
     super(`Document ${id} not found`);
@@ -92,59 +136,6 @@ export class Documents {
 
   private ensureTables(): void {
     this.db.exec(`
-      CREATE TABLE IF NOT EXISTS Tags (
-        tagId INTEGER NOT NULL CONSTRAINT PK_Tags PRIMARY KEY AUTOINCREMENT,
-        parentId INTEGER NULL,
-        name TEXT NOT NULL,
-        isExpanded INTEGER NOT NULL DEFAULT 0
-      );
-
-      CREATE TABLE IF NOT EXISTS Doctors (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        specialty TEXT,
-        clinic TEXT,
-        phone TEXT,
-        address TEXT,
-        email TEXT,
-        notes TEXT,
-        tagId INTEGER NOT NULL,
-        photoPath TEXT
-      );
-
-      CREATE TABLE IF NOT EXISTS Appointments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        doctorId INTEGER,
-        dateTime TEXT NOT NULL,
-        location TEXT,
-        notes TEXT NOT NULL,
-        status TEXT NOT NULL DEFAULT 'planned',
-        summary TEXT
-      );
-
-      CREATE TABLE IF NOT EXISTS Tasks (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        type TEXT NOT NULL,
-        title TEXT NOT NULL,
-        status TEXT NOT NULL DEFAULT 'open',
-        dueDate TEXT,
-        doctorId INTEGER,
-        sourceAppointmentId INTEGER,
-        pendingAppointmentId INTEGER,
-        requiresAdvanceScheduling INTEGER NOT NULL DEFAULT 0,
-        recurrenceWindow TEXT,
-        approximateDateWindow TEXT,
-        institution TEXT,
-        department TEXT,
-        healthFund TEXT,
-        codeNumber TEXT,
-        codeName TEXT,
-        issuingBody TEXT,
-        purpose TEXT,
-        createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-
       CREATE TABLE IF NOT EXISTS Notes (
         noteId INTEGER PRIMARY KEY AUTOINCREMENT,
         notebookId INTEGER NOT NULL,
@@ -198,41 +189,44 @@ export class Documents {
 
     const insertNote = this.db.prepare(`
       INSERT INTO Notes (notebookId, title, noteData, createTime, updateTime, updatedBy)
-      VALUES ($notebookId, $title, $noteData, date('now'), date('now'), 'turnado')
+      VALUES (@notebookId, @title, @noteData, date('now'), date('now'), 'turnado')
     `);
 
     const insertAttachment = this.db.prepare(`
       INSERT INTO Attachments (noteId, fileName, uniqueFilename, mime, hash, size)
-      VALUES ($noteId, $fileName, $uniqueFilename, $mime, $hash, $size)
+      VALUES (@noteId, @fileName, @uniqueFilename, @mime, @hash, @size)
     `);
 
     const insertMeta = this.db.prepare(`
       INSERT INTO DocumentMeta (noteId, documentDate, doctorId)
-      VALUES ($noteId, $documentDate, $doctorId)
+      VALUES (@noteId, @documentDate, @doctorId)
     `);
 
     const insertNoteTag = this.db.prepare(`
-      INSERT OR IGNORE INTO NoteTags (noteId, tagId) VALUES ($noteId, $tagId)
+      INSERT OR IGNORE INTO NoteTags (noteId, tagId)
+      VALUES (@noteId, @tagId)
     `);
 
     const insertAppointmentDoc = this.db.prepare(`
-      INSERT OR IGNORE INTO AppointmentDocuments (noteId, appointmentId) VALUES ($noteId, $appointmentId)
+      INSERT OR IGNORE INTO AppointmentDocuments (noteId, appointmentId)
+      VALUES (@noteId, @appointmentId)
     `);
 
     const insertTaskDoc = this.db.prepare(`
-      INSERT OR IGNORE INTO TaskDocuments (noteId, taskId) VALUES ($noteId, $taskId)
+      INSERT OR IGNORE INTO TaskDocuments (noteId, taskId)
+      VALUES (@noteId, @taskId)
     `);
 
     const typeTagId = this.findOrCreateDocumentTypeTag(input.type);
 
     let createdId = 0;
-
     const tx = this.db.transaction(() => {
       const noteResult = insertNote.run({
         notebookId: this.medicalNotebookId,
         title: input.title.trim(),
-        noteData: input.notes?.trim() ?? null,
+        noteData: input.notes?.trim() || null,
       });
+
       createdId = Number(noteResult.lastInsertRowid);
 
       insertAttachment.run({
@@ -246,7 +240,7 @@ export class Documents {
 
       insertMeta.run({
         noteId: createdId,
-        documentDate: input.documentDate?.trim() ?? null,
+        documentDate: input.documentDate || null,
         doctorId: input.doctorId ?? null,
       });
 
@@ -278,13 +272,15 @@ export class Documents {
   get(id: number): Document | undefined {
     const note = this.db
       .prepare(`SELECT * FROM Notes WHERE noteId = ? AND notebookId = ?`)
-      .get(id, this.medicalNotebookId) as any;
+      .get(id, this.medicalNotebookId) as NoteRow | undefined;
     if (!note) return undefined;
 
-    const meta = this.db.prepare(`SELECT * FROM DocumentMeta WHERE noteId = ?`).get(id) as any;
+    const meta = this.db
+      .prepare(`SELECT * FROM DocumentMeta WHERE noteId = ?`)
+      .get(id) as DocumentMetaRow | undefined;
     const attachment = this.db
       .prepare(`SELECT * FROM Attachments WHERE noteId = ? ORDER BY attachmentId DESC LIMIT 1`)
-      .get(id) as any;
+      .get(id) as AttachmentRow | undefined;
 
     const typeTag = this.db
       .prepare(
@@ -293,7 +289,7 @@ export class Documents {
          JOIN Tags parent ON parent.tagId = t.parentId
          WHERE nt.noteId = ? AND parent.name = ?`,
       )
-      .get(id, this.docTypeParentTagName) as any;
+      .get(id, this.docTypeParentTagName) as TagNameRow | undefined;
 
     const appointmentRows = this.db
       .prepare(`SELECT appointmentId FROM AppointmentDocuments WHERE noteId = ?`)
@@ -336,14 +332,14 @@ export class Documents {
   list(): Document[] {
     const notes = this.db
       .prepare(`SELECT noteId FROM Notes WHERE notebookId = ? ORDER BY noteId DESC`)
-      .all(this.medicalNotebookId) as { noteId: number }[];
+      .all(this.medicalNotebookId) as NoteIdRow[];
     return notes.map((n) => this.get(n.noteId)!).filter(Boolean);
   }
 
   listRecent(limit = 5): Document[] {
     const notes = this.db
       .prepare(`SELECT noteId FROM Notes WHERE notebookId = ? ORDER BY noteId DESC LIMIT ?`)
-      .all(this.medicalNotebookId, limit) as { noteId: number }[];
+      .all(this.medicalNotebookId, limit) as NoteIdRow[];
     return notes.map((n) => this.get(n.noteId)!).filter(Boolean);
   }
 
@@ -362,7 +358,7 @@ export class Documents {
          )
          ORDER BY n.noteId DESC`,
       )
-      .all(this.medicalNotebookId, doctorId, doctorId, doctorId) as { noteId: number }[];
+      .all(this.medicalNotebookId, doctorId, doctorId, doctorId) as NoteIdRow[];
 
     return rows.map((r) => this.get(r.noteId)!).filter(Boolean);
   }
@@ -375,7 +371,7 @@ export class Documents {
          WHERE n.notebookId = ? AND td.taskId = ?
          ORDER BY n.noteId DESC`,
       )
-      .all(this.medicalNotebookId, taskId) as { noteId: number }[];
+      .all(this.medicalNotebookId, taskId) as NoteIdRow[];
 
     return rows.map((r) => this.get(r.noteId)!).filter(Boolean);
   }
@@ -388,7 +384,7 @@ export class Documents {
          WHERE n.notebookId = ? AND ad.appointmentId = ?
          ORDER BY n.noteId DESC`,
       )
-      .all(this.medicalNotebookId, appointmentId) as { noteId: number }[];
+      .all(this.medicalNotebookId, appointmentId) as NoteIdRow[];
 
     return rows.map((r) => this.get(r.noteId)!).filter(Boolean);
   }
@@ -410,7 +406,9 @@ export class Documents {
    * and removes any doctor tags that are no longer linked.
    */
   syncDoctorTags(noteId: number): void {
-    const meta = this.db.prepare(`SELECT doctorId FROM DocumentMeta WHERE noteId = ?`).get(noteId) as any;
+    const meta = this.db
+      .prepare(`SELECT doctorId FROM DocumentMeta WHERE noteId = ?`)
+      .get(noteId) as DocumentMetaRow | undefined;
     const directDoctorId = meta?.doctorId;
 
     const apptDoctorRows = this.db
@@ -419,7 +417,7 @@ export class Documents {
          JOIN Appointments a ON a.id = ad.appointmentId
          WHERE ad.noteId = ? AND a.doctorId IS NOT NULL`,
       )
-      .all(noteId) as { doctorId: number }[];
+      .all(noteId) as DoctorIdRow[];
 
     const taskDoctorRows = this.db
       .prepare(
@@ -427,7 +425,7 @@ export class Documents {
          JOIN Tasks t ON t.id = td.taskId
          WHERE td.noteId = ? AND t.doctorId IS NOT NULL`,
       )
-      .all(noteId) as { doctorId: number }[];
+      .all(noteId) as DoctorIdRow[];
 
     const doctorIds = new Set<number>();
     if (directDoctorId) doctorIds.add(directDoctorId);
@@ -440,20 +438,20 @@ export class Documents {
       const placeholders = Array.from(doctorIds).map(() => "?").join(",");
       const doctorRows = this.db
         .prepare(`SELECT tagId FROM Doctors WHERE id IN (${placeholders})`)
-        .all(...Array.from(doctorIds)) as { tagId: number }[];
+        .all(...Array.from(doctorIds)) as DoctorTagRow[];
       for (const d of doctorRows) {
         if (d.tagId) targetTagIds.add(d.tagId);
       }
     }
 
-    // Get all doctor tags currently associated with this note (tags whose parent or doctor tag is under medical/doctors or in Doctors table)
+    // Get all doctor tags currently associated with this note
     const existingDoctorTagRows = this.db
       .prepare(
         `SELECT nt.tagId FROM NoteTags nt
          JOIN Doctors d ON d.tagId = nt.tagId
          WHERE nt.noteId = ?`,
       )
-      .all(noteId) as { tagId: number }[];
+      .all(noteId) as DoctorTagRow[];
 
     const existingTagIds = new Set<number>(existingDoctorTagRows.map((r) => r.tagId));
 
@@ -474,22 +472,21 @@ export class Documents {
     }
   }
 
-  syncDoctorTagsForAppointment(appointmentId: number): void {
+  private syncDoctorTagsForLinkedEntity(table: "AppointmentDocuments" | "TaskDocuments", foreignKey: "appointmentId" | "taskId", id: number): void {
     const rows = this.db
-      .prepare(`SELECT noteId FROM AppointmentDocuments WHERE appointmentId = ?`)
-      .all(appointmentId) as { noteId: number }[];
+      .prepare(`SELECT noteId FROM ${table} WHERE ${foreignKey} = ?`)
+      .all(id) as NoteIdRow[];
     for (const r of rows) {
       this.syncDoctorTags(r.noteId);
     }
   }
 
+  syncDoctorTagsForAppointment(appointmentId: number): void {
+    this.syncDoctorTagsForLinkedEntity("AppointmentDocuments", "appointmentId", appointmentId);
+  }
+
   syncDoctorTagsForTask(taskId: number): void {
-    const rows = this.db
-      .prepare(`SELECT noteId FROM TaskDocuments WHERE taskId = ?`)
-      .all(taskId) as { noteId: number }[];
-    for (const r of rows) {
-      this.syncDoctorTags(r.noteId);
-    }
+    this.syncDoctorTagsForLinkedEntity("TaskDocuments", "taskId", taskId);
   }
 
   private findOrCreateDocumentTypeTag(type: DocumentType): number {

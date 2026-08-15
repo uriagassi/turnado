@@ -115,7 +115,7 @@ export function DocumentDetailScreen({
 
       {linkedTasks.length > 0 && (
         <section>
-          <h2 className="section-title">{t("documentForm.tasks.label")}</h2>
+          <h2 className="section-title">{t("doctorDetail.openItems.title")}</h2>
           <div className="item-row-list">
             {linkedTasks.map((task) => (
               <div

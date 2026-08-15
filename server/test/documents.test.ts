@@ -42,6 +42,9 @@ describe("Documents", () => {
   }
 
   function tmpDocuments(db: Database) {
+    new Doctors(db, { parentTagName: "Doctors" });
+    new Appointments(db);
+    new Tasks(db);
     return new Documents(db, {
       medicalNotebookId: MEDICAL_NOTEBOOK_ID,
     });

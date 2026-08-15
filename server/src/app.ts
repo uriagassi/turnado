@@ -322,7 +322,6 @@ export function createApp(options: AppOptions): Express {
       const uniqueFilename = `${hash}_${req.file.originalname}`;
 
       if (attachmentsDir) {
-        fs.mkdirSync(attachmentsDir, { recursive: true });
         fs.writeFileSync(path.join(attachmentsDir, uniqueFilename), req.file.buffer);
       }
 
@@ -334,44 +333,14 @@ export function createApp(options: AppOptions): Express {
         size: req.file.size,
       };
 
-      let appointmentIds: number[] | undefined;
-      if (req.body.appointmentIds) {
-        if (Array.isArray(req.body.appointmentIds)) {
-          appointmentIds = req.body.appointmentIds.map(Number);
-        } else if (typeof req.body.appointmentIds === "string") {
-          try {
-            const parsed = JSON.parse(req.body.appointmentIds);
-            if (Array.isArray(parsed)) appointmentIds = parsed.map(Number);
-            else appointmentIds = req.body.appointmentIds.split(",").map((s: string) => Number(s.trim())).filter(Boolean);
-          } catch {
-            appointmentIds = req.body.appointmentIds.split(",").map((s: string) => Number(s.trim())).filter(Boolean);
-          }
-        }
-      }
-
-      let taskIds: number[] | undefined;
-      if (req.body.taskIds) {
-        if (Array.isArray(req.body.taskIds)) {
-          taskIds = req.body.taskIds.map(Number);
-        } else if (typeof req.body.taskIds === "string") {
-          try {
-            const parsed = JSON.parse(req.body.taskIds);
-            if (Array.isArray(parsed)) taskIds = parsed.map(Number);
-            else taskIds = req.body.taskIds.split(",").map((s: string) => Number(s.trim())).filter(Boolean);
-          } catch {
-            taskIds = req.body.taskIds.split(",").map((s: string) => Number(s.trim())).filter(Boolean);
-          }
-        }
-      }
-
       const input: DocumentCreateInput = {
         title: req.body.title,
         type: req.body.type as DocumentType,
         documentDate: req.body.documentDate || null,
         doctorId: req.body.doctorId ? Number(req.body.doctorId) : null,
         notes: req.body.notes || null,
-        appointmentIds,
-        taskIds,
+        appointmentIds: parseIdList(req.body.appointmentIds),
+        taskIds: parseIdList(req.body.taskIds),
       };
 
       try {
@@ -432,3 +401,22 @@ export function createApp(options: AppOptions): Express {
 
   return app;
 }
+
+function parseIdList(raw: unknown): number[] | undefined {
+  if (!raw) return undefined;
+  if (Array.isArray(raw)) return raw.map(Number);
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed.map(Number);
+    } catch {
+      // Fall through to comma-separated string
+    }
+    return raw
+      .split(",")
+      .map((s: string) => Number(s.trim()))
+      .filter((n: number) => !isNaN(n) && n > 0);
+  }
+  return undefined;
+}
+
