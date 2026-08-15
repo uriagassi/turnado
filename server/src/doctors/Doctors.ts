@@ -8,7 +8,7 @@ export interface DoctorInput {
   phone?: string;
   address?: string;
   email?: string;
-  notes: string;
+  notes?: string;
 }
 
 export interface Doctor extends DoctorInput {
@@ -71,7 +71,7 @@ export class Doctors {
         phone TEXT,
         address TEXT,
         email TEXT,
-        notes TEXT NOT NULL,
+        notes TEXT,
         tagId INTEGER NOT NULL REFERENCES Tags(tagId),
         photoPath TEXT
       )
@@ -101,7 +101,7 @@ export class Doctors {
       phone: input.phone ?? null,
       address: input.address ?? null,
       email: input.email ?? null,
-      notes: input.notes,
+      notes: input.notes ?? null,
       tagId,
     });
     return this.getDoctor.get(result.lastInsertRowid) as Doctor;
@@ -126,7 +126,7 @@ export class Doctors {
       phone: input.phone ?? null,
       address: input.address ?? null,
       email: input.email ?? null,
-      notes: input.notes,
+      notes: input.notes ?? null,
     });
     // Renames the adopted tag in place rather than adopting/creating a
     // different one for the new name, so existing tag links (e.g. from the
@@ -150,7 +150,6 @@ export class Doctors {
 
   private validate(input: DoctorInput): void {
     if (!input.name?.trim()) throw new InvalidDoctorInputError("name is required");
-    if (!input.notes?.trim()) throw new InvalidDoctorInputError("notes is required");
   }
 
   /**
