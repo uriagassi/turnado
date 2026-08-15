@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Doctor, DoctorInput } from "../api";
 import { DoctorAvatar } from "../components/DoctorAvatar";
@@ -54,6 +54,23 @@ export function DoctorFormScreen({
   });
   const [errors, setErrors] = useState<RequiredFieldErrors>({});
   const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!photo) {
+      setPhotoPreview(null);
+      return;
+    }
+    if (typeof URL !== "undefined" && typeof URL.createObjectURL === "function") {
+      const objectUrl = URL.createObjectURL(photo);
+      setPhotoPreview(objectUrl);
+      return () => {
+        if (typeof URL.revokeObjectURL === "function") {
+          URL.revokeObjectURL(objectUrl);
+        }
+      };
+    }
+  }, [photo]);
 
   const setField = <K extends keyof DoctorInput>(key: K, value: DoctorInput[K]) =>
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -96,13 +113,24 @@ export function DoctorFormScreen({
           </label>
         </div>
         <div className="form-field">
-          {doctor && (
-            // Shows what's already on file (photo or the initials fallback)
-            // so the user knows what a blank file input would leave in
-            // place, before deciding whether to replace it.
+          {(photoPreview || doctor) && (
+            // Shows what's currently selected or on file
             <div className="current-photo">
-              <span>{t("doctorForm.currentPhoto.label")}</span>
-              <DoctorAvatar doctor={doctor} />
+              <span>
+                {photoPreview
+                  ? t("doctorForm.newPhotoPreview.label", "Selected photo:")
+                  : t("doctorForm.currentPhoto.label")}
+              </span>
+              {photoPreview ? (
+                <img
+                  src={photoPreview}
+                  alt="Selected doctor photo preview"
+                  className="doctor-avatar"
+                  style={{ objectFit: "cover", borderRadius: "50%" }}
+                />
+              ) : (
+                <DoctorAvatar doctor={doctor!} />
+              )}
             </div>
           )}
           <label>

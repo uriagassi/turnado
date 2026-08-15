@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Appointment, Doctor, DocumentType, Task, TaskType } from "../api";
 
@@ -59,6 +59,24 @@ export function DocumentFormScreen({
     : "other";
 
   const [file, setFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!file) {
+      setFilePreview(null);
+      return;
+    }
+    if (typeof URL !== "undefined" && typeof URL.createObjectURL === "function") {
+      const objectUrl = URL.createObjectURL(file);
+      setFilePreview(objectUrl);
+      return () => {
+        if (typeof URL.revokeObjectURL === "function") {
+          URL.revokeObjectURL(objectUrl);
+        }
+      };
+    }
+  }, [file]);
+
   const [title, setTitle] = useState("");
   const [type, setType] = useState<DocumentType>(defaultType);
   const [documentDate, setDocumentDate] = useState("");
@@ -133,6 +151,45 @@ export function DocumentFormScreen({
               }}
             />
           </label>
+          {filePreview && file && (
+            <div
+              className="document-file-preview"
+              style={{
+                marginTop: "0.5rem",
+                borderRadius: "8px",
+                overflow: "hidden",
+                background: "var(--color-surface, #f9f9f9)",
+                padding: "0.5rem",
+                border: "1px solid var(--color-border, #e5e5e5)",
+              }}
+            >
+              {file.type.startsWith("image/") ||
+              /\.(jpe?g|png|webp|gif|svg|avif|heic|heif|bmp)$/i.test(file.name) ? (
+                <img
+                  src={filePreview}
+                  alt="Upload preview"
+                  style={{
+                    maxHeight: "200px",
+                    maxWidth: "100%",
+                    objectFit: "contain",
+                    display: "block",
+                    margin: "0 auto",
+                    borderRadius: "4px",
+                  }}
+                />
+              ) : file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf") ? (
+                <embed
+                  src={filePreview}
+                  type="application/pdf"
+                  style={{ width: "100%", height: "240px", border: "none", borderRadius: "4px" }}
+                />
+              ) : (
+                <div style={{ padding: "0.5rem", fontSize: "0.875rem", color: "var(--color-text-dim, #666)" }}>
+                  📄 {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                </div>
+              )}
+            </div>
+          )}
           {errors.file && <p className="field-error">{errors.file}</p>}
         </div>
 
