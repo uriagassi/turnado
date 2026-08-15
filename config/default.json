@@ -16,7 +16,8 @@
     "medicalNotebookId": 0
   },
   "doctors": {
-    "parentTagName": "Doctors"
+    "parentTagName": "Doctors",
+    "photosDir": "~/paperless/doctor-photos"
   },
   "mail": {
     "host": "smtp.example.com",
