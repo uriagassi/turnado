@@ -319,14 +319,14 @@ export class Documents {
       )
       .get(id) as AttachmentRow | undefined;
 
+    const docTypeParentId = this.findOrCreateDocumentTypeParentTagId();
     const typeTag = this.db
       .prepare(
         `SELECT t.name FROM NoteTags nt
          JOIN Tags t ON t.tagId = nt.tagId
-         JOIN Tags parent ON parent.tagId = t.parentId
-         WHERE nt.noteId = ? AND parent.name = ?`,
+         WHERE nt.noteId = ? AND t.parentId = ?`,
       )
-      .get(id, this.docTypeParentTagName) as TagNameRow | undefined;
+      .get(id, docTypeParentId) as TagNameRow | undefined;
 
     const appointmentRows = this.db
       .prepare(`SELECT appointmentId FROM AppointmentDocuments WHERE noteId = ?`)
@@ -527,8 +527,12 @@ export class Documents {
   }
 
   private findOrCreateDocumentTypeTag(type: DocumentType): number {
-    const parentId = this.findOrCreateTag(this.docTypeParentTagName, null);
+    const parentId = this.findOrCreateDocumentTypeParentTagId();
     return this.findOrCreateTag(type, parentId);
+  }
+
+  private findOrCreateDocumentTypeParentTagId(): number {
+    return this.tags.findOrCreatePath(this.docTypeParentTagName);
   }
 
   private findOrCreateTag(name: string, parentId: number | null): number {

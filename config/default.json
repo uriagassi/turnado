@@ -19,8 +19,11 @@
     "dir": "~/paperless/attachments"
   },
   "doctors": {
-    "parentTagName": "Doctors",
+    "parentTagName": "medical/doctors",
     "photosDir": "~/paperless/doctor-photos"
+  },
+  "documents": {
+    "documentTypeParentTagName": "medical/document-type"
   },
   "mail": {
     "host": "smtp.example.com",

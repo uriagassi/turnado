@@ -169,8 +169,6 @@ export class Doctors {
 
   /** Every newly created doctor tag nests under this shared parent tag (adopted-or-created the same way). */
   private findOrCreateParentTagId(): number {
-    const existing = this.tags.findByName(this.parentTagName);
-    if (existing) return existing.tagId;
-    return this.tags.create(this.parentTagName, null);
+    return this.tags.findOrCreatePath(this.parentTagName);
   }
 }

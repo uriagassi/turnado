@@ -24,7 +24,12 @@ const app = createApp({
   supportedLocales: config.get<string[]>("i18n.supportedLocales"),
   fallbackLocale: config.get<string>("i18n.fallbackLocale"),
   db,
-  doctorsParentTagName: config.get<string>("doctors.parentTagName"),
+  doctorsParentTagName: config.has("doctors.parentTagName")
+    ? config.get<string>("doctors.parentTagName")
+    : "medical/doctors",
+  documentTypeParentTagName: config.has("documents.documentTypeParentTagName")
+    ? config.get<string>("documents.documentTypeParentTagName")
+    : "medical/document-type",
   photosDir: expandHome(config.get<string>("doctors.photosDir")),
   medicalNotebookId: config.has("notebook.medicalNotebookId") ? config.get<number>("notebook.medicalNotebookId") : 0,
   attachmentsDir: config.has("attachments.dir") ? expandHome(config.get<string>("attachments.dir")) : undefined,

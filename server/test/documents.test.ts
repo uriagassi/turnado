@@ -101,8 +101,11 @@ describe("Documents", () => {
       expect(metaRow.documentDate).toBe("2026-08-10");
       expect(metaRow.doctorId).toBeNull();
 
-      // Verify Tags row under medical/document-type
-      const parentTag = db.prepare("SELECT * FROM Tags WHERE name = 'medical/document-type'").get() as any;
+      // Verify Tags row under medical -> document-type
+      const rootTag = db.prepare("SELECT * FROM Tags WHERE name = 'medical'").get() as any;
+      expect(rootTag).toBeDefined();
+      expect(rootTag.parentId).toBeNull();
+      const parentTag = db.prepare("SELECT * FROM Tags WHERE name = 'document-type' AND parentId = ?").get(rootTag.tagId) as any;
       expect(parentTag).toBeDefined();
       const typeTag = db.prepare("SELECT * FROM Tags WHERE name = 'test result' AND parentId = ?").get(parentTag.tagId) as any;
       expect(typeTag).toBeDefined();
