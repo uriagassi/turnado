@@ -8,8 +8,8 @@ export function DoctorDetailScreen({ doctor, onBack }: { doctor: Doctor; onBack:
   return (
     <main className="screen doctor-detail-screen">
       <div className="doctor-header">
-        <DoctorAvatar doctor={doctor} />
         <h1>{doctor.name}</h1>
+        <DoctorAvatar doctor={doctor} />
       </div>
       {doctor.specialty && <p>{doctor.specialty}</p>}
       {doctor.clinic && <p>{doctor.clinic}</p>}
