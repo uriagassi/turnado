@@ -70,8 +70,10 @@ h1 {
   height: 2.5rem;
   border-radius: 50%;
   overflow: hidden;
+  /* Background color is set per-doctor inline (see DoctorAvatar in
+     DoctorsScreen.tsx) — this is only a fallback before that renders. */
   background: light-dark(#e5e7eb, #374151);
-  color: light-dark(#374151, #e5e7eb);
+  color: #fff;
   font-weight: 600;
   font-size: 0.875rem;
 }
