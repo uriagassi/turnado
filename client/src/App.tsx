@@ -1,12 +1,25 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { applyLocale } from "./i18n";
-import { fetchAuthInfo, fetchCurrentUser, fetchHome, fetchDoctors, AuthClientData, Doctor, HomeData, UserInfo } from "./api";
+import {
+  fetchAuthInfo,
+  fetchCurrentUser,
+  fetchHome,
+  fetchDoctors,
+  createDoctor,
+  updateDoctor,
+  AuthClientData,
+  Doctor,
+  DoctorInput,
+  HomeData,
+  UserInfo,
+} from "./api";
 import { HomeScreen } from "./screens/HomeScreen";
 import { NotAuthorizedScreen } from "./screens/NotAuthorizedScreen";
 import { SignInScreen } from "./screens/SignInScreen";
 import { DoctorsScreen } from "./screens/DoctorsScreen";
 import { DoctorDetailScreen } from "./screens/DoctorDetailScreen";
+import { DoctorFormScreen } from "./screens/DoctorFormScreen";
 
 type Session = { user: UserInfo; home: HomeData };
 
@@ -16,7 +29,9 @@ type AppState =
   | { phase: "sign-in"; authInfo: AuthClientData }
   | { phase: "home"; session: Session }
   | { phase: "doctors"; session: Session; doctors: Doctor[] }
-  | { phase: "doctor-detail"; session: Session; doctors: Doctor[]; doctor: Doctor };
+  | { phase: "doctor-detail"; session: Session; doctors: Doctor[]; doctor: Doctor }
+  // `doctor` is undefined when adding a new doctor, set when editing an existing one.
+  | { phase: "doctor-form"; session: Session; doctors: Doctor[]; doctor?: Doctor };
 
 export function App() {
   const { t } = useTranslation();
@@ -67,12 +82,29 @@ export function App() {
     case "doctors": {
       const { session, doctors } = state;
       const selectDoctor = (doctor: Doctor) => setState({ phase: "doctor-detail", session, doctors, doctor });
-      return <DoctorsScreen doctors={doctors} onSelectDoctor={selectDoctor} />;
+      const addDoctor = () => setState({ phase: "doctor-form", session, doctors });
+      return <DoctorsScreen doctors={doctors} onSelectDoctor={selectDoctor} onAddDoctor={addDoctor} />;
     }
     case "doctor-detail": {
-      const { session, doctors } = state;
+      const { session, doctors, doctor } = state;
       const back = () => setState({ phase: "doctors", session, doctors });
-      return <DoctorDetailScreen doctor={state.doctor} onBack={back} />;
+      const edit = () => setState({ phase: "doctor-form", session, doctors, doctor });
+      return <DoctorDetailScreen doctor={doctor} onBack={back} onEdit={edit} />;
+    }
+    case "doctor-form": {
+      const { session, doctors, doctor } = state;
+      const cancel = () =>
+        doctor
+          ? setState({ phase: "doctor-detail", session, doctors, doctor })
+          : setState({ phase: "doctors", session, doctors });
+      const submit = async (input: DoctorInput) => {
+        const saved = doctor ? await updateDoctor(doctor.id, input) : await createDoctor(input);
+        const nextDoctors = doctor
+          ? doctors.map((d) => (d.id === saved.id ? saved : d))
+          : [...doctors, saved].sort((a, b) => a.name.localeCompare(b.name));
+        setState({ phase: "doctor-detail", session, doctors: nextDoctors, doctor: saved });
+      };
+      return <DoctorFormScreen doctor={doctor} onSubmit={submit} onCancel={cancel} />;
     }
   }
 }

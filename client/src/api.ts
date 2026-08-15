@@ -28,8 +28,7 @@ export async function fetchCurrentUser(): Promise<UserResult> {
   return { status: "ok", user };
 }
 
-export interface Doctor {
-  id: number;
+export interface DoctorInput {
   name: string;
   specialty?: string;
   clinic?: string;
@@ -37,6 +36,10 @@ export interface Doctor {
   address?: string;
   email?: string;
   notes: string;
+}
+
+export interface Doctor extends DoctorInput {
+  id: number;
   photoPath: string | null;
 }
 
@@ -55,5 +58,27 @@ export async function fetchHome(): Promise<HomeData> {
 export async function fetchDoctors(): Promise<Doctor[]> {
   const res = await fetch("/api/doctors", { credentials: "same-origin" });
   if (!res.ok) throw new Error(`Unexpected /api/doctors status ${res.status}`);
+  return res.json();
+}
+
+export async function createDoctor(input: DoctorInput): Promise<Doctor> {
+  const res = await fetch("/api/doctors", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(`Unexpected POST /api/doctors status ${res.status}`);
+  return res.json();
+}
+
+export async function updateDoctor(id: number, input: DoctorInput): Promise<Doctor> {
+  const res = await fetch(`/api/doctors/${id}`, {
+    method: "PUT",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(`Unexpected PUT /api/doctors/${id} status ${res.status}`);
   return res.json();
 }

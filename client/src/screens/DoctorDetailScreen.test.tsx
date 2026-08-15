@@ -21,7 +21,7 @@ function doctor(overrides: Partial<Doctor> = {}): Doctor {
 
 describe("DoctorDetailScreen", () => {
   it("renders the doctor's fields", () => {
-    render(<DoctorDetailScreen doctor={doctor()} onBack={() => {}} />);
+    render(<DoctorDetailScreen doctor={doctor()} onBack={() => {}} onEdit={() => {}} />);
 
     expect(screen.getByText("Dr. Jane Smith")).toBeInTheDocument();
     expect(screen.getByText("Cardiology")).toBeInTheDocument();
@@ -33,7 +33,7 @@ describe("DoctorDetailScreen", () => {
   });
 
   it("shows empty placeholder sections for appointments, open items, and documents", () => {
-    render(<DoctorDetailScreen doctor={doctor()} onBack={() => {}} />);
+    render(<DoctorDetailScreen doctor={doctor()} onBack={() => {}} onEdit={() => {}} />);
 
     expect(screen.getByText("No upcoming appointment.")).toBeInTheDocument();
     expect(screen.getByText("No open items.")).toBeInTheDocument();
@@ -41,13 +41,13 @@ describe("DoctorDetailScreen", () => {
   });
 
   it("shows the doctor's avatar, same as the list view", () => {
-    render(<DoctorDetailScreen doctor={doctor({ name: "Dr. Jane Smith", photoPath: null })} onBack={() => {}} />);
+    render(<DoctorDetailScreen doctor={doctor({ name: "Dr. Jane Smith", photoPath: null })} onBack={() => {}} onEdit={() => {}} />);
 
     expect(screen.getByTestId("doctor-avatar")).toHaveTextContent("JS");
   });
 
   it("shows the doctor's photo instead of initials in the avatar when photoPath is set", () => {
-    render(<DoctorDetailScreen doctor={doctor({ name: "Dr. Jane Smith", photoPath: "1-170000.jpg" })} onBack={() => {}} />);
+    render(<DoctorDetailScreen doctor={doctor({ name: "Dr. Jane Smith", photoPath: "1-170000.jpg" })} onBack={() => {}} onEdit={() => {}} />);
 
     expect(screen.getByTestId("doctor-avatar").querySelector("img")).toHaveAttribute("src", "/photos/1-170000.jpg");
   });
@@ -55,10 +55,20 @@ describe("DoctorDetailScreen", () => {
   it("calls onBack when the back-to-doctor-list control is activated", async () => {
     const user = userEvent.setup();
     const onBack = vi.fn();
-    render(<DoctorDetailScreen doctor={doctor()} onBack={onBack} />);
+    render(<DoctorDetailScreen doctor={doctor()} onBack={onBack} onEdit={() => {}} />);
 
     await user.click(screen.getByRole("button", { name: "Back to doctor list" }));
 
     expect(onBack).toHaveBeenCalledOnce();
+  });
+
+  it("calls onEdit when the edit control is activated", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    render(<DoctorDetailScreen doctor={doctor()} onBack={() => {}} onEdit={onEdit} />);
+
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+
+    expect(onEdit).toHaveBeenCalledOnce();
   });
 });
