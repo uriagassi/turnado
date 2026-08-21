@@ -9,6 +9,7 @@
   "home.addAppointment": "הוספת תור",
   "home.viewUpcoming": "תורים קרובים",
   "home.viewHistory": "היסטוריית תורים",
+  "home.viewDocuments": "מסמכים",
   "doctors.title": "רופאים",
   "doctors.empty": "אין עדיין רופאים — הוסיפו רופא כדי להתחיל.",
   "doctors.add": "הוספת רופא",
@@ -148,5 +149,18 @@
   "taskForm.purpose.label": "מטרה",
   "taskForm.resolveToAppointment": "קביעת מועד ויצירת תור",
   "taskForm.save": "שמירה",
-  "taskForm.cancel": "ביטול"
+  "taskForm.cancel": "ביטול",
+  "documentsScreen.title": "מסמכים",
+  "documentsScreen.back": "בית",
+  "documentsScreen.filters.toggle": "סינון",
+  "documentsScreen.filters.query.label": "חיפוש לפי כותרת",
+  "documentsScreen.filters.type.label": "סוג מסמך",
+  "documentsScreen.filters.type.any": "כל הסוגים",
+  "documentsScreen.filters.doctor.label": "רופא",
+  "documentsScreen.filters.doctor.any": "כל הרופאים",
+  "documentsScreen.filters.dateFrom.label": "מתאריך",
+  "documentsScreen.filters.dateTo.label": "עד תאריך",
+  "documentsScreen.filters.clearAll": "ניקוי הכל",
+  "documentsScreen.linkedBadge_one": "מקושר לפריט אחד",
+  "documentsScreen.linkedBadge_other": "מקושר ל-{{count}} פריטים"
 }

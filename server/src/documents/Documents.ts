@@ -28,6 +28,18 @@ export interface UploadedFile {
   size: number;
 }
 
+export interface DocumentSearchFilters {
+  /** Case-insensitive substring match against the document title. */
+  query?: string;
+  type?: DocumentType;
+  /** Matches a document linked to this doctor directly, or transitively via a linked appointment/task (same rule as listByDoctor). */
+  doctorId?: number;
+  /** Inclusive lower bound on documentDate. */
+  dateFrom?: string;
+  /** Inclusive upper bound on documentDate. */
+  dateTo?: string;
+}
+
 export interface DocumentCreateInput {
   title: string;
   type: DocumentType;
@@ -129,6 +141,27 @@ interface DoctorIdRow {
 
 interface NoteIdRow {
   noteId: number;
+}
+
+export interface DocumentTypeGroup {
+  type: DocumentType;
+  documents: Document[];
+}
+
+/**
+ * Groups documents by their type for search-results display, in
+ * VALID_DOCUMENT_TYPES declaration order (types with no matches are
+ * omitted), preserving each document's relative order within its group.
+ */
+export function groupDocumentsByType(docs: Document[]): DocumentTypeGroup[] {
+  const groups: DocumentTypeGroup[] = [];
+  for (const type of VALID_DOCUMENT_TYPES) {
+    const matching = docs.filter((d) => d.type === type);
+    if (matching.length > 0) {
+      groups.push({ type, documents: matching });
+    }
+  }
+  return groups;
 }
 
 export class DocumentNotFoundError extends Error {
@@ -453,6 +486,56 @@ export class Documents {
          ORDER BY n.noteId DESC`,
       )
       .all(this.medicalNotebookId, appointmentId) as NoteIdRow[];
+
+    return rows.map((r) => this.get(r.noteId)!).filter(Boolean);
+  }
+
+  search(filters: DocumentSearchFilters): Document[] {
+    const conditions: string[] = ["n.notebookId = ?"];
+    const params: (string | number)[] = [this.medicalNotebookId];
+
+    if (filters.doctorId !== undefined) {
+      conditions.push(`n.noteId IN (
+        SELECT n2.noteId FROM Notes n2
+        LEFT JOIN DocumentMeta dm ON dm.noteId = n2.noteId
+        LEFT JOIN AppointmentDocuments ad ON ad.noteId = n2.noteId
+        LEFT JOIN Appointments a ON a.id = ad.appointmentId
+        LEFT JOIN TaskDocuments td ON td.noteId = n2.noteId
+        LEFT JOIN Tasks t ON t.id = td.taskId
+        WHERE dm.doctorId = ? OR a.doctorId = ? OR t.doctorId = ?
+      )`);
+      params.push(filters.doctorId, filters.doctorId, filters.doctorId);
+    }
+
+    if (filters.type) {
+      const docTypeParentId = this.findOrCreateDocumentTypeParentTagId();
+      conditions.push(`n.noteId IN (
+        SELECT nt.noteId FROM NoteTags nt
+        JOIN Tags tg ON tg.tagId = nt.tagId
+        WHERE tg.parentId = ? AND tg.name = ?
+      )`);
+      params.push(docTypeParentId, filters.type);
+    }
+
+    const trimmedQuery = filters.query?.trim();
+    if (trimmedQuery) {
+      conditions.push(`n.title LIKE ? COLLATE NOCASE`);
+      params.push(`%${trimmedQuery}%`);
+    }
+
+    if (filters.dateFrom) {
+      conditions.push(`n.noteId IN (SELECT noteId FROM DocumentMeta WHERE documentDate >= ?)`);
+      params.push(filters.dateFrom);
+    }
+
+    if (filters.dateTo) {
+      conditions.push(`n.noteId IN (SELECT noteId FROM DocumentMeta WHERE documentDate <= ?)`);
+      params.push(filters.dateTo);
+    }
+
+    const rows = this.db
+      .prepare(`SELECT n.noteId FROM Notes n WHERE ${conditions.join(" AND ")} ORDER BY n.noteId DESC`)
+      .all(...params) as NoteIdRow[];
 
     return rows.map((r) => this.get(r.noteId)!).filter(Boolean);
   }

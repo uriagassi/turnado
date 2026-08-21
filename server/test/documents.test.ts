@@ -10,6 +10,7 @@ import {
   UploadedFile,
   DocumentNotFoundError,
   InvalidDocumentInputError,
+  groupDocumentsByType,
 } from "../src/documents/Documents.js";
 import { Doctors } from "../src/doctors/Doctors.js";
 import { Appointments } from "../src/appointments/Appointments.js";
@@ -301,6 +302,80 @@ describe("Documents", () => {
 
       const drBDocs = documents.listByDoctor(drB.id);
       expect(drBDocs.map((d) => d.id)).toEqual([doc3.id]);
+    });
+  });
+
+  describe("search", () => {
+    it("combines type and doctor filters, returning only documents matching both", () => {
+      const db = tmpDb();
+      const doctors = new Doctors(db, "Doctors");
+      const documents = tmpDocuments(db);
+
+      const drA = doctors.create({ name: "Dr. Alice" });
+      const drB = doctors.create({ name: "Dr. Bob" });
+
+      const file: UploadedFile = { fileName: "f.pdf", uniqueFilename: "u.pdf", mime: "application/pdf", hash: "h", size: 100 };
+
+      const doc1 = documents.create(
+        { title: "Blood Test Alice", type: "test result", doctorId: drA.id, documentDate: "2026-08-01" },
+        file,
+      );
+      documents.create(
+        { title: "Blood Test Bob", type: "test result", doctorId: drB.id, documentDate: "2026-08-02" },
+        file,
+      );
+      documents.create(
+        { title: "Referral Alice", type: "referral", doctorId: drA.id, documentDate: "2026-08-03" },
+        file,
+      );
+
+      const results = documents.search({ type: "test result", doctorId: drA.id });
+
+      expect(results.map((d) => d.id)).toEqual([doc1.id]);
+    });
+
+    it("combines a title text query with a date range, excluding matches outside the range", () => {
+      const db = tmpDb();
+      const documents = tmpDocuments(db);
+
+      const file: UploadedFile = { fileName: "f.pdf", uniqueFilename: "u.pdf", mime: "application/pdf", hash: "h", size: 100 };
+
+      const inRange = documents.create(
+        { title: "Cardiology Referral", type: "referral", documentDate: "2026-08-10" },
+        file,
+      );
+      // Same title text, but outside the date range.
+      documents.create(
+        { title: "Cardiology Referral Old", type: "referral", documentDate: "2026-01-01" },
+        file,
+      );
+      // Inside the date range, but title doesn't match the query.
+      documents.create({ title: "Unrelated Letter", type: "letter", documentDate: "2026-08-11" }, file);
+
+      const results = documents.search({ query: "cardiology", dateFrom: "2026-08-01", dateTo: "2026-08-31" });
+
+      expect(results.map((d) => d.id)).toEqual([inRange.id]);
+    });
+  });
+
+  describe("groupDocumentsByType", () => {
+    it("groups documents under their type, in VALID_DOCUMENT_TYPES declaration order, preserving input order within a group", () => {
+      const db = tmpDb();
+      const documents = tmpDocuments(db);
+      const file: UploadedFile = { fileName: "f.pdf", uniqueFilename: "u.pdf", mime: "application/pdf", hash: "h", size: 100 };
+
+      // Input order: referral, test result, referral — declaration order puts
+      // "test result" before "referral" (see VALID_DOCUMENT_TYPES).
+      const referral1 = documents.create({ title: "Referral 1", type: "referral" }, file);
+      const testResult = documents.create({ title: "Test Result 1", type: "test result" }, file);
+      const referral2 = documents.create({ title: "Referral 2", type: "referral" }, file);
+
+      const grouped = groupDocumentsByType([referral1, testResult, referral2]);
+
+      expect(grouped).toEqual([
+        { type: "test result", documents: [testResult] },
+        { type: "referral", documents: [referral1, referral2] },
+      ]);
     });
   });
 });

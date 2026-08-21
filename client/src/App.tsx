@@ -50,6 +50,7 @@ import { TaskFormScreen } from "./screens/TaskFormScreen";
 import { TaskDetailScreen } from "./screens/TaskDetailScreen";
 import { DocumentFormScreen, getDocumentTypeForTask } from "./screens/DocumentFormScreen";
 import { DocumentDetailScreen } from "./screens/DocumentDetailScreen";
+import { DocumentsScreen, type DocumentFilters } from "./screens/DocumentsScreen";
 import { ConfirmationModal } from "./components/ConfirmationModal";
 
 type Session = {
@@ -203,9 +204,23 @@ type AppState =
       phase: "document-detail";
       session: Session;
       document: MedicalDocument;
-      returnTo: "home" | "doctor-detail";
+      returnTo: "home" | "doctor-detail" | "documents";
       doctor?: Doctor;
-    };
+      documentsFilters?: DocumentFilters;
+    }
+  | { phase: "documents"; session: Session; documents: MedicalDocument[]; filters: DocumentFilters };
+
+const EMPTY_DOCUMENT_FILTERS: DocumentFilters = { query: "", type: "", doctorId: "", dateFrom: "", dateTo: "" };
+
+function documentFiltersToApiFilter(filters: DocumentFilters) {
+  return {
+    query: filters.query || undefined,
+    type: filters.type || undefined,
+    doctorId: filters.doctorId === "" ? undefined : filters.doctorId,
+    dateFrom: filters.dateFrom || undefined,
+    dateTo: filters.dateTo || undefined,
+  };
+}
 
 /** How often the home screen's data refreshes itself in the background, absent a manual refresh or a window-focus event (see useAutoRefresh). */
 const HOME_REFRESH_INTERVAL_MS = 45_000;
@@ -292,6 +307,10 @@ export function App() {
       const addDocument = () => setState({ phase: "document-form", session, returnTo: "home" });
       const selectDocument = (doc: MedicalDocument) =>
         setState({ phase: "document-detail", session, document: doc, returnTo: "home" });
+      const viewDocuments = async () => {
+        const documents = await fetchDocuments(documentFiltersToApiFilter(EMPTY_DOCUMENT_FILTERS));
+        setState({ phase: "documents", session, documents, filters: EMPTY_DOCUMENT_FILTERS });
+      };
       return (
         <HomeScreen
           home={session.home}
@@ -306,6 +325,7 @@ export function App() {
           onAddTask={addTask}
           onAddDocument={addDocument}
           onSelectDocument={selectDocument}
+          onViewDocuments={viewDocuments}
           onRefresh={refreshHome}
         />
       );
@@ -402,10 +422,14 @@ export function App() {
       );
     }
     case "document-detail": {
-      const { session, document, returnTo, doctor } = state;
-      const back = () => {
+      const { session, document, returnTo, doctor, documentsFilters } = state;
+      const back = async () => {
         if (returnTo === "doctor-detail" && doctor) {
           setState({ phase: "doctor-detail", session, doctors: session.doctors, doctor });
+        } else if (returnTo === "documents") {
+          const filters = documentsFilters ?? EMPTY_DOCUMENT_FILTERS;
+          const documents = await fetchDocuments(documentFiltersToApiFilter(filters));
+          setState({ phase: "documents", session, documents, filters });
         } else {
           setState({ phase: "home", session });
         }
@@ -426,6 +450,28 @@ export function App() {
           onSelectDoctor={selectDoctor}
           onSelectAppointment={selectAppointment}
           onSelectTask={selectTask}
+        />
+      );
+    }
+    case "documents": {
+      const { session, documents, filters } = state;
+      const back = () => setState({ phase: "home", session });
+      const changeFilters = async (nextFilters: DocumentFilters) => {
+        const nextDocuments = await fetchDocuments(documentFiltersToApiFilter(nextFilters));
+        setState({ phase: "documents", session, documents: nextDocuments, filters: nextFilters });
+      };
+      const selectDocument = (doc: MedicalDocument) =>
+        setState({ phase: "document-detail", session, document: doc, returnTo: "documents", documentsFilters: filters });
+      return (
+        <DocumentsScreen
+          documents={documents}
+          doctors={session.doctors}
+          appointments={session.appointments}
+          openItems={session.home.openItems}
+          filters={filters}
+          onFiltersChange={changeFilters}
+          onSelectDocument={selectDocument}
+          onBack={back}
         />
       );
     }

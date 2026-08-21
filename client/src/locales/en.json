@@ -9,6 +9,7 @@
   "home.addAppointment": "Add appointment",
   "home.viewUpcoming": "Upcoming appointments",
   "home.viewHistory": "Appointment history",
+  "home.viewDocuments": "Documents",
   "doctors.title": "Doctors",
   "doctors.empty": "No doctors yet — add one to get started.",
   "doctors.add": "Add doctor",
@@ -147,5 +148,18 @@
   "taskForm.purpose.label": "Purpose",
   "taskForm.resolveToAppointment": "Set date & create appointment",
   "taskForm.save": "Save",
-  "taskForm.cancel": "Cancel"
+  "taskForm.cancel": "Cancel",
+  "documentsScreen.title": "Documents",
+  "documentsScreen.back": "Home",
+  "documentsScreen.filters.toggle": "Filters",
+  "documentsScreen.filters.query.label": "Search by title",
+  "documentsScreen.filters.type.label": "Document type",
+  "documentsScreen.filters.type.any": "Any type",
+  "documentsScreen.filters.doctor.label": "Doctor",
+  "documentsScreen.filters.doctor.any": "Any doctor",
+  "documentsScreen.filters.dateFrom.label": "From",
+  "documentsScreen.filters.dateTo.label": "To",
+  "documentsScreen.filters.clearAll": "Clear all",
+  "documentsScreen.linkedBadge_one": "Linked to {{count}} item",
+  "documentsScreen.linkedBadge_other": "Linked to {{count}} items"
 }

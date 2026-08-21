@@ -52,6 +52,7 @@ export function HomeScreen({
   onAddTask,
   onSelectDocument,
   onAddDocument,
+  onViewDocuments,
   onRefresh,
 }: {
   home: HomeData;
@@ -67,6 +68,7 @@ export function HomeScreen({
   onAddTask?: () => void;
   onSelectDocument?: (doc: MedicalDocument) => void;
   onAddDocument?: () => void;
+  onViewDocuments?: () => void;
   onRefresh: () => void;
 }) {
   const { t } = useTranslation();
@@ -239,6 +241,11 @@ export function HomeScreen({
         <button type="button" className="home-nav-item" onClick={onViewHistory}>
           {t("home.viewHistory")}
         </button>
+        {onViewDocuments && (
+          <button type="button" className="home-nav-item" onClick={onViewDocuments}>
+            {t("home.viewDocuments")}
+          </button>
+        )}
       </nav>
     </main>
   );
