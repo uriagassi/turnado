@@ -33,7 +33,6 @@ describe("AppointmentHistoryScreen", () => {
         onEdit={noop}
         onStatusChange={noop}
         onSaveSummary={noop}
-        onBack={noop}
       />,
     );
 
@@ -50,31 +49,10 @@ describe("AppointmentHistoryScreen", () => {
         onEdit={noop}
         onStatusChange={noop}
         onSaveSummary={noop}
-        onBack={noop}
       />,
     );
 
     expect(screen.getByText("No past appointments yet.")).toBeInTheDocument();
-  });
-
-  it("calls onBack when the back control is activated", async () => {
-    const user = userEvent.setup();
-    const onBack = vi.fn();
-    render(
-      <AppointmentHistoryScreen
-        appointments={[]}
-        doctors={doctors}
-        onSelectDoctor={noop}
-        onEdit={noop}
-        onStatusChange={noop}
-        onSaveSummary={noop}
-        onBack={onBack}
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: "Back" }));
-
-    expect(onBack).toHaveBeenCalledOnce();
   });
 
   it("links a card's doctor name into that doctor's detail view (issue #4 AC)", async () => {
@@ -88,7 +66,6 @@ describe("AppointmentHistoryScreen", () => {
         onEdit={noop}
         onStatusChange={noop}
         onSaveSummary={noop}
-        onBack={noop}
       />,
     );
 
@@ -106,7 +83,6 @@ describe("AppointmentHistoryScreen", () => {
         onEdit={noop}
         onStatusChange={noop}
         onSaveSummary={noop}
-        onBack={noop}
       />,
     );
 
@@ -125,7 +101,6 @@ describe("AppointmentHistoryScreen", () => {
         onEdit={onEdit}
         onStatusChange={noop}
         onSaveSummary={noop}
-        onBack={noop}
       />,
     );
 
@@ -146,7 +121,6 @@ describe("AppointmentHistoryScreen", () => {
         onEdit={noop}
         onStatusChange={onStatusChange}
         onSaveSummary={noop}
-        onBack={noop}
       />,
     );
 
@@ -164,7 +138,6 @@ describe("AppointmentHistoryScreen", () => {
         onEdit={noop}
         onStatusChange={noop}
         onSaveSummary={noop}
-        onBack={noop}
       />,
     );
     expect(screen.queryByLabelText("Post-visit summary")).not.toBeInTheDocument();
@@ -177,7 +150,6 @@ describe("AppointmentHistoryScreen", () => {
         onEdit={noop}
         onStatusChange={noop}
         onSaveSummary={noop}
-        onBack={noop}
       />,
     );
     expect(screen.getByLabelText("Post-visit summary")).toBeInTheDocument();
@@ -195,7 +167,6 @@ describe("AppointmentHistoryScreen", () => {
         onEdit={noop}
         onStatusChange={noop}
         onSaveSummary={onSaveSummary}
-        onBack={noop}
       />,
     );
 
@@ -214,7 +185,6 @@ describe("AppointmentHistoryScreen", () => {
         onEdit={noop}
         onStatusChange={noop}
         onSaveSummary={noop}
-        onBack={noop}
       />,
     );
 

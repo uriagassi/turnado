@@ -21,7 +21,7 @@ function doctor(overrides: Partial<Doctor> = {}): Doctor {
 
 describe("DoctorDetailScreen", () => {
   it("renders the doctor's fields", () => {
-    render(<DoctorDetailScreen doctor={doctor()} onBack={() => {}} onEdit={() => {}} />);
+    render(<DoctorDetailScreen doctor={doctor()} onEdit={() => {}} />);
 
     expect(screen.getByText("Dr. Jane Smith")).toBeInTheDocument();
     expect(screen.getByText("Cardiology")).toBeInTheDocument();
@@ -33,13 +33,13 @@ describe("DoctorDetailScreen", () => {
   });
 
   it("omits the notes paragraph entirely when the doctor has no notes", () => {
-    const { container } = render(<DoctorDetailScreen doctor={doctor({ notes: undefined })} onBack={() => {}} onEdit={() => {}} />);
+    const { container } = render(<DoctorDetailScreen doctor={doctor({ notes: undefined })} onEdit={() => {}} />);
 
     expect(container.querySelector(".doctor-notes")).not.toBeInTheDocument();
   });
 
   it("shows empty placeholder sections for appointments, open items, and documents", () => {
-    render(<DoctorDetailScreen doctor={doctor()} onBack={() => {}} onEdit={() => {}} />);
+    render(<DoctorDetailScreen doctor={doctor()} onEdit={() => {}} />);
 
     expect(screen.getByText("No upcoming appointment.")).toBeInTheDocument();
     expect(screen.getByText("No open items.")).toBeInTheDocument();
@@ -57,7 +57,7 @@ describe("DoctorDetailScreen", () => {
       summary: null,
     };
 
-    render(<DoctorDetailScreen doctor={doctor()} appointments={[nextAppointment]} onBack={() => {}} onEdit={() => {}} />);
+    render(<DoctorDetailScreen doctor={doctor()} appointments={[nextAppointment]} onEdit={() => {}} />);
 
     expect(screen.getByText("Annual checkup")).toBeInTheDocument();
     expect(screen.queryByText("No upcoming appointment.")).not.toBeInTheDocument();
@@ -83,38 +83,28 @@ describe("DoctorDetailScreen", () => {
       summary: null,
     };
 
-    render(<DoctorDetailScreen doctor={doctor()} appointments={[soonest, later]} onBack={() => {}} onEdit={() => {}} />);
+    render(<DoctorDetailScreen doctor={doctor()} appointments={[soonest, later]} onEdit={() => {}} />);
 
     expect(screen.getByText("Annual checkup")).toBeInTheDocument();
     expect(screen.getByText("Follow-up")).toBeInTheDocument();
   });
 
   it("shows the doctor's avatar, same as the list view", () => {
-    render(<DoctorDetailScreen doctor={doctor({ name: "Dr. Jane Smith", photoPath: null })} onBack={() => {}} onEdit={() => {}} />);
+    render(<DoctorDetailScreen doctor={doctor({ name: "Dr. Jane Smith", photoPath: null })} onEdit={() => {}} />);
 
     expect(screen.getByTestId("doctor-avatar")).toHaveTextContent("JS");
   });
 
   it("shows the doctor's photo instead of initials in the avatar when photoPath is set", () => {
-    render(<DoctorDetailScreen doctor={doctor({ name: "Dr. Jane Smith", photoPath: "1-170000.jpg" })} onBack={() => {}} onEdit={() => {}} />);
+    render(<DoctorDetailScreen doctor={doctor({ name: "Dr. Jane Smith", photoPath: "1-170000.jpg" })} onEdit={() => {}} />);
 
     expect(screen.getByTestId("doctor-avatar").querySelector("img")).toHaveAttribute("src", "/photos/1-170000.jpg");
-  });
-
-  it("calls onBack when the back-to-doctor-list control is activated", async () => {
-    const user = userEvent.setup();
-    const onBack = vi.fn();
-    render(<DoctorDetailScreen doctor={doctor()} onBack={onBack} onEdit={() => {}} />);
-
-    await user.click(screen.getByRole("button", { name: "Back to doctor list" }));
-
-    expect(onBack).toHaveBeenCalledOnce();
   });
 
   it("calls onEdit when the edit control is activated", async () => {
     const user = userEvent.setup();
     const onEdit = vi.fn();
-    render(<DoctorDetailScreen doctor={doctor()} onBack={() => {}} onEdit={onEdit} />);
+    render(<DoctorDetailScreen doctor={doctor()} onEdit={onEdit} />);
 
     await user.click(screen.getByRole("button", { name: "Edit" }));
 
@@ -149,7 +139,6 @@ describe("DoctorDetailScreen", () => {
       <DoctorDetailScreen
         doctor={doctor()}
         openItems={[task]}
-        onBack={() => {}}
         onEdit={() => {}}
       />
     );
@@ -188,7 +177,6 @@ describe("DoctorDetailScreen", () => {
         doctor={doctor()}
         documents={[doc]}
         onSelectDocument={onSelectDocument}
-        onBack={() => {}}
         onEdit={() => {}}
       />
     );

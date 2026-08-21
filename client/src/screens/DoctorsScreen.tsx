@@ -8,14 +8,12 @@ export function DoctorsScreen({
   nextAppointments,
   onSelectDoctor,
   onAddDoctor,
-  onBackHome,
 }: {
   doctors: Doctor[];
   /** Each doctor's soonest upcoming appointment, keyed by doctor id — same computation as DoctorDetailScreen's `nextAppointment` (App.tsx's nextAppointmentForDoctor), just for every row on this screen instead of one. Matches the prototype's directory-row "התור הבא: …" preview (06-doctor-view.html). */
   nextAppointments: Map<number, Appointment | undefined>;
   onSelectDoctor: (doctor: Doctor) => void;
   onAddDoctor: () => void;
-  onBackHome: () => void;
 }) {
   const { t } = useTranslation();
   const formatRelative = useRelativeDateTime();
@@ -61,9 +59,6 @@ export function DoctorsScreen({
           })}
         </ul>
       )}
-      <button type="button" className="back-to-list" onClick={onBackHome}>
-        {t("doctors.backHome")}
-      </button>
     </main>
   );
 }

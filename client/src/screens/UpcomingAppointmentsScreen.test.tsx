@@ -33,7 +33,6 @@ describe("UpcomingAppointmentsScreen", () => {
         onEdit={noop}
         onStatusChange={noop}
         onSaveSummary={noop}
-        onBack={noop}
       />,
     );
 
@@ -50,31 +49,10 @@ describe("UpcomingAppointmentsScreen", () => {
         onEdit={noop}
         onStatusChange={noop}
         onSaveSummary={noop}
-        onBack={noop}
       />,
     );
 
     expect(screen.getByText("No upcoming appointments.")).toBeInTheDocument();
-  });
-
-  it("calls onBack when the back control is activated", async () => {
-    const user = userEvent.setup();
-    const onBack = vi.fn();
-    render(
-      <UpcomingAppointmentsScreen
-        appointments={[]}
-        doctors={doctors}
-        onSelectDoctor={noop}
-        onEdit={noop}
-        onStatusChange={noop}
-        onSaveSummary={noop}
-        onBack={onBack}
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: "Back" }));
-
-    expect(onBack).toHaveBeenCalledOnce();
   });
 
   it("links a card's doctor name into that doctor's detail view (issue #4 AC)", async () => {
@@ -88,7 +66,6 @@ describe("UpcomingAppointmentsScreen", () => {
         onEdit={noop}
         onStatusChange={noop}
         onSaveSummary={noop}
-        onBack={noop}
       />,
     );
 
@@ -106,7 +83,6 @@ describe("UpcomingAppointmentsScreen", () => {
         onEdit={noop}
         onStatusChange={noop}
         onSaveSummary={noop}
-        onBack={noop}
       />,
     );
 
@@ -125,7 +101,6 @@ describe("UpcomingAppointmentsScreen", () => {
         onEdit={onEdit}
         onStatusChange={noop}
         onSaveSummary={noop}
-        onBack={noop}
       />,
     );
 
@@ -146,7 +121,6 @@ describe("UpcomingAppointmentsScreen", () => {
         onEdit={noop}
         onStatusChange={onStatusChange}
         onSaveSummary={noop}
-        onBack={noop}
       />,
     );
 
@@ -164,7 +138,6 @@ describe("UpcomingAppointmentsScreen", () => {
         onEdit={noop}
         onStatusChange={noop}
         onSaveSummary={noop}
-        onBack={noop}
       />,
     );
 

@@ -9,7 +9,6 @@ export function UpcomingAppointmentsScreen({
   onEdit,
   onStatusChange,
   onSaveSummary,
-  onBack,
 }: {
   appointments: Appointment[];
   doctors: Doctor[];
@@ -18,7 +17,6 @@ export function UpcomingAppointmentsScreen({
   onEdit: (appointment: Appointment) => void;
   onStatusChange: (appointment: Appointment, status: AppointmentStatus) => void;
   onSaveSummary: (appointment: Appointment, summary: string) => void;
-  onBack: () => void;
 }) {
   const { t } = useTranslation();
 
@@ -42,9 +40,6 @@ export function UpcomingAppointmentsScreen({
           ))}
         </ul>
       )}
-      <button type="button" className="back-to-home" onClick={onBack}>
-        {t("upcomingAppointments.back")}
-      </button>
     </main>
   );
 }
