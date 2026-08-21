@@ -32,12 +32,30 @@ describe("AppointmentFormScreen", () => {
     await user.type(screen.getByLabelText("Notes"), "Annual checkup");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
-    expect(onSubmit).toHaveBeenCalledWith({
-      doctorId: 2,
-      dateTime: "2026-09-01T10:00",
-      location: "Clinic B",
-      notes: "Annual checkup",
-    });
+    expect(onSubmit).toHaveBeenCalledWith(
+      {
+        doctorId: 2,
+        dateTime: "2026-09-01T10:00",
+        location: "Clinic B",
+        notes: "Annual checkup",
+      },
+      null,
+    );
+  });
+
+  it("submits the selected invitation file alongside the fields", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<AppointmentFormScreen doctors={doctors} onSubmit={onSubmit} onCancel={() => {}} />);
+    const invitation = new File(["fake-pdf-bytes"], "invitation.pdf", { type: "application/pdf" });
+
+    fireEvent.change(screen.getByLabelText("Date & time"), { target: { value: "2026-09-01T10:00" } });
+    await user.type(screen.getByLabelText("Notes"), "Annual checkup");
+    await user.upload(screen.getByLabelText("Invitation letter"), invitation);
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(onSubmit).toHaveBeenCalledOnce();
+    expect(onSubmit.mock.calls[0][1]).toBe(invitation);
   });
 
   it("submits with doctorId null when no doctor is selected, e.g. an imaging-center slot", async () => {
@@ -49,7 +67,7 @@ describe("AppointmentFormScreen", () => {
     await user.type(screen.getByLabelText("Notes"), "MRI scan");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
-    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ doctorId: null }));
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ doctorId: null }), null);
   });
 
   it("blocks submission and shows an error when notes is left blank", async () => {

@@ -74,6 +74,7 @@
   "appointmentForm.cancel": "ביטול",
   "appointmentForm.notes.required": "הערות הן שדה חובה.",
   "appointmentForm.dateTime.required": "תאריך ושעה הם שדה חובה.",
+  "appointmentForm.invitation.label": "מכתב הזמנה",
   "appointmentHistory.title": "היסטוריית תורים",
   "appointmentHistory.empty": "אין עדיין תורים קודמים.",
   "upcomingAppointments.title": "תורים קרובים",
