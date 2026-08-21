@@ -10,7 +10,6 @@ export function TaskDetailScreen({
   doctors,
   appointments = [],
   documents = [],
-  onBack,
   onEdit,
   onStatusChange,
   onResolveToAppointment,
@@ -21,7 +20,6 @@ export function TaskDetailScreen({
   doctors: Doctor[];
   appointments?: Appointment[];
   documents?: MedicalDocument[];
-  onBack: () => void;
   onEdit: (task: Task) => void;
   onStatusChange: (task: Task, status: TaskStatus) => void;
   onResolveToAppointment?: (task: Task) => void;
@@ -39,13 +37,6 @@ export function TaskDetailScreen({
 
   return (
     <main className="screen task-detail-screen">
-      <button type="button" className="back-link" onClick={onBack}>
-        <span className="back-link-arrow" aria-hidden="true">
-          ←
-        </span>
-        {t("taskDetail.back")}
-      </button>
-
       <div className="task-detail-header card">
         <div className="task-detail-top">
           <div className="feed-icon" aria-hidden="true">

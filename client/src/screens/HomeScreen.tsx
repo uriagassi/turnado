@@ -43,38 +43,29 @@ export function HomeScreen({
   home,
   doctors,
   appointments = [],
-  onOpenDoctors,
   onSelectDoctor,
   onAddAppointment,
-  onViewUpcoming,
-  onViewHistory,
   onSelectTask,
   onAddTask,
   onSelectDocument,
   onAddDocument,
-  onViewDocuments,
   onRefresh,
 }: {
   home: HomeData;
   doctors: Doctor[];
   appointments?: Appointment[];
-  onOpenDoctors: () => void;
   /** Follows the doctor-name link on the hero card into that doctor's detail view (see issue #4 AC). */
   onSelectDoctor: (doctor: Doctor) => void;
   onAddAppointment: () => void;
-  onViewUpcoming: () => void;
-  onViewHistory: () => void;
   onSelectTask?: (task: Task) => void;
   onAddTask?: () => void;
   onSelectDocument?: (doc: MedicalDocument) => void;
   onAddDocument?: () => void;
-  onViewDocuments?: () => void;
   onRefresh: () => void;
 }) {
   const { t } = useTranslation();
   const formatRelative = useRelativeDateTime();
   const sortedOpenItems = sortOpenItems(home.openItems, appointments);
-  const isEmpty = !home.nextAppointment && home.openItems.length === 0 && home.recentDocuments.length === 0;
   const heroDoctor = home.nextAppointment?.doctorId
     ? doctors.find((d) => d.id === home.nextAppointment?.doctorId)
     : undefined;
@@ -105,42 +96,61 @@ export function HomeScreen({
           {t("home.refresh")}
         </button>
       </div>
-      {home.nextAppointment && (
-        // Single-column, phone-legible per the AC — no side-by-side layout
-        // to squeeze on a narrow viewport. Structure follows the winning
-        // hero-card prototype (05-home-screen.html, variant A): a label,
-        // then doctor + specialty on one line, then a date/location meta
-        // line — see medical/.scratch/medical-app-spec/prototypes.
-        <section className="hero-card">
-          <h2>{t("home.hero.title")}</h2>
-          {heroDoctor && (
-            <p className="hero-doctor-line">
-              <button type="button" className="hero-doctor-link" onClick={() => onSelectDoctor(heroDoctor)}>
-                {heroDoctor.name}
-              </button>
-              {heroDoctor.specialty && <span className="hero-specialty"> — {heroDoctor.specialty}</span>}
-            </p>
-          )}
-          <p className="hero-date">
-            {/* "Tomorrow, 10:00 AM" while the appointment is near, matching
-                the prototype's "מחר" treatment — see useRelativeDateTime. */}
-            {formatRelative(home.nextAppointment.dateTime)}
-            {home.nextAppointment.location ? ` · ${home.nextAppointment.location}` : ""}
-          </p>
-          <p className="hero-notes">{home.nextAppointment.notes}</p>
-        </section>
-      )}
-
-      {home.openItems.length > 0 && (
-        <section className="open-items-section">
-          <div className="section-header">
-            <h2 className="section-title">{t("home.openItems.title")}</h2>
-            {onAddTask && (
-              <button type="button" className="btn-small btn-secondary" onClick={onAddTask}>
-                + {t("home.addTask")}
-              </button>
+      {/*
+        Every section below always renders — header (title + its own "+ Add"
+        button) plus either its content or an empty-state line — the same
+        shape DoctorDetailScreen's Appointments/Open items/Documents
+        sections already use. Each section is now the one and only place to
+        add that kind of record: the bottom-of-page nav row this replaced
+        duplicated these same three actions once a section had content, and
+        gave no way to add the *first* item when a section was still empty
+        (issue #27 follow-up).
+      */}
+      <section className="hero-card-section">
+        <div className="section-header">
+          <h2 className="section-title">{t("home.hero.title")}</h2>
+          <button type="button" className="btn-small btn-secondary" onClick={onAddAppointment}>
+            + {t("home.addAppointment")}
+          </button>
+        </div>
+        {home.nextAppointment ? (
+          // Single-column, phone-legible per the AC — no side-by-side layout
+          // to squeeze on a narrow viewport. Structure follows the winning
+          // hero-card prototype (05-home-screen.html, variant A): doctor +
+          // specialty on one line, then a date/location meta line — see
+          // medical/.scratch/medical-app-spec/prototypes.
+          <div className="hero-card">
+            {heroDoctor && (
+              <p className="hero-doctor-line">
+                <button type="button" className="hero-doctor-link" onClick={() => onSelectDoctor(heroDoctor)}>
+                  {heroDoctor.name}
+                </button>
+                {heroDoctor.specialty && <span className="hero-specialty"> — {heroDoctor.specialty}</span>}
+              </p>
             )}
+            <p className="hero-date">
+              {/* "Tomorrow, 10:00 AM" while the appointment is near, matching
+                  the prototype's "מחר" treatment — see useRelativeDateTime. */}
+              {formatRelative(home.nextAppointment.dateTime)}
+              {home.nextAppointment.location ? ` · ${home.nextAppointment.location}` : ""}
+            </p>
+            <p className="hero-notes">{home.nextAppointment.notes}</p>
           </div>
+        ) : (
+          <p className="section-empty">{t("home.hero.empty")}</p>
+        )}
+      </section>
+
+      <section className="open-items-section">
+        <div className="section-header">
+          <h2 className="section-title">{t("home.openItems.title")}</h2>
+          {onAddTask && (
+            <button type="button" className="btn-small btn-secondary" onClick={onAddTask}>
+              + {t("home.addTask")}
+            </button>
+          )}
+        </div>
+        {home.openItems.length > 0 ? (
           <div className="feed">
             {sortedOpenItems.map((task) => {
               const pendingLabel = getPendingAppointmentLabel(task.pendingAppointmentId);
@@ -176,19 +186,21 @@ export function HomeScreen({
               );
             })}
           </div>
-        </section>
-      )}
+        ) : (
+          <p className="section-empty">{t("home.openItems.empty")}</p>
+        )}
+      </section>
 
-      {home.recentDocuments.length > 0 && (
-        <section className="recent-documents-section">
-          <div className="section-header">
-            <h2 className="section-title">{t("home.recentDocuments.title")}</h2>
-            {onAddDocument && (
-              <button type="button" className="btn-small btn-secondary" onClick={onAddDocument}>
-                + {t("home.addDocument")}
-              </button>
-            )}
-          </div>
+      <section className="recent-documents-section">
+        <div className="section-header">
+          <h2 className="section-title">{t("home.recentDocuments.title")}</h2>
+          {onAddDocument && (
+            <button type="button" className="btn-small btn-secondary" onClick={onAddDocument}>
+              + {t("home.addDocument")}
+            </button>
+          )}
+        </div>
+        {home.recentDocuments.length > 0 ? (
           <div className="doc-strip">
             {home.recentDocuments.map((doc) => (
               <div
@@ -214,39 +226,10 @@ export function HomeScreen({
               </div>
             ))}
           </div>
-        </section>
-      )}
-
-      {isEmpty && <p className="empty-state">{t("home.empty")}</p>}
-      <nav className="home-nav">
-        {onAddDocument && (
-          <button type="button" className="home-nav-item" onClick={onAddDocument}>
-            {t("home.addDocument")}
-          </button>
+        ) : (
+          <p className="section-empty">{t("home.recentDocuments.empty")}</p>
         )}
-        {onAddTask && (
-          <button type="button" className="home-nav-item" onClick={onAddTask}>
-            {t("home.addTask")}
-          </button>
-        )}
-        <button type="button" className="home-nav-item" onClick={onAddAppointment}>
-          {t("home.addAppointment")}
-        </button>
-        <button type="button" className="home-nav-item" onClick={onOpenDoctors}>
-          {t("doctors.title")}
-        </button>
-        <button type="button" className="home-nav-item" onClick={onViewUpcoming}>
-          {t("home.viewUpcoming")}
-        </button>
-        <button type="button" className="home-nav-item" onClick={onViewHistory}>
-          {t("home.viewHistory")}
-        </button>
-        {onViewDocuments && (
-          <button type="button" className="home-nav-item" onClick={onViewDocuments}>
-            {t("home.viewDocuments")}
-          </button>
-        )}
-      </nav>
+      </section>
     </main>
   );
 }

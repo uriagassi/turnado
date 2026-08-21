@@ -45,6 +45,22 @@
   --status-cancelled-fg: var(--color-text-dim);
   --status-postponed-bg: var(--color-purple-bg);
   --status-postponed-fg: var(--color-purple);
+
+  /* Fixed so .nav-drawer/.nav-drawer-backdrop can start exactly where
+     .nav-bar ends — otherwise the drawer (a viewport-fixed overlay) would
+     render on top of the title bar's own hamburger control, making it
+     unclickable while open. */
+  --nav-bar-height: 3.5rem;
+
+  /* Shared with body's own max-width below — .nav-drawer (a viewport-fixed
+     overlay) needs this to line its left edge up with .nav-bar's, since
+     .nav-bar is sticky *inside* the centered content column while the
+     drawer is fixed to the raw viewport. On any viewport wider than this
+     (e.g. testing in a desktop browser instead of a phone), the column is
+     centered with margin on both sides, so the drawer must offset by that
+     same margin or it renders flush against the browser window instead of
+     under the title bar. */
+  --content-max-width: 480px;
 }
 
 * {
@@ -57,7 +73,7 @@ body {
   padding-block: 1.5rem;
   /* Mobile-first, single column: no breakpoint-driven collapse anywhere
      in this app shell — see spec's "Mobile-first UI baseline". */
-  max-width: 480px;
+  max-width: var(--content-max-width);
   margin-inline: auto;
   font-size: 1rem;
   line-height: 1.5;
@@ -344,11 +360,8 @@ h1 {
   padding-block: 0.25rem;
 }
 
-.back-to-list,
-.back-to-home,
 .add-doctor,
-.edit-doctor,
-.home-nav-item {
+.edit-doctor {
   display: block;
   width: 100%;
   padding-block: 0.75rem;
@@ -360,61 +373,24 @@ h1 {
   cursor: pointer;
 }
 
-.back-to-list:hover,
-.back-to-home:hover,
 .add-doctor:hover,
-.edit-doctor:hover,
-.home-nav-item:hover {
+.edit-doctor:hover {
   background: var(--color-primary-dim);
   border-color: var(--color-primary);
 }
 
-/* Pinned to the bottom of the viewport so it's reachable without scrolling
-   past a long doctor list — the list itself can grow arbitrarily, but this
-   is the one way back to Home from here, so it always stays in view.
-   `bottom` matches body's own padding-block so the gap below the button is
-   the same whether it's actively stuck mid-scroll or just resting at the
-   natural end of the list — no jump between the two. */
-.doctors-screen .back-to-list {
-  position: sticky;
-  bottom: 1.5rem;
-  background: var(--color-card-bg);
-  box-shadow: 0 -4px 8px light-dark(rgb(17 24 39 / 8%), rgb(0 0 0 / 40%));
-}
-
-/* Labeled, full-width back-link at the top of a detail view — matches the
-   prototype's `.back-link` (06-doctor-view.html). That prototype's round-2
-   feedback flagged "from the detail view, not obvious how to get back to
-   the list" against a bare icon button; the fix there was a full-width,
-   labeled, primary-colored link at the top of the page, not a footer
-   button — mirrored here for the same reason. */
-.back-link {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  width: 100%;
-  text-align: start;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-card-bg);
-  color: var(--color-primary);
-  font: inherit;
-  font-weight: 600;
-  padding: 0.75rem 1rem;
-  cursor: pointer;
-}
-
-.back-link:hover {
-  background: var(--color-primary-dim);
-}
-
-.back-link .back-link-arrow {
+/* Back-arrow glyph — now only used inside the title bar's .nav-bar-back
+   control (see below), which replaced the old per-screen full-width
+   back-link this rule set used to style (doctor/document/task detail all
+   had their own copy; issue #27 follow-up consolidated them into the title
+   bar instead). The glyph itself isn't translatable text — written
+   pointing "back" for LTR and mirrored for RTL locales via the `dir`
+   i18n.ts already sets on <html>, rather than shipping two glyphs through
+   the locale files. */
+.back-link-arrow {
   font-size: 1.125rem;
 }
 
-/* The arrow glyph itself isn't translatable text — written pointing "back"
-   for LTR and mirrored for RTL locales via the `dir` i18n.ts already sets
-   on <html>, rather than shipping two glyphs through the locale files. */
 html[dir="rtl"] .back-link-arrow {
   display: inline-block;
   transform: scaleX(-1);
@@ -564,7 +540,11 @@ html[dir="rtl"] .back-link-arrow {
    appointment) — matches the prototype's winning hero treatment
    (05-home-screen.html, variant A): a solid primary-color gradient card,
    not just an accent border, so it reads as the one unmissable thing on
-   the screen. */
+   the screen. Its own uppercase "NEXT APPOINTMENT" label folded into the
+   surrounding .hero-card-section's .section-header when that section
+   picked up an "+ Add appointment" button of its own, matching Open
+   items/Recent documents (issue #27 follow-up) — so this card no longer
+   carries a title of its own. */
 .hero-card {
   display: flex;
   flex-direction: column;
@@ -573,15 +553,6 @@ html[dir="rtl"] .back-link-arrow {
   border-radius: var(--radius);
   background: linear-gradient(135deg, var(--color-primary), #1d4ed8);
   color: #fff;
-}
-
-.hero-card h2 {
-  margin: 0 0 0.375rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: rgb(255 255 255 / 85%);
 }
 
 .hero-doctor-line {
@@ -616,12 +587,6 @@ html[dir="rtl"] .back-link-arrow {
   margin: 0.25rem 0 0;
   font-size: 1.0625rem;
   font-weight: 600;
-}
-
-.home-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
 }
 
 .item-row-notes {
@@ -1450,3 +1415,128 @@ html[dir="rtl"] .back-link-arrow {
 
 
 
+
+/* Nav bar: persistent title bar + hamburger drawer (issue #27) — sits
+   above every screen once, in App.tsx, rather than each screen owning its
+   own header. */
+.nav-bar {
+  position: sticky;
+  top: 0;
+  z-index: 900;
+  height: var(--nav-bar-height);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  /* Cancels body's own padding-block-start (1.5rem) the same way
+     margin-inline below cancels its padding-inline — without this, the bar
+     only reaches the true viewport top (y:0) once the page is scrolled
+     past that 1.5rem (position: sticky clamping it there); before that, it
+     sits 1.5rem lower, while .nav-drawer/.nav-drawer-backdrop (fixed
+     overlays) always start at --nav-bar-height from y:0 regardless of
+     scroll — so without this, they'd cut into the bar's bottom edge on
+     first load or on any screen too short to scroll. */
+  margin-block-start: -1.5rem;
+  margin-block-end: 0.5rem;
+  margin-inline: -1rem;
+  padding-inline: 1rem;
+  background: var(--color-bg);
+  border-block-end: 1px solid var(--color-border);
+}
+
+.nav-bar-menu-toggle,
+.nav-bar-back {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 0.375rem 0.5rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  color: var(--color-text);
+}
+
+.nav-bar-menu-toggle:hover,
+.nav-bar-back:hover {
+  background: var(--color-primary-dim);
+}
+
+.nav-bar-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Both start at --nav-bar-height, not the viewport top, so this overlay
+   never renders over the title bar itself — that was obscuring the
+   hamburger toggle, the only way to close the drawer without this fix. */
+.nav-drawer-backdrop {
+  position: fixed;
+  inset-block: var(--nav-bar-height) 0;
+  inset-inline: 0;
+  z-index: 940;
+  background-color: light-dark(rgba(17, 24, 39, 0.5), rgba(0, 0, 0, 0.75));
+}
+
+/* inset-inline-start (not left/right) is what makes the drawer open from
+   the correct side in RTL — it flips automatically with html[dir], the
+   same mechanism i18n.ts already uses for the rest of the app's layout. */
+.nav-drawer {
+  position: fixed;
+  inset-block: var(--nav-bar-height) 0;
+  /* Lines up with .nav-bar's own left edge (see --content-max-width above)
+     instead of the raw viewport edge, which only matches on a viewport
+     narrower than --content-max-width. */
+  inset-inline-start: max(0px, calc((100vw - var(--content-max-width)) / 2));
+  z-index: 950;
+  width: min(80vw, 320px);
+  background: var(--color-card-bg);
+  border-inline-end: 1px solid var(--color-border);
+  box-shadow: 0 10px 25px -5px light-dark(rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.6));
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.nav-drawer-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-block-end: 0.75rem;
+  margin-block-end: 0.75rem;
+  border-block-end: 1px solid var(--color-border);
+}
+
+.nav-drawer-logo {
+  font-size: 1.5rem;
+}
+
+.nav-drawer-app-name {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.nav-drawer ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.nav-drawer button {
+  width: 100%;
+  text-align: start;
+  background: none;
+  border: none;
+  padding: 0.75rem;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.nav-drawer button:hover {
+  background: var(--color-primary-dim);
+}

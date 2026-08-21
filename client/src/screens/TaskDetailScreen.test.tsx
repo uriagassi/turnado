@@ -38,7 +38,6 @@ describe("TaskDetailScreen", () => {
       <TaskDetailScreen
         task={task}
         doctors={doctors}
-        onBack={() => {}}
         onEdit={() => {}}
         onStatusChange={() => {}}
       />
@@ -82,7 +81,6 @@ describe("TaskDetailScreen", () => {
       <TaskDetailScreen
         task={task}
         doctors={doctors}
-        onBack={() => {}}
         onEdit={() => {}}
         onStatusChange={onStatusChange}
       />
@@ -125,7 +123,6 @@ describe("TaskDetailScreen", () => {
       <TaskDetailScreen
         task={task}
         doctors={doctors}
-        onBack={() => {}}
         onEdit={onEdit}
         onStatusChange={() => {}}
       />
@@ -166,7 +163,6 @@ describe("TaskDetailScreen", () => {
       <TaskDetailScreen
         task={task}
         doctors={doctors}
-        onBack={() => {}}
         onEdit={() => {}}
         onStatusChange={() => {}}
         onResolveToAppointment={onResolve}
@@ -220,7 +216,6 @@ describe("TaskDetailScreen", () => {
         task={task}
         doctors={doctors}
         appointments={appointments}
-        onBack={() => {}}
         onEdit={() => {}}
         onStatusChange={() => {}}
       />
@@ -282,7 +277,6 @@ describe("TaskDetailScreen", () => {
         task={task}
         doctors={doctors}
         documents={docs}
-        onBack={() => {}}
         onEdit={() => {}}
         onStatusChange={() => {}}
         onAddDocument={onAddDocument}

@@ -24,14 +24,12 @@ function renderScreen(
   options: {
     onSelectDoctor?: (doctor: Doctor) => void;
     onAddDoctor?: () => void;
-    onBackHome?: () => void;
     nextAppointments?: Map<number, Appointment | undefined>;
   } = {},
 ) {
   const {
     onSelectDoctor = () => {},
     onAddDoctor = () => {},
-    onBackHome = () => {},
     nextAppointments = new Map(),
   } = options;
   return render(
@@ -40,7 +38,6 @@ function renderScreen(
       nextAppointments={nextAppointments}
       onSelectDoctor={onSelectDoctor}
       onAddDoctor={onAddDoctor}
-      onBackHome={onBackHome}
     />,
   );
 }
@@ -118,16 +115,6 @@ describe("DoctorsScreen", () => {
     await user.click(screen.getByRole("button", { name: "Add doctor" }));
 
     expect(onAddDoctor).toHaveBeenCalledOnce();
-  });
-
-  it("calls onBackHome when the home control is activated", async () => {
-    const user = userEvent.setup();
-    const onBackHome = vi.fn();
-    renderScreen([], { onBackHome });
-
-    await user.click(screen.getByRole("button", { name: "Home" }));
-
-    expect(onBackHome).toHaveBeenCalledOnce();
   });
 
   it("shows a doctor's next appointment when they have one, matching the directory-row prototype", () => {
