@@ -6,26 +6,13 @@ import type { Doctor, HomeData } from "../api";
 
 const emptyHome: HomeData = { nextAppointment: null, openItems: [], recentDocuments: [] };
 const noopProps = {
-  onOpenDoctors: () => {},
   onRefresh: () => {},
   doctors: [] as Doctor[],
   onSelectDoctor: () => {},
   onAddAppointment: () => {},
-  onViewUpcoming: () => {},
-  onViewHistory: () => {},
 };
 
 describe("HomeScreen", () => {
-  it("calls onOpenDoctors when the doctors entry point is activated", async () => {
-    const user = userEvent.setup();
-    const onOpenDoctors = vi.fn();
-    render(<HomeScreen home={emptyHome} {...noopProps} onOpenDoctors={onOpenDoctors} />);
-
-    await user.click(screen.getByRole("button", { name: "Doctors" }));
-
-    expect(onOpenDoctors).toHaveBeenCalledOnce();
-  });
-
   it("calls onRefresh when the manual refresh control is activated", async () => {
     const user = userEvent.setup();
     const onRefresh = vi.fn();
@@ -96,11 +83,32 @@ describe("HomeScreen", () => {
     expect(screen.getByText("Annual checkup")).toBeInTheDocument();
   });
 
-  it("omits the hero card and shows the empty state when there's no upcoming appointment", () => {
+  it("omits the hero card and shows an empty-state message when there's no upcoming appointment", () => {
     render(<HomeScreen home={emptyHome} {...noopProps} />);
 
     expect(screen.queryByText("Annual checkup")).not.toBeInTheDocument();
-    expect(screen.getByText(/Nothing here yet/)).toBeInTheDocument();
+    expect(screen.getByText("No upcoming appointment.")).toBeInTheDocument();
+  });
+
+  it("shows an empty-state message for open items when there are none, instead of hiding the section", () => {
+    render(<HomeScreen home={emptyHome} {...noopProps} />);
+
+    expect(screen.getByText("Open items")).toBeInTheDocument();
+    expect(screen.getByText("No open items.")).toBeInTheDocument();
+  });
+
+  it("shows an empty-state message for recent documents when there are none, instead of hiding the section", () => {
+    render(<HomeScreen home={emptyHome} {...noopProps} />);
+
+    expect(screen.getByText("Recent documents")).toBeInTheDocument();
+    expect(screen.getByText("No documents yet.")).toBeInTheDocument();
+  });
+
+  it("puts the add-appointment control next to the Next appointment section even when there's no appointment yet", () => {
+    render(<HomeScreen home={emptyHome} {...noopProps} />);
+
+    expect(screen.getByText("Next appointment")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "+ Add appointment" })).toBeInTheDocument();
   });
 
   it("shows the appointment's doctor as a link that opens that doctor's detail view", async () => {
@@ -132,29 +140,9 @@ describe("HomeScreen", () => {
     const onAddAppointment = vi.fn();
     render(<HomeScreen home={emptyHome} {...noopProps} onAddAppointment={onAddAppointment} />);
 
-    await user.click(screen.getByRole("button", { name: "Add appointment" }));
+    await user.click(screen.getByRole("button", { name: "+ Add appointment" }));
 
     expect(onAddAppointment).toHaveBeenCalledOnce();
-  });
-
-  it("calls onViewUpcoming when the upcoming-appointments control is activated", async () => {
-    const user = userEvent.setup();
-    const onViewUpcoming = vi.fn();
-    render(<HomeScreen home={emptyHome} {...noopProps} onViewUpcoming={onViewUpcoming} />);
-
-    await user.click(screen.getByRole("button", { name: "Upcoming appointments" }));
-
-    expect(onViewUpcoming).toHaveBeenCalledOnce();
-  });
-
-  it("calls onViewHistory when the history control is activated", async () => {
-    const user = userEvent.setup();
-    const onViewHistory = vi.fn();
-    render(<HomeScreen home={emptyHome} {...noopProps} onViewHistory={onViewHistory} />);
-
-    await user.click(screen.getByRole("button", { name: "Appointment history" }));
-
-    expect(onViewHistory).toHaveBeenCalledOnce();
   });
 
   it("omits the doctor link when the appointment has no doctor attached", () => {

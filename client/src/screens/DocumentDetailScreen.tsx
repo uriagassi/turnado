@@ -7,7 +7,6 @@ interface DocumentDetailScreenProps {
   doctors: Doctor[];
   appointments?: Appointment[];
   openItems?: Task[];
-  onBack: () => void;
   onSelectDoctor?: (doctor: Doctor) => void;
   onSelectAppointment?: (appointment: Appointment) => void;
   onSelectTask?: (task: Task) => void;
@@ -18,7 +17,6 @@ export function DocumentDetailScreen({
   doctors,
   appointments = [],
   openItems = [],
-  onBack,
   onSelectDoctor,
   onSelectAppointment,
   onSelectTask,
@@ -39,13 +37,6 @@ export function DocumentDetailScreen({
 
   return (
     <main className="screen document-detail-screen">
-      <button type="button" className="back-link" onClick={onBack}>
-        <span className="back-link-arrow" aria-hidden="true">
-          ←
-        </span>
-        {t("documentDetail.back")}
-      </button>
-
       <div className="detail-head">
         <div className="detail-titles">
           <h1>{document.title}</h1>

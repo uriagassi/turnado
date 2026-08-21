@@ -18,7 +18,6 @@ interface DocumentsScreenProps {
   filters: DocumentFilters;
   onFiltersChange: (filters: DocumentFilters) => void;
   onSelectDocument: (document: MedicalDocument) => void;
-  onBack: () => void;
 }
 
 interface FilterChip {
@@ -138,7 +137,6 @@ export function DocumentsScreen({
   filters,
   onFiltersChange,
   onSelectDocument,
-  onBack,
 }: DocumentsScreenProps) {
   const { t } = useTranslation();
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -271,10 +269,6 @@ export function DocumentsScreen({
           </section>
         ))}
       </div>
-
-      <button type="button" className="back-to-list" onClick={onBack}>
-        {t("documentsScreen.back")}
-      </button>
     </main>
   );
 }

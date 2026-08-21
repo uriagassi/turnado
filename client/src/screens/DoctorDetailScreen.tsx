@@ -9,7 +9,6 @@ export function DoctorDetailScreen({
   appointments = [],
   openItems = [],
   documents = [],
-  onBack,
   onEdit,
   onSelectTask,
   onSelectDocument,
@@ -18,7 +17,6 @@ export function DoctorDetailScreen({
   appointments?: Appointment[];
   openItems?: Task[];
   documents?: MedicalDocument[];
-  onBack: () => void;
   onEdit: () => void;
   onSelectTask?: (task: Task) => void;
   onSelectDocument?: (doc: MedicalDocument) => void;
@@ -28,16 +26,6 @@ export function DoctorDetailScreen({
 
   return (
     <main className="screen doctor-detail-screen">
-      {/* Labeled, full-width back-link at the TOP of the page rather than a
-          footer button — matches the winning doctor-view prototype
-          (06-doctor-view.html), whose round-2 feedback specifically flagged
-          "from the detail view, not obvious how to get back to the list". */}
-      <button type="button" className="back-link" onClick={onBack}>
-        <span className="back-link-arrow" aria-hidden="true">
-          ←
-        </span>
-        {t("doctorDetail.back")}
-      </button>
       {/* Compact avatar + name/specialty header, matching the prototype's
           `.detail-head` — a small round avatar next to the identity, not a
           large portrait spanning the row. Contact fields (clinic/phone/

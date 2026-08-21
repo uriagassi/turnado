@@ -53,8 +53,9 @@ import { DocumentFormScreen, getDocumentTypeForTask } from "./screens/DocumentFo
 import { DocumentDetailScreen } from "./screens/DocumentDetailScreen";
 import { DocumentsScreen, type DocumentFilters } from "./screens/DocumentsScreen";
 import { ConfirmationModal } from "./components/ConfirmationModal";
+import { NavBar, type NavDestination } from "./components/NavBar";
 
-type Session = {
+export type Session = {
   user: UserInfo;
   home: HomeData;
   doctors: Doctor[];
@@ -156,7 +157,7 @@ function sortDoctorsByNextAppointment(doctors: Doctor[], nextAppointments: Map<n
   });
 }
 
-type AppState =
+export type AppState =
   | { phase: "loading" }
   | { phase: "not-authorized" }
   | { phase: "sign-in"; authInfo: AuthClientData }
@@ -231,6 +232,107 @@ function documentFiltersToApiFilter(filters: DocumentFilters): DocumentQueryFilt
   };
 }
 
+/**
+ * Fetches everything the "documents" phase needs and builds its state —
+ * shared by navigateTo's own "documents" destination and document-detail's
+ * back handler (returnTo === "documents"), which used to each duplicate
+ * this fetch-both-then-setState shape with only the filters differing.
+ */
+async function loadDocumentsScreen(
+  session: Session,
+  filters: DocumentFilters,
+): Promise<Extract<AppState, { phase: "documents" }>> {
+  const [documents, allTasks] = await Promise.all([
+    fetchDocuments(documentFiltersToApiFilter(filters)),
+    fetchTasks(),
+  ]);
+  return { phase: "documents", session, documents, filters, allTasks };
+}
+
+/**
+ * The title NavBar shows for the current screen (issue #27 AC: "showing at
+ * least the current screen's title"). Drill-in phases show the nearest
+ * top-level section's title (or, where the screen itself already headlines
+ * a specific record — a doctor, task, or document — that record's own name)
+ * rather than a bespoke title per phase.
+ */
+export function screenTitle(state: AppState, t: (key: string) => string): string {
+  switch (state.phase) {
+    case "loading":
+    case "not-authorized":
+    case "sign-in":
+      return t("app.title");
+    case "home":
+      return t("home.title");
+    case "doctors":
+    case "doctor-form":
+      return t("doctors.title");
+    case "doctor-detail":
+      return state.doctor.name;
+    case "appointment-upcoming":
+      return t("upcomingAppointments.title");
+    case "appointment-history":
+      return t("appointmentHistory.title");
+    case "appointment-form":
+      if (state.returnTo === "appointment-upcoming") return t("upcomingAppointments.title");
+      if (state.returnTo === "appointment-history") return t("appointmentHistory.title");
+      return t("home.title");
+    case "task-detail":
+      return state.task.title;
+    case "task-form":
+      return state.task ? t("taskForm.title.edit") : t("taskForm.title.new");
+    case "document-form":
+      return t("documentForm.title");
+    case "document-detail":
+      return state.document.title;
+    case "documents":
+      return t("documentsScreen.title");
+  }
+}
+
+/**
+ * The title bar's back control, used only as a fallback for when the
+ * App()-level back-stack (see `backStack`/`goTo`/`goBack`) has nothing to
+ * pop — i.e. the detail view being shown was just *created* by a form
+ * (add doctor, upload document), so there's no prior screen on the stack to
+ * retrace. In that case there's a fixed, correct answer regardless of stack
+ * state: back to wherever that kind of record is created from. Whenever the
+ * stack does have an entry, the render below prefers it over this, since it
+ * reflects the screen the user actually came from (this function doesn't
+ * know that — e.g. it always sends doctor-detail to the doctors list, which
+ * is right after creating a doctor but wrong after drilling in from a
+ * document, the exact bug the stack exists to fix).
+ */
+export function screenBack(state: AppState, setState: (s: AppState) => void): (() => void) | undefined {
+  switch (state.phase) {
+    case "doctor-detail": {
+      const { session, doctors } = state;
+      return () => setState({ phase: "doctors", session, doctors });
+    }
+    case "document-detail": {
+      const { session, returnTo, doctor, documentsFilters } = state;
+      return async () => {
+        if (returnTo === "doctor-detail" && doctor) {
+          setState({ phase: "doctor-detail", session, doctors: session.doctors, doctor });
+        } else if (returnTo === "documents") {
+          setState(await loadDocumentsScreen(session, documentsFilters ?? EMPTY_DOCUMENT_FILTERS));
+        } else {
+          setState({ phase: "home", session });
+        }
+      };
+    }
+    case "task-detail": {
+      const { session, returnTo, doctor } = state;
+      return () =>
+        returnTo === "doctor-detail" && doctor
+          ? setState({ phase: "doctor-detail", session, doctors: session.doctors, doctor })
+          : setState({ phase: "home", session });
+    }
+    default:
+      return undefined;
+  }
+}
+
 /** How often the home screen's data refreshes itself in the background, absent a manual refresh or a window-focus event (see useAutoRefresh). */
 const HOME_REFRESH_INTERVAL_MS = 45_000;
 
@@ -242,6 +344,34 @@ export function App() {
   const [state, setState] = useState<AppState>({ phase: "loading" });
   const [pendingTaskPrompt, setPendingTaskPrompt] = useState<{ taskId: number } | null>(null);
   const documentsFilterTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /**
+   * Chronological back-stack for the title bar's back arrow (issue #27
+   * follow-up) — every screen actually visited on the way to the current
+   * one, so "back" always retraces the real path (e.g. document → doctor →
+   * back returns to that document), not a fixed per-record destination like
+   * "doctor detail always goes back to the doctors list" (the bug this
+   * replaced). Only pushed to at the specific "drill into a record's detail
+   * view" call sites below (see goTo) — status changes, edits, and form
+   * cancel/submit keep using plain setState and don't disturb it, so
+   * returning from an edit still resumes wherever the stack already had.
+   */
+  const [backStack, setBackStack] = useState<AppState[]>([]);
+
+  /** Drills into a detail view, remembering the screen being left so the title bar's back arrow can retrace it (see backStack above). */
+  const goTo = (next: AppState) => {
+    setBackStack((stack) => [...stack, state]);
+    setState(next);
+  };
+
+  /** Pops the back-stack, if it has anything — used only as a fallback when it doesn't (see backOrFallback below in the render). */
+  const goBack = () => {
+    setBackStack((stack) => {
+      if (stack.length === 0) return stack;
+      setState(stack[stack.length - 1]);
+      return stack.slice(0, -1);
+    });
+  };
 
   // Home screen auto-refreshes periodically while it's the active screen;
   // navigating away doesn't stomp on whatever screen the user moved to.
@@ -278,6 +408,42 @@ export function App() {
     };
   }, []);
 
+  // The nav drawer's destination handler (issue #27) — reachable from any
+  // screen that has a session, jumping straight to a top-level section
+  // rather than routing back through Home first. Doctors/Documents refetch
+  // (matching openDoctors/viewDocuments below) so the list is current even
+  // if it was never loaded on this visit; Home/Upcoming/History just switch
+  // phase since their data already lives on the session.
+  const navigateTo = async (destination: NavDestination) => {
+    if (state.phase === "loading" || state.phase === "not-authorized" || state.phase === "sign-in") return;
+    const { session } = state;
+    // A drawer jump leaves whatever drill-down the user was in — the
+    // back-stack it leaves behind is no longer relevant to where they're
+    // going, so pressing back after a drawer jump shouldn't tunnel back
+    // into it.
+    setBackStack([]);
+    switch (destination) {
+      case "home":
+        setState({ phase: "home", session });
+        return;
+      case "doctors": {
+        const doctors = await fetchDoctors();
+        setState({ phase: "doctors", session: { ...session, doctors }, doctors });
+        return;
+      }
+      case "documents": {
+        setState(await loadDocumentsScreen(session, EMPTY_DOCUMENT_FILTERS));
+        return;
+      }
+      case "appointment-upcoming":
+        setState({ phase: "appointment-upcoming", session });
+        return;
+      case "appointment-history":
+        setState({ phase: "appointment-history", session });
+        return;
+    }
+  };
+
   const navigateToResolveAppointment = (session: Session, t: Task) => {
     setState({
       phase: "appointment-form",
@@ -303,45 +469,28 @@ export function App() {
       return <SignInScreen authInfo={state.authInfo} />;
     case "home": {
       const { session } = state;
-      const openDoctors = async () => {
-        const doctors = await fetchDoctors();
-        setState({ phase: "doctors", session: { ...session, doctors }, doctors });
-      };
-      const selectDoctor = (doctor: Doctor) => setState({ phase: "doctor-detail", session, doctors: session.doctors, doctor });
+      const selectDoctor = (doctor: Doctor) => goTo({ phase: "doctor-detail", session, doctors: session.doctors, doctor });
       const addAppointment = () => setState({ phase: "appointment-form", session, returnTo: "home" });
-      const viewUpcoming = () => setState({ phase: "appointment-upcoming", session });
-      const viewHistory = () => setState({ phase: "appointment-history", session });
       const addTask = () => setState({ phase: "task-form", session, returnTo: "home" });
       const selectTask = async (task: Task) => {
         const docs = await fetchDocuments({ taskId: task.id });
         const taskDocuments = { ...session.taskDocuments, [task.id]: docs };
-        setState({ phase: "task-detail", session: { ...session, taskDocuments }, task, returnTo: "home" });
+        goTo({ phase: "task-detail", session: { ...session, taskDocuments }, task, returnTo: "home" });
       };
       const addDocument = () => setState({ phase: "document-form", session, returnTo: "home" });
       const selectDocument = (doc: MedicalDocument) =>
-        setState({ phase: "document-detail", session, document: doc, returnTo: "home" });
-      const viewDocuments = async () => {
-        const [documents, allTasks] = await Promise.all([
-          fetchDocuments(documentFiltersToApiFilter(EMPTY_DOCUMENT_FILTERS)),
-          fetchTasks(),
-        ]);
-        setState({ phase: "documents", session, documents, filters: EMPTY_DOCUMENT_FILTERS, allTasks });
-      };
+        goTo({ phase: "document-detail", session, document: doc, returnTo: "home" });
       return (
         <HomeScreen
           home={session.home}
           doctors={session.doctors}
           appointments={session.appointments}
-          onOpenDoctors={openDoctors}
           onSelectDoctor={selectDoctor}
           onAddAppointment={addAppointment}
-          onViewUpcoming={viewUpcoming}
-          onViewHistory={viewHistory}
           onSelectTask={selectTask}
           onAddTask={addTask}
           onAddDocument={addDocument}
           onSelectDocument={selectDocument}
-          onViewDocuments={viewDocuments}
           onRefresh={refreshHome}
         />
       );
@@ -351,7 +500,7 @@ export function App() {
       const selectDoctor = async (doctor: Doctor) => {
         const docs = await fetchDocuments({ doctorId: doctor.id });
         const doctorDocuments = { ...session.doctorDocuments, [doctor.id]: docs };
-        setState({
+        goTo({
           phase: "doctor-detail",
           session: { ...session, doctorDocuments },
           doctors,
@@ -359,7 +508,6 @@ export function App() {
         });
       };
       const addDoctor = () => setState({ phase: "doctor-form", session, doctors });
-      const backHome = () => setState({ phase: "home", session });
       // Same nextAppointmentForDoctor used by doctor-detail, just precomputed
       // per doctor for the list's own "next appointment" preview (see
       // DoctorsScreen — matches the prototype's directory-row preview).
@@ -371,13 +519,11 @@ export function App() {
           nextAppointments={nextAppointments}
           onSelectDoctor={selectDoctor}
           onAddDoctor={addDoctor}
-          onBackHome={backHome}
         />
       );
     }
     case "doctor-detail": {
       const { session, doctors, doctor } = state;
-      const back = () => setState({ phase: "doctors", session, doctors });
       const edit = () => setState({ phase: "doctor-form", session, doctors, doctor });
       const appointments = upcomingAppointmentsForDoctor(session.appointments, doctor.id, new Date());
       const doctorOpenItems = openItemsForDoctor(session.home.openItems, doctor.id);
@@ -385,17 +531,16 @@ export function App() {
       const selectTask = async (task: Task) => {
         const docs = await fetchDocuments({ taskId: task.id });
         const taskDocuments = { ...session.taskDocuments, [task.id]: docs };
-        setState({ phase: "task-detail", session: { ...session, taskDocuments }, task, returnTo: "doctor-detail", doctor });
+        goTo({ phase: "task-detail", session: { ...session, taskDocuments }, task, returnTo: "doctor-detail", doctor });
       };
       const selectDocument = (doc: MedicalDocument) =>
-        setState({ phase: "document-detail", session, document: doc, returnTo: "doctor-detail", doctor });
+        goTo({ phase: "document-detail", session, document: doc, returnTo: "doctor-detail", doctor });
       return (
         <DoctorDetailScreen
           doctor={doctor}
           appointments={appointments}
           openItems={doctorOpenItems}
           documents={doctorDocs}
-          onBack={back}
           onEdit={edit}
           onSelectTask={selectTask}
           onSelectDocument={selectDocument}
@@ -438,34 +583,19 @@ export function App() {
       );
     }
     case "document-detail": {
-      const { session, document, returnTo, doctor, documentsFilters } = state;
-      const back = async () => {
-        if (returnTo === "doctor-detail" && doctor) {
-          setState({ phase: "doctor-detail", session, doctors: session.doctors, doctor });
-        } else if (returnTo === "documents") {
-          const filters = documentsFilters ?? EMPTY_DOCUMENT_FILTERS;
-          const [documents, allTasks] = await Promise.all([
-            fetchDocuments(documentFiltersToApiFilter(filters)),
-            fetchTasks(),
-          ]);
-          setState({ phase: "documents", session, documents, filters, allTasks });
-        } else {
-          setState({ phase: "home", session });
-        }
-      };
+      const { session, document } = state;
       const selectDoctor = (d: Doctor) =>
-        setState({ phase: "doctor-detail", session, doctors: session.doctors, doctor: d });
+        goTo({ phase: "doctor-detail", session, doctors: session.doctors, doctor: d });
       const selectAppointment = (appt: Appointment) =>
         setState({ phase: "appointment-form", session, appointment: appt, returnTo: "home" });
       const selectTask = (t: Task) =>
-        setState({ phase: "task-detail", session, task: t, returnTo: "home" });
+        goTo({ phase: "task-detail", session, task: t, returnTo: "home" });
       return (
         <DocumentDetailScreen
           document={document}
           doctors={session.doctors}
           appointments={session.appointments}
           openItems={session.home.openItems}
-          onBack={back}
           onSelectDoctor={selectDoctor}
           onSelectAppointment={selectAppointment}
           onSelectTask={selectTask}
@@ -474,7 +604,6 @@ export function App() {
     }
     case "documents": {
       const { session, documents, filters, allTasks } = state;
-      const back = () => setState({ phase: "home", session });
       const changeFilters = (nextFilters: DocumentFilters) => {
         // Filters/chips update immediately (AC: live, no apply step); only the
         // results re-fetch is debounced, so fast typing in the search box
@@ -487,7 +616,7 @@ export function App() {
         }, DOCUMENTS_FILTER_DEBOUNCE_MS);
       };
       const selectDocument = (doc: MedicalDocument) =>
-        setState({ phase: "document-detail", session, document: doc, returnTo: "documents", documentsFilters: filters });
+        goTo({ phase: "document-detail", session, document: doc, returnTo: "documents", documentsFilters: filters });
       return (
         <DocumentsScreen
           documents={documents}
@@ -497,7 +626,6 @@ export function App() {
           filters={filters}
           onFiltersChange={changeFilters}
           onSelectDocument={selectDocument}
-          onBack={back}
         />
       );
     }
@@ -536,10 +664,6 @@ export function App() {
     }
     case "task-detail": {
       const { session, task, returnTo, doctor } = state;
-      const back = () =>
-        returnTo === "doctor-detail" && doctor
-          ? setState({ phase: "doctor-detail", session, doctors: session.doctors, doctor })
-          : setState({ phase: "home", session });
       const edit = (t: Task) =>
         setState({ phase: "task-form", session, task: t, returnTo: "task-detail", doctor });
       const changeStatus = async (t: Task, status: TaskStatus) => {
@@ -549,7 +673,7 @@ export function App() {
         setState({ phase: "task-detail", session: nextSession, task: updated, returnTo, doctor });
       };
       const selectDocument = (doc: MedicalDocument) =>
-        setState({
+        goTo({
           phase: "document-detail",
           session,
           document: doc,
@@ -581,7 +705,6 @@ export function App() {
           doctors={session.doctors}
           appointments={session.appointments}
           documents={taskDocs}
-          onBack={back}
           onEdit={edit}
           onStatusChange={changeStatus}
           onResolveToAppointment={(t) => navigateToResolveAppointment(session, t)}
@@ -625,8 +748,7 @@ export function App() {
     }
     case "appointment-upcoming": {
       const { session } = state;
-      const back = () => setState({ phase: "home", session });
-      const selectDoctor = (doctor: Doctor) => setState({ phase: "doctor-detail", session, doctors: session.doctors, doctor });
+      const selectDoctor = (doctor: Doctor) => goTo({ phase: "doctor-detail", session, doctors: session.doctors, doctor });
       const editAppointment = (appointment: Appointment) =>
         setState({ phase: "appointment-form", session, appointment, returnTo: "appointment-upcoming" });
       const changeStatus = async (appointment: Appointment, status: AppointmentStatus) => {
@@ -646,14 +768,12 @@ export function App() {
           onEdit={editAppointment}
           onStatusChange={changeStatus}
           onSaveSummary={saveSummary}
-          onBack={back}
         />
       );
     }
     case "appointment-history": {
       const { session } = state;
-      const back = () => setState({ phase: "home", session });
-      const selectDoctor = (doctor: Doctor) => setState({ phase: "doctor-detail", session, doctors: session.doctors, doctor });
+      const selectDoctor = (doctor: Doctor) => goTo({ phase: "doctor-detail", session, doctors: session.doctors, doctor });
       const editAppointment = (appointment: Appointment) =>
         setState({ phase: "appointment-form", session, appointment, returnTo: "appointment-history" });
       const changeStatus = async (appointment: Appointment, status: AppointmentStatus) => {
@@ -673,15 +793,23 @@ export function App() {
           onEdit={editAppointment}
           onStatusChange={changeStatus}
           onSaveSummary={saveSummary}
-          onBack={back}
         />
       );
     }
   }
 };
 
+  const showNavBar = state.phase !== "loading" && state.phase !== "not-authorized" && state.phase !== "sign-in";
+  // screenBack(...) is non-undefined only on the 3 detail phases that ever
+  // get a back control at all — reused here as that check, so the stack
+  // isn't offered as "back" on a phase that shouldn't show one even if
+  // something left stale entries in it (e.g. see navigateTo's own comment).
+  const staticBack = screenBack(state, setState);
+  const onBack = staticBack && backStack.length > 0 ? goBack : staticBack;
+
   return (
     <>
+      {showNavBar && <NavBar title={screenTitle(state, t)} onNavigate={navigateTo} onBack={onBack} />}
       {renderScreen()}
       {pendingTaskPrompt && (
         <ConfirmationModal

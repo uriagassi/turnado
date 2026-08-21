@@ -1,6 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { DocumentDetailScreen } from "./DocumentDetailScreen";
 import type { Doctor, MedicalDocument } from "../api";
 
@@ -35,7 +34,6 @@ describe("DocumentDetailScreen", () => {
       <DocumentDetailScreen
         document={mockDoc}
         doctors={mockDoctors}
-        onBack={vi.fn()}
       />,
     );
 
@@ -45,21 +43,5 @@ describe("DocumentDetailScreen", () => {
     expect(screen.getByText("Dr. Jane Smith")).toBeInTheDocument();
     expect(screen.getByText("No acute abnormalities")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Download file" })).toBeInTheDocument();
-  });
-
-  it("calls onBack when back button is clicked", async () => {
-    const user = userEvent.setup();
-    const onBack = vi.fn();
-
-    render(
-      <DocumentDetailScreen
-        document={mockDoc}
-        doctors={mockDoctors}
-        onBack={onBack}
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: /back/i }));
-    expect(onBack).toHaveBeenCalledOnce();
   });
 });

@@ -35,7 +35,6 @@ function renderScreen(
     filters?: DocumentFilters;
     onFiltersChange?: (filters: DocumentFilters) => void;
     onSelectDocument?: (document: MedicalDocument) => void;
-    onBack?: () => void;
   } = {},
 ) {
   const {
@@ -45,7 +44,6 @@ function renderScreen(
     filters = emptyFilters(),
     onFiltersChange = () => {},
     onSelectDocument = () => {},
-    onBack = () => {},
   } = options;
   return render(
     <DocumentsScreen
@@ -56,7 +54,6 @@ function renderScreen(
       filters={filters}
       onFiltersChange={onFiltersChange}
       onSelectDocument={onSelectDocument}
-      onBack={onBack}
     />,
   );
 }
@@ -128,7 +125,6 @@ describe("DocumentsScreen", () => {
         filters={afterFrom}
         onFiltersChange={onFiltersChange}
         onSelectDocument={() => {}}
-        onBack={() => {}}
       />,
     );
     fireEvent.change(screen.getByLabelText("To"), { target: { value: "2026-08-31" } });
