@@ -78,6 +78,23 @@ async function saveDoctor(doctor: Doctor | undefined, input: DoctorInput, photo:
   return photo ? uploadDoctorPhoto(saved.id, photo) : saved;
 }
 
+/**
+ * Uploads the optional invitation letter attached in AppointmentFormScreen
+ * as an "appointment invitation" document linked to the just-saved
+ * appointment. The server derives the auto Form-17 task from that link
+ * (see #8 / app.ts's linkInvitationToFormSeventeen) — this is only
+ * responsible for getting the file there with the right link.
+ */
+async function uploadInvitation(appointment: Appointment, file: File): Promise<void> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("title", file.name.replace(/\.[^/.]+$/, ""));
+  formData.append("type", "appointment invitation");
+  if (appointment.doctorId) formData.append("doctorId", String(appointment.doctorId));
+  formData.append("appointmentIds", JSON.stringify([appointment.id]));
+  await uploadDocument(formData);
+}
+
 /** Folds a just-saved Doctor into the in-memory list: replaces it in place on edit, or inserts it in name order on create (list order matches the server's own `ORDER BY name`, see Doctors.ts). */
 function withSavedDoctor(doctors: Doctor[], wasEdit: boolean, saved: Doctor): Doctor[] {
   if (wasEdit) return doctors.map((d) => (d.id === saved.id ? saved : d));
@@ -331,6 +348,24 @@ export function screenBack(state: AppState, setState: (s: AppState) => void): ((
     default:
       return undefined;
   }
+}
+
+/**
+ * Re-stamps every backStack entry's session with a freshly-fetched home —
+ * called wherever a background mutation (e.g. the "mark task as completed?"
+ * prompt below) changes data that an already-pushed entry's snapshot no
+ * longer reflects. Without this, "Back" happily restores that stale
+ * snapshot instead of the fresh data (see screenBack's own doc comment on
+ * why the stack is preferred over a fresh static fallback) — the exact bug
+ * where confirming the prompt marked a task done, but Back still showed it
+ * open because the backStack entry was frozen from before the confirm.
+ */
+export function refreshBackStackSessions(backStack: AppState[], home: HomeData): AppState[] {
+  return backStack.map((entry) =>
+    entry.phase === "loading" || entry.phase === "not-authorized" || entry.phase === "sign-in"
+      ? entry
+      : { ...entry, session: { ...entry.session, home } },
+  );
 }
 
 /** How often the home screen's data refreshes itself in the background, absent a manual refresh or a window-focus event (see useAutoRefresh). */
@@ -646,8 +681,11 @@ export function App() {
     case "appointment-form": {
       const { session, appointment, returnTo, resolvingTaskId } = state;
       const cancel = () => setState({ phase: returnTo, session });
-      const submit = async (input: AppointmentInput) => {
+      const submit = async (input: AppointmentInput, invitationFile: File | null) => {
         const saved = appointment?.id ? await updateAppointment(appointment.id, input) : await createAppointment(input);
+        if (invitationFile) {
+          await uploadInvitation(saved, invitationFile);
+        }
         if (resolvingTaskId) {
           await setTaskPendingAppointment(resolvingTaskId, saved.id);
         }
@@ -827,6 +865,11 @@ export function App() {
                 ? { ...prev, session: { ...prev.session, home } }
                 : prev,
             );
+            // Also refreshes any backStack entries' own session — "Back"
+            // prefers the stack over a fresh static fallback (see
+            // screenBack's doc comment), so without this it would restore
+            // whatever snapshot was pushed *before* this task closed.
+            setBackStack((stack) => refreshBackStackSessions(stack, home));
           }}
           onCancel={() => setPendingTaskPrompt(null)}
         />

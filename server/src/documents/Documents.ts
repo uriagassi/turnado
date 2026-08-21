@@ -504,6 +504,12 @@ export class Documents {
     return rows.map((r) => this.get(r.noteId)!).filter(Boolean);
   }
 
+  /** Links an already-created document to an already-created task (see app.ts's auto Form-17 linkage on invitation upload, where the task can't exist yet at document-creation time). Re-syncs doctor tags since the linked task may carry its own doctorId. */
+  linkTask(noteId: number, taskId: number): void {
+    this.db.prepare(`INSERT OR IGNORE INTO TaskDocuments (noteId, taskId) VALUES (?, ?)`).run(noteId, taskId);
+    this.syncDoctorTags(noteId);
+  }
+
   private getOrThrow(id: number): Document {
     const doc = this.get(id);
     if (!doc) throw new DocumentNotFoundError(id);

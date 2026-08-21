@@ -12,7 +12,11 @@ export function AppointmentFormScreen({
 }: {
   appointment?: Appointment;
   doctors: Doctor[];
-  onSubmit: (input: AppointmentInput) => void;
+  // The invitation file, when the user attaches one — see the "appointment
+  // invitation" upload below, which is optional (an appointment can be
+  // created/edited without one). Not part of AppointmentInput, same
+  // reasoning as DoctorFormScreen's separate photo parameter.
+  onSubmit: (input: AppointmentInput, invitationFile: File | null) => void;
   onCancel: () => void;
 }) {
   const { t } = useTranslation();
@@ -23,6 +27,7 @@ export function AppointmentFormScreen({
     notes: appointment?.notes ?? "",
   });
   const [errors, setErrors] = useState<RequiredFieldErrors>({});
+  const [invitationFile, setInvitationFile] = useState<File | null>(null);
 
   const setField = <K extends keyof AppointmentInput>(key: K, value: AppointmentInput[K]) =>
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -37,7 +42,7 @@ export function AppointmentFormScreen({
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    onSubmit(formData);
+    onSubmit(formData, invitationFile);
   };
 
   return (
@@ -78,6 +83,16 @@ export function AppointmentFormScreen({
             <textarea value={formData.notes} onChange={(e) => setField("notes", e.target.value)} />
           </label>
           {errors.notes && <p className="field-error">{errors.notes}</p>}
+        </div>
+        <div className="form-field">
+          <label>
+            {t("appointmentForm.invitation.label")}
+            <input
+              type="file"
+              accept="image/*,application/pdf"
+              onChange={(e) => setInvitationFile(e.target.files?.[0] ?? null)}
+            />
+          </label>
         </div>
         <div className="form-actions">
           <button type="submit" className="save-appointment">

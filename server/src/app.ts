@@ -398,12 +398,33 @@ export function createApp(options: AppOptions): Express {
 
       try {
         const created = documents.create(input, uploadedFile);
-        res.status(201).json(created);
+        if (created.type === "appointment invitation") {
+          linkInvitationToFormSeventeen(created);
+        }
+        res.status(201).json(documents.get(created.id));
       } catch (err) {
         if (err instanceof InvalidDocumentInputError) return res.status(400).json({ error: err.message });
         throw err;
       }
     });
+
+    // AC (#8): uploading an appointment-invitation document that's linked to
+    // an appointment auto-creates the "Form 17 to obtain" task for it — no
+    // separate manual step, and the task links back to the invitation.
+    function linkInvitationToFormSeventeen(invitation: { id: number; appointmentIds: number[] }): void {
+      for (const appointmentId of invitation.appointmentIds) {
+        const appointment = appointments.get(appointmentId);
+        if (!appointment) continue;
+        const doctor = appointment.doctorId ? doctors.get(appointment.doctorId) : undefined;
+        const form17Task = tasks.create({
+          type: "form_17",
+          title: doctor ? `Form 17 for ${doctor.name}` : "Form 17",
+          doctorId: appointment.doctorId,
+          sourceAppointmentId: appointment.id,
+        });
+        documents.linkTask(invitation.id, form17Task.id);
+      }
+    }
 
     app.get("/api/documents", (req, res) => {
       if (req.query.taskId !== undefined) {

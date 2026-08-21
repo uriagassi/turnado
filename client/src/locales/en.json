@@ -73,6 +73,7 @@
   "appointmentForm.cancel": "Cancel",
   "appointmentForm.notes.required": "Notes is required.",
   "appointmentForm.dateTime.required": "Date & time is required.",
+  "appointmentForm.invitation.label": "Invitation letter",
   "appointmentHistory.title": "Appointment history",
   "appointmentHistory.empty": "No past appointments yet.",
   "upcomingAppointments.title": "Upcoming appointments",
