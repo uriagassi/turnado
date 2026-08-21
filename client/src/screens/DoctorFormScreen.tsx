@@ -1,7 +1,9 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Doctor, DoctorInput } from "../api";
 import { DoctorAvatar } from "../components/DoctorAvatar";
+
+import { createPreviewUrl } from "../utils/filePreview";
 
 // The plain single-line text fields — every DoctorInput key except name
 // (which gets its own required-field validation/error slot below) and
@@ -54,6 +56,35 @@ export function DoctorFormScreen({
   });
   const [errors, setErrors] = useState<RequiredFieldErrors>({});
   const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isCancelled = false;
+    let urlToRevoke: string | null = null;
+
+    if (!photo) {
+      setPhotoPreview(null);
+      return;
+    }
+
+    createPreviewUrl(photo).then((url) => {
+      if (isCancelled) {
+        if (url && typeof URL !== "undefined" && typeof URL.revokeObjectURL === "function") {
+          URL.revokeObjectURL(url);
+        }
+        return;
+      }
+      urlToRevoke = url;
+      setPhotoPreview(url);
+    });
+
+    return () => {
+      isCancelled = true;
+      if (urlToRevoke && typeof URL !== "undefined" && typeof URL.revokeObjectURL === "function") {
+        URL.revokeObjectURL(urlToRevoke);
+      }
+    };
+  }, [photo]);
 
   const setField = <K extends keyof DoctorInput>(key: K, value: DoctorInput[K]) =>
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -96,13 +127,24 @@ export function DoctorFormScreen({
           </label>
         </div>
         <div className="form-field">
-          {doctor && (
-            // Shows what's already on file (photo or the initials fallback)
-            // so the user knows what a blank file input would leave in
-            // place, before deciding whether to replace it.
+          {(photoPreview || doctor) && (
+            // Shows what's currently selected or on file
             <div className="current-photo">
-              <span>{t("doctorForm.currentPhoto.label")}</span>
-              <DoctorAvatar doctor={doctor} />
+              <span>
+                {photoPreview
+                  ? t("doctorForm.newPhotoPreview.label", "Selected photo:")
+                  : t("doctorForm.currentPhoto.label")}
+              </span>
+              {photoPreview ? (
+                <img
+                  src={photoPreview}
+                  alt="Selected doctor photo preview"
+                  className="doctor-avatar"
+                  style={{ objectFit: "cover", borderRadius: "50%" }}
+                />
+              ) : (
+                <DoctorAvatar doctor={doctor!} />
+              )}
             </div>
           )}
           <label>

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import type { Appointment, Doctor, Task } from "../api";
+import type { Appointment, Doctor, MedicalDocument, Task } from "../api";
 import { DoctorAvatar } from "../components/DoctorAvatar";
 import { useRelativeDateTime } from "../hooks/useRelativeDateTime";
 import { TaskStatusBadge } from "../components/TaskStatusBadge";
@@ -8,23 +8,20 @@ export function DoctorDetailScreen({
   doctor,
   appointments = [],
   openItems = [],
+  documents = [],
   onBack,
   onEdit,
   onSelectTask,
+  onSelectDocument,
 }: {
   doctor: Doctor;
-  /**
-   * This doctor's still-upcoming planned appointments, soonest first —
-   * populated by App.tsx via upcomingAppointmentsForDoctor (the client-side
-   * counterpart of the server's selectUpcomingAppointments). Matches the
-   * accepted prototype 06-doctor-view.html's plural "תורים" heading, which
-   * lists every upcoming appointment rather than just the soonest one.
-   */
   appointments?: Appointment[];
   openItems?: Task[];
+  documents?: MedicalDocument[];
   onBack: () => void;
   onEdit: () => void;
   onSelectTask?: (task: Task) => void;
+  onSelectDocument?: (doc: MedicalDocument) => void;
 }) {
   const { t } = useTranslation();
   const formatRelative = useRelativeDateTime();
@@ -127,7 +124,35 @@ export function DoctorDetailScreen({
 
       <section>
         <h2 className="section-title">{t("doctorDetail.documents.title")}</h2>
-        <p className="section-empty">{t("doctorDetail.documents.empty")}</p>
+        {documents.length > 0 ? (
+          <div className="item-row-list">
+            {documents.map((doc) => (
+              <div
+                className="card item-row clickable"
+                key={doc.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => onSelectDocument?.(doc)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onSelectDocument?.(doc);
+                  }
+                }}
+              >
+                <div>
+                  <p className="item-row-notes">{doc.title}</p>
+                  <p className="item-row-sub">
+                    {doc.documentDate ?? doc.createdAt.slice(0, 10)}
+                  </p>
+                </div>
+                <span className="badge type-tag">{t(`document.type.${doc.type}`)}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="section-empty">{t("doctorDetail.documents.empty")}</p>
+        )}
       </section>
     </main>
   );

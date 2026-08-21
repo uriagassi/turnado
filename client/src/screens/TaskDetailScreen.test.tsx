@@ -230,4 +230,72 @@ describe("TaskDetailScreen", () => {
     expect(screen.getByText("Cardiology follow-up")).toBeInTheDocument();
     expect(screen.getByText(/Assuta Hospital/i)).toBeInTheDocument();
   });
+
+  it("renders attached documents and allows clicking to view and attach", async () => {
+    const user = userEvent.setup();
+    const onAddDocument = vi.fn();
+    const onSelectDocument = vi.fn();
+
+    const task: Task = {
+      id: 20,
+      type: "test",
+      title: "Blood test",
+      status: "open",
+      doctorId: 1,
+      dueDate: null,
+      sourceAppointmentId: null,
+      pendingAppointmentId: null,
+      requiresAdvanceScheduling: false,
+      recurrenceWindow: null,
+      approximateDateWindow: null,
+      institution: null,
+      department: null,
+      healthFund: null,
+      codeNumber: null,
+      codeName: null,
+      issuingBody: null,
+      purpose: null,
+      createdAt: "2026-08-01",
+      updatedAt: "2026-08-01",
+    };
+
+    const docs = [
+      {
+        id: 101,
+        notebookId: 0,
+        title: "Blood count results",
+        type: "test result" as const,
+        documentDate: "2026-08-10",
+        doctorId: 1,
+        notes: null,
+        file: { attachmentId: 1, fileName: "blood.pdf", uniqueFilename: "blood.pdf", mime: "application/pdf", size: 100, hash: "abc" },
+        files: [{ attachmentId: 1, fileName: "blood.pdf", uniqueFilename: "blood.pdf", mime: "application/pdf", size: 100, hash: "abc" }],
+        appointmentIds: [],
+        taskIds: [20],
+        createdAt: "2026-08-10",
+        updatedAt: "2026-08-10",
+      },
+    ];
+
+    render(
+      <TaskDetailScreen
+        task={task}
+        doctors={doctors}
+        documents={docs}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onStatusChange={() => {}}
+        onAddDocument={onAddDocument}
+        onSelectDocument={onSelectDocument}
+      />
+    );
+
+    expect(screen.getByText("Blood count results")).toBeInTheDocument();
+    await user.click(screen.getByText("Blood count results"));
+    expect(onSelectDocument).toHaveBeenCalledWith(docs[0]);
+
+    const attachBtn = screen.getByRole("button", { name: /Attach document/i });
+    await user.click(attachBtn);
+    expect(onAddDocument).toHaveBeenCalledWith(task);
+  });
 });

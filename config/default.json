@@ -13,11 +13,19 @@
     "busyTimeoutMs": 5000
   },
   "notebook": {
+    "medicalNotebookName": "Medical",
     "medicalNotebookId": 0
   },
+  "attachments": {
+    "dir": "~/paperless/attachments"
+  },
   "doctors": {
-    "parentTagName": "Doctors",
+    "parentTagName": "medical/doctors",
     "photosDir": "~/paperless/doctor-photos"
+  },
+  "documents": {
+    "documentTypeParentTagName": "medical/document-type",
+    "specialtyParentTagName": "medical/specialty"
   },
   "mail": {
     "host": "smtp.example.com",
@@ -27,7 +35,8 @@
     "from": "REPLACE_ME"
   },
   "auth": {
-    "handler": "./auth/EmptyAuth.js"
+    "handler": "./auth/EmptyAuth.js",
+    "devUserName": "user-one"
   },
   "security": {
     "allowList": {
