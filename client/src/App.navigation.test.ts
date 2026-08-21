@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { screenTitle, screenBack, type AppState, type Session } from "./App";
-import type { Doctor, MedicalDocument, Task } from "./api";
+import { screenTitle, screenBack, refreshBackStackSessions, type AppState, type Session } from "./App";
+import type { Doctor, HomeData, MedicalDocument, Task } from "./api";
 import type { DocumentFilters } from "./screens/DocumentsScreen";
 
 // screenTitle/screenBack are App.tsx's own navigation logic — the part of
@@ -206,5 +206,52 @@ describe("screenBack", () => {
     await screenBack(state, setState)?.();
 
     expect(setState).toHaveBeenCalledWith({ phase: "documents", session: s, documents: [], filters, allTasks: [] });
+  });
+});
+
+describe("refreshBackStackSessions", () => {
+  // Reproduces the reported bug: task-detail -> attach document -> confirm
+  // "mark as completed" -> Back landed on a backStack entry frozen *before*
+  // the task closed, so it still showed the task as open even though the
+  // server had already marked it done. The fix re-stamps every backStack
+  // entry's session.home with the fresh fetch the confirm handler already
+  // made, instead of leaving them holding their push-time snapshot forever.
+  it("replaces every backStack entry's home data with the freshly-fetched one", () => {
+    const staleHome: HomeData = {
+      nextAppointment: null,
+      openItems: [task({ id: 3, title: "Reproduce bug - Form 17" })],
+      recentDocuments: [],
+    };
+    const freshHome: HomeData = {
+      nextAppointment: null,
+      openItems: [],
+      recentDocuments: [medicalDocument({ id: 9, title: "form17" })],
+    };
+    const homeEntry: AppState = { phase: "home", session: session({ home: staleHome }) };
+    const taskDetailEntry: AppState = {
+      phase: "task-detail",
+      session: session({ home: staleHome }),
+      task: task(),
+      returnTo: "home",
+    };
+
+    const refreshed = refreshBackStackSessions([homeEntry, taskDetailEntry], freshHome);
+
+    expect(refreshed).toEqual([
+      { phase: "home", session: session({ home: freshHome }) },
+      { phase: "task-detail", session: session({ home: freshHome }), task: task(), returnTo: "home" },
+    ]);
+  });
+
+  it("leaves stack entries with no session (loading/not-authorized/sign-in) untouched", () => {
+    const loadingEntry: AppState = { phase: "loading" };
+
+    const refreshed = refreshBackStackSessions([loadingEntry], {
+      nextAppointment: null,
+      openItems: [],
+      recentDocuments: [],
+    });
+
+    expect(refreshed).toEqual([loadingEntry]);
   });
 });

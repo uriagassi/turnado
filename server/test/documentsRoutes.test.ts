@@ -215,4 +215,80 @@ describe("/api/documents routes", () => {
       expect(noteTags.map((r) => r.tagId)).toContain(dr2Res.body.tagId);
     });
   });
+
+  describe("auto Form-17 linkage on invitation upload", () => {
+    it("uploading an invitation during appointment creation produces exactly one linked Form-17 task pointing back at the document", async () => {
+      const db = tmpDb();
+      const agent = signedInAgent(db);
+
+      const doctorRes = await agent.post("/api/doctors").send({ name: "Dr. Cohen" });
+      const apptRes = await agent.post("/api/appointments").send({
+        doctorId: doctorRes.body.id,
+        dateTime: "2026-09-01T10:00:00Z",
+        notes: "Cardiology visit",
+      });
+
+      const docRes = await agent
+        .post("/api/documents")
+        .field("title", "Invitation letter")
+        .field("type", "appointment invitation")
+        .field("doctorId", String(doctorRes.body.id))
+        .field("appointmentIds", JSON.stringify([apptRes.body.id]))
+        .attach("file", Buffer.from("invitation content"), "invitation.pdf");
+
+      expect(docRes.status).toBe(201);
+
+      const tasksRes = await agent.get("/api/tasks");
+      const form17Tasks = tasksRes.body.filter((t: { type: string }) => t.type === "form_17");
+      expect(form17Tasks).toHaveLength(1);
+      expect(form17Tasks[0]).toMatchObject({
+        title: "Form 17 for Dr. Cohen",
+        doctorId: doctorRes.body.id,
+        sourceAppointmentId: apptRes.body.id,
+      });
+
+      const savedDoc = await agent.get(`/api/documents/${docRes.body.id}`);
+      expect(savedDoc.body.taskIds).toEqual([form17Tasks[0].id]);
+    });
+
+    it("falls back to a doctor-less title when the appointment has no doctor", async () => {
+      const agent = signedInAgent(tmpDb());
+
+      const apptRes = await agent.post("/api/appointments").send({
+        dateTime: "2026-09-01T10:00:00Z",
+        notes: "Unassigned visit",
+      });
+
+      await agent
+        .post("/api/documents")
+        .field("title", "Invitation letter")
+        .field("type", "appointment invitation")
+        .field("appointmentIds", JSON.stringify([apptRes.body.id]))
+        .attach("file", Buffer.from("invitation content"), "invitation.pdf");
+
+      const tasksRes = await agent.get("/api/tasks");
+      const form17Tasks = tasksRes.body.filter((t: { type: string }) => t.type === "form_17");
+      expect(form17Tasks).toHaveLength(1);
+      expect(form17Tasks[0]).toMatchObject({ title: "Form 17", doctorId: null });
+    });
+
+    it("does not create a Form-17 task for a non-invitation document upload", async () => {
+      const agent = signedInAgent(tmpDb());
+
+      const apptRes = await agent.post("/api/appointments").send({
+        dateTime: "2026-09-01T10:00:00Z",
+        notes: "Visit",
+      });
+
+      await agent
+        .post("/api/documents")
+        .field("title", "Visit summary")
+        .field("type", "letter")
+        .field("appointmentIds", JSON.stringify([apptRes.body.id]))
+        .attach("file", Buffer.from("summary content"), "summary.pdf");
+
+      const tasksRes = await agent.get("/api/tasks");
+      expect(tasksRes.body).toHaveLength(0);
+    });
+  });
 });
