@@ -28,6 +28,18 @@ export interface UploadedFile {
   size: number;
 }
 
+export interface DocumentSearchFilters {
+  /** Case-insensitive substring match against the document title. */
+  query?: string;
+  type?: DocumentType;
+  /** Matches a document linked to this doctor directly, or transitively via a linked appointment/task (same rule as listByDoctor). */
+  doctorId?: number;
+  /** Inclusive lower bound on documentDate. */
+  dateFrom?: string;
+  /** Inclusive upper bound on documentDate. */
+  dateTo?: string;
+}
+
 export interface DocumentCreateInput {
   title: string;
   type: DocumentType;
@@ -411,24 +423,9 @@ export class Documents {
     return notes.map((n) => this.get(n.noteId)!).filter(Boolean);
   }
 
+  /** Documents linked to a doctor directly, or transitively via a linked appointment/task — same rule `search({ doctorId })` applies for its doctor filter, so this just delegates to it. */
   listByDoctor(doctorId: number): Document[] {
-    // Note IDs directly linked via DocumentMeta or via linked Appointments/Tasks
-    const rows = this.db
-      .prepare(
-        `SELECT DISTINCT n.noteId FROM Notes n
-         LEFT JOIN DocumentMeta dm ON dm.noteId = n.noteId
-         LEFT JOIN AppointmentDocuments ad ON ad.noteId = n.noteId
-         LEFT JOIN Appointments a ON a.id = ad.appointmentId
-         LEFT JOIN TaskDocuments td ON td.noteId = n.noteId
-         LEFT JOIN Tasks t ON t.id = td.taskId
-         WHERE n.notebookId = ? AND (
-           dm.doctorId = ? OR a.doctorId = ? OR t.doctorId = ?
-         )
-         ORDER BY n.noteId DESC`,
-      )
-      .all(this.medicalNotebookId, doctorId, doctorId, doctorId) as NoteIdRow[];
-
-    return rows.map((r) => this.get(r.noteId)!).filter(Boolean);
+    return this.search({ doctorId });
   }
 
   listByTask(taskId: number): Document[] {
@@ -453,6 +450,56 @@ export class Documents {
          ORDER BY n.noteId DESC`,
       )
       .all(this.medicalNotebookId, appointmentId) as NoteIdRow[];
+
+    return rows.map((r) => this.get(r.noteId)!).filter(Boolean);
+  }
+
+  search(filters: DocumentSearchFilters): Document[] {
+    const conditions: string[] = ["n.notebookId = ?"];
+    const params: (string | number)[] = [this.medicalNotebookId];
+
+    if (filters.doctorId !== undefined) {
+      conditions.push(`n.noteId IN (
+        SELECT n2.noteId FROM Notes n2
+        LEFT JOIN DocumentMeta dm ON dm.noteId = n2.noteId
+        LEFT JOIN AppointmentDocuments ad ON ad.noteId = n2.noteId
+        LEFT JOIN Appointments a ON a.id = ad.appointmentId
+        LEFT JOIN TaskDocuments td ON td.noteId = n2.noteId
+        LEFT JOIN Tasks t ON t.id = td.taskId
+        WHERE dm.doctorId = ? OR a.doctorId = ? OR t.doctorId = ?
+      )`);
+      params.push(filters.doctorId, filters.doctorId, filters.doctorId);
+    }
+
+    if (filters.type) {
+      const docTypeParentId = this.findOrCreateDocumentTypeParentTagId();
+      conditions.push(`n.noteId IN (
+        SELECT nt.noteId FROM NoteTags nt
+        JOIN Tags tg ON tg.tagId = nt.tagId
+        WHERE tg.parentId = ? AND tg.name = ?
+      )`);
+      params.push(docTypeParentId, filters.type);
+    }
+
+    const trimmedQuery = filters.query?.trim();
+    if (trimmedQuery) {
+      conditions.push(`n.title LIKE ? COLLATE NOCASE`);
+      params.push(`%${trimmedQuery}%`);
+    }
+
+    if (filters.dateFrom) {
+      conditions.push(`n.noteId IN (SELECT noteId FROM DocumentMeta WHERE documentDate >= ?)`);
+      params.push(filters.dateFrom);
+    }
+
+    if (filters.dateTo) {
+      conditions.push(`n.noteId IN (SELECT noteId FROM DocumentMeta WHERE documentDate <= ?)`);
+      params.push(filters.dateTo);
+    }
+
+    const rows = this.db
+      .prepare(`SELECT n.noteId FROM Notes n WHERE ${conditions.join(" AND ")} ORDER BY n.noteId DESC`)
+      .all(...params) as NoteIdRow[];
 
     return rows.map((r) => this.get(r.noteId)!).filter(Boolean);
   }
