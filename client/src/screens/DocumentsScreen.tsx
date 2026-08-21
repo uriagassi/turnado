@@ -66,6 +66,18 @@ function chipFieldName(key: keyof DocumentFilters): string {
   return key === "doctorId" ? "doctor" : key;
 }
 
+/** Resolves a document's linked appointments/tasks out of the full lists the screen was handed — the badge's expanded detail. */
+function selectLinkedItems(
+  document: MedicalDocument,
+  appointments: Appointment[],
+  openItems: Task[],
+): { linkedAppointments: Appointment[]; linkedTasks: Task[] } {
+  return {
+    linkedAppointments: appointments.filter((a) => document.appointmentIds.includes(a.id)),
+    linkedTasks: openItems.filter((task) => document.taskIds.includes(task.id)),
+  };
+}
+
 function DocumentRow({
   document,
   appointments,
@@ -84,8 +96,7 @@ function DocumentRow({
   // resolved appointments/openItems arrays — those may be a partial list
   // the caller happened to pass in.
   const linkedCount = document.appointmentIds.length + document.taskIds.length;
-  const linkedAppointments = appointments.filter((a) => document.appointmentIds.includes(a.id));
-  const linkedTasks = openItems.filter((task) => document.taskIds.includes(task.id));
+  const { linkedAppointments, linkedTasks } = selectLinkedItems(document, appointments, openItems);
 
   return (
     <li>

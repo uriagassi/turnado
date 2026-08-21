@@ -298,7 +298,8 @@ export async function setAppointmentSummary(id: number, summary: string): Promis
   return res.json();
 }
 
-export async function fetchDocuments(filter?: {
+/** Query params GET /api/documents accepts — see server's DocumentSearchFilters for the search-dimension fields (doctorId/type/query/dateFrom/dateTo); taskId/appointmentId are single-purpose lookups it also supports. */
+export interface DocumentQueryFilter {
   doctorId?: number;
   taskId?: number;
   appointmentId?: number;
@@ -306,7 +307,9 @@ export async function fetchDocuments(filter?: {
   query?: string;
   dateFrom?: string;
   dateTo?: string;
-}): Promise<MedicalDocument[]> {
+}
+
+export async function fetchDocuments(filter?: DocumentQueryFilter): Promise<MedicalDocument[]> {
   const params = new URLSearchParams();
   if (filter?.doctorId !== undefined) params.set("doctorId", String(filter.doctorId));
   if (filter?.taskId !== undefined) params.set("taskId", String(filter.taskId));

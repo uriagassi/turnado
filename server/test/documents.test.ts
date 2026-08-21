@@ -10,7 +10,6 @@ import {
   UploadedFile,
   DocumentNotFoundError,
   InvalidDocumentInputError,
-  groupDocumentsByType,
 } from "../src/documents/Documents.js";
 import { Doctors } from "../src/doctors/Doctors.js";
 import { Appointments } from "../src/appointments/Appointments.js";
@@ -355,27 +354,6 @@ describe("Documents", () => {
       const results = documents.search({ query: "cardiology", dateFrom: "2026-08-01", dateTo: "2026-08-31" });
 
       expect(results.map((d) => d.id)).toEqual([inRange.id]);
-    });
-  });
-
-  describe("groupDocumentsByType", () => {
-    it("groups documents under their type, in VALID_DOCUMENT_TYPES declaration order, preserving input order within a group", () => {
-      const db = tmpDb();
-      const documents = tmpDocuments(db);
-      const file: UploadedFile = { fileName: "f.pdf", uniqueFilename: "u.pdf", mime: "application/pdf", hash: "h", size: 100 };
-
-      // Input order: referral, test result, referral — declaration order puts
-      // "test result" before "referral" (see VALID_DOCUMENT_TYPES).
-      const referral1 = documents.create({ title: "Referral 1", type: "referral" }, file);
-      const testResult = documents.create({ title: "Test Result 1", type: "test result" }, file);
-      const referral2 = documents.create({ title: "Referral 2", type: "referral" }, file);
-
-      const grouped = groupDocumentsByType([referral1, testResult, referral2]);
-
-      expect(grouped).toEqual([
-        { type: "test result", documents: [testResult] },
-        { type: "referral", documents: [referral1, referral2] },
-      ]);
     });
   });
 });

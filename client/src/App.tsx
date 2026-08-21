@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAutoRefresh } from "./hooks/useAutoRefresh";
 import { useTranslation } from "react-i18next";
 import { applyLocale } from "./i18n";
@@ -29,6 +29,7 @@ import {
   AppointmentStatus,
   Doctor,
   DoctorInput,
+  DocumentQueryFilter,
   DocumentType,
   HomeData,
   MedicalDocument,
@@ -208,11 +209,19 @@ type AppState =
       doctor?: Doctor;
       documentsFilters?: DocumentFilters;
     }
-  | { phase: "documents"; session: Session; documents: MedicalDocument[]; filters: DocumentFilters };
+  | {
+      phase: "documents";
+      session: Session;
+      documents: MedicalDocument[];
+      filters: DocumentFilters;
+      /** Every task regardless of status — unlike session.home.openItems (open-only), so a document's
+          "linked to N items" badge can expand to the full detail even when a linked task is done. */
+      allTasks: Task[];
+    };
 
 const EMPTY_DOCUMENT_FILTERS: DocumentFilters = { query: "", type: "", doctorId: "", dateFrom: "", dateTo: "" };
 
-function documentFiltersToApiFilter(filters: DocumentFilters) {
+function documentFiltersToApiFilter(filters: DocumentFilters): DocumentQueryFilter {
   return {
     query: filters.query || undefined,
     type: filters.type || undefined,
@@ -225,10 +234,14 @@ function documentFiltersToApiFilter(filters: DocumentFilters) {
 /** How often the home screen's data refreshes itself in the background, absent a manual refresh or a window-focus event (see useAutoRefresh). */
 const HOME_REFRESH_INTERVAL_MS = 45_000;
 
+/** Delay before a documents-filter change re-fetches results — filters/chips still update instantly, this only smooths the network call so fast typing in the title-search field doesn't fire one request per keystroke. */
+const DOCUMENTS_FILTER_DEBOUNCE_MS = 300;
+
 export function App() {
   const { t } = useTranslation();
   const [state, setState] = useState<AppState>({ phase: "loading" });
   const [pendingTaskPrompt, setPendingTaskPrompt] = useState<{ taskId: number } | null>(null);
+  const documentsFilterTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Home screen auto-refreshes periodically while it's the active screen;
   // navigating away doesn't stomp on whatever screen the user moved to.
@@ -308,8 +321,11 @@ export function App() {
       const selectDocument = (doc: MedicalDocument) =>
         setState({ phase: "document-detail", session, document: doc, returnTo: "home" });
       const viewDocuments = async () => {
-        const documents = await fetchDocuments(documentFiltersToApiFilter(EMPTY_DOCUMENT_FILTERS));
-        setState({ phase: "documents", session, documents, filters: EMPTY_DOCUMENT_FILTERS });
+        const [documents, allTasks] = await Promise.all([
+          fetchDocuments(documentFiltersToApiFilter(EMPTY_DOCUMENT_FILTERS)),
+          fetchTasks(),
+        ]);
+        setState({ phase: "documents", session, documents, filters: EMPTY_DOCUMENT_FILTERS, allTasks });
       };
       return (
         <HomeScreen
@@ -428,8 +444,11 @@ export function App() {
           setState({ phase: "doctor-detail", session, doctors: session.doctors, doctor });
         } else if (returnTo === "documents") {
           const filters = documentsFilters ?? EMPTY_DOCUMENT_FILTERS;
-          const documents = await fetchDocuments(documentFiltersToApiFilter(filters));
-          setState({ phase: "documents", session, documents, filters });
+          const [documents, allTasks] = await Promise.all([
+            fetchDocuments(documentFiltersToApiFilter(filters)),
+            fetchTasks(),
+          ]);
+          setState({ phase: "documents", session, documents, filters, allTasks });
         } else {
           setState({ phase: "home", session });
         }
@@ -454,11 +473,18 @@ export function App() {
       );
     }
     case "documents": {
-      const { session, documents, filters } = state;
+      const { session, documents, filters, allTasks } = state;
       const back = () => setState({ phase: "home", session });
-      const changeFilters = async (nextFilters: DocumentFilters) => {
-        const nextDocuments = await fetchDocuments(documentFiltersToApiFilter(nextFilters));
-        setState({ phase: "documents", session, documents: nextDocuments, filters: nextFilters });
+      const changeFilters = (nextFilters: DocumentFilters) => {
+        // Filters/chips update immediately (AC: live, no apply step); only the
+        // results re-fetch is debounced, so fast typing in the search box
+        // doesn't fire one request per keystroke.
+        setState({ phase: "documents", session, documents, filters: nextFilters, allTasks });
+        if (documentsFilterTimer.current) clearTimeout(documentsFilterTimer.current);
+        documentsFilterTimer.current = setTimeout(async () => {
+          const nextDocuments = await fetchDocuments(documentFiltersToApiFilter(nextFilters));
+          setState((prev) => (prev.phase === "documents" ? { ...prev, documents: nextDocuments } : prev));
+        }, DOCUMENTS_FILTER_DEBOUNCE_MS);
       };
       const selectDocument = (doc: MedicalDocument) =>
         setState({ phase: "document-detail", session, document: doc, returnTo: "documents", documentsFilters: filters });
@@ -467,7 +493,7 @@ export function App() {
           documents={documents}
           doctors={session.doctors}
           appointments={session.appointments}
-          openItems={session.home.openItems}
+          openItems={allTasks}
           filters={filters}
           onFiltersChange={changeFilters}
           onSelectDocument={selectDocument}

@@ -143,27 +143,6 @@ interface NoteIdRow {
   noteId: number;
 }
 
-export interface DocumentTypeGroup {
-  type: DocumentType;
-  documents: Document[];
-}
-
-/**
- * Groups documents by their type for search-results display, in
- * VALID_DOCUMENT_TYPES declaration order (types with no matches are
- * omitted), preserving each document's relative order within its group.
- */
-export function groupDocumentsByType(docs: Document[]): DocumentTypeGroup[] {
-  const groups: DocumentTypeGroup[] = [];
-  for (const type of VALID_DOCUMENT_TYPES) {
-    const matching = docs.filter((d) => d.type === type);
-    if (matching.length > 0) {
-      groups.push({ type, documents: matching });
-    }
-  }
-  return groups;
-}
-
 export class DocumentNotFoundError extends Error {
   constructor(id: number) {
     super(`Document ${id} not found`);
@@ -444,24 +423,9 @@ export class Documents {
     return notes.map((n) => this.get(n.noteId)!).filter(Boolean);
   }
 
+  /** Documents linked to a doctor directly, or transitively via a linked appointment/task — same rule `search({ doctorId })` applies for its doctor filter, so this just delegates to it. */
   listByDoctor(doctorId: number): Document[] {
-    // Note IDs directly linked via DocumentMeta or via linked Appointments/Tasks
-    const rows = this.db
-      .prepare(
-        `SELECT DISTINCT n.noteId FROM Notes n
-         LEFT JOIN DocumentMeta dm ON dm.noteId = n.noteId
-         LEFT JOIN AppointmentDocuments ad ON ad.noteId = n.noteId
-         LEFT JOIN Appointments a ON a.id = ad.appointmentId
-         LEFT JOIN TaskDocuments td ON td.noteId = n.noteId
-         LEFT JOIN Tasks t ON t.id = td.taskId
-         WHERE n.notebookId = ? AND (
-           dm.doctorId = ? OR a.doctorId = ? OR t.doctorId = ?
-         )
-         ORDER BY n.noteId DESC`,
-      )
-      .all(this.medicalNotebookId, doctorId, doctorId, doctorId) as NoteIdRow[];
-
-    return rows.map((r) => this.get(r.noteId)!).filter(Boolean);
+    return this.search({ doctorId });
   }
 
   listByTask(taskId: number): Document[] {

@@ -1341,7 +1341,9 @@ html[dir="rtl"] .back-link-arrow {
   color: var(--color-primary);
   background: var(--color-primary-dim);
   border-radius: 999px;
-  padding: 0.3rem 0.375rem 0.3rem 0.75rem;
+  padding-block: 0.3rem;
+  padding-inline-start: 0.75rem;
+  padding-inline-end: 0.375rem;
 }
 
 .filter-chip button {
