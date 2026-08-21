@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAutoRefresh } from "./hooks/useAutoRefresh";
 import { useTranslation } from "react-i18next";
 import { applyLocale } from "./i18n";
@@ -29,6 +29,7 @@ import {
   AppointmentStatus,
   Doctor,
   DoctorInput,
+  DocumentQueryFilter,
   DocumentType,
   HomeData,
   MedicalDocument,
@@ -50,6 +51,7 @@ import { TaskFormScreen } from "./screens/TaskFormScreen";
 import { TaskDetailScreen } from "./screens/TaskDetailScreen";
 import { DocumentFormScreen, getDocumentTypeForTask } from "./screens/DocumentFormScreen";
 import { DocumentDetailScreen } from "./screens/DocumentDetailScreen";
+import { DocumentsScreen, type DocumentFilters } from "./screens/DocumentsScreen";
 import { ConfirmationModal } from "./components/ConfirmationModal";
 
 type Session = {
@@ -203,17 +205,43 @@ type AppState =
       phase: "document-detail";
       session: Session;
       document: MedicalDocument;
-      returnTo: "home" | "doctor-detail";
+      returnTo: "home" | "doctor-detail" | "documents";
       doctor?: Doctor;
+      documentsFilters?: DocumentFilters;
+    }
+  | {
+      phase: "documents";
+      session: Session;
+      documents: MedicalDocument[];
+      filters: DocumentFilters;
+      /** Every task regardless of status — unlike session.home.openItems (open-only), so a document's
+          "linked to N items" badge can expand to the full detail even when a linked task is done. */
+      allTasks: Task[];
     };
+
+const EMPTY_DOCUMENT_FILTERS: DocumentFilters = { query: "", type: "", doctorId: "", dateFrom: "", dateTo: "" };
+
+function documentFiltersToApiFilter(filters: DocumentFilters): DocumentQueryFilter {
+  return {
+    query: filters.query || undefined,
+    type: filters.type || undefined,
+    doctorId: filters.doctorId === "" ? undefined : filters.doctorId,
+    dateFrom: filters.dateFrom || undefined,
+    dateTo: filters.dateTo || undefined,
+  };
+}
 
 /** How often the home screen's data refreshes itself in the background, absent a manual refresh or a window-focus event (see useAutoRefresh). */
 const HOME_REFRESH_INTERVAL_MS = 45_000;
+
+/** Delay before a documents-filter change re-fetches results — filters/chips still update instantly, this only smooths the network call so fast typing in the title-search field doesn't fire one request per keystroke. */
+const DOCUMENTS_FILTER_DEBOUNCE_MS = 300;
 
 export function App() {
   const { t } = useTranslation();
   const [state, setState] = useState<AppState>({ phase: "loading" });
   const [pendingTaskPrompt, setPendingTaskPrompt] = useState<{ taskId: number } | null>(null);
+  const documentsFilterTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Home screen auto-refreshes periodically while it's the active screen;
   // navigating away doesn't stomp on whatever screen the user moved to.
@@ -292,6 +320,13 @@ export function App() {
       const addDocument = () => setState({ phase: "document-form", session, returnTo: "home" });
       const selectDocument = (doc: MedicalDocument) =>
         setState({ phase: "document-detail", session, document: doc, returnTo: "home" });
+      const viewDocuments = async () => {
+        const [documents, allTasks] = await Promise.all([
+          fetchDocuments(documentFiltersToApiFilter(EMPTY_DOCUMENT_FILTERS)),
+          fetchTasks(),
+        ]);
+        setState({ phase: "documents", session, documents, filters: EMPTY_DOCUMENT_FILTERS, allTasks });
+      };
       return (
         <HomeScreen
           home={session.home}
@@ -306,6 +341,7 @@ export function App() {
           onAddTask={addTask}
           onAddDocument={addDocument}
           onSelectDocument={selectDocument}
+          onViewDocuments={viewDocuments}
           onRefresh={refreshHome}
         />
       );
@@ -402,10 +438,17 @@ export function App() {
       );
     }
     case "document-detail": {
-      const { session, document, returnTo, doctor } = state;
-      const back = () => {
+      const { session, document, returnTo, doctor, documentsFilters } = state;
+      const back = async () => {
         if (returnTo === "doctor-detail" && doctor) {
           setState({ phase: "doctor-detail", session, doctors: session.doctors, doctor });
+        } else if (returnTo === "documents") {
+          const filters = documentsFilters ?? EMPTY_DOCUMENT_FILTERS;
+          const [documents, allTasks] = await Promise.all([
+            fetchDocuments(documentFiltersToApiFilter(filters)),
+            fetchTasks(),
+          ]);
+          setState({ phase: "documents", session, documents, filters, allTasks });
         } else {
           setState({ phase: "home", session });
         }
@@ -426,6 +469,35 @@ export function App() {
           onSelectDoctor={selectDoctor}
           onSelectAppointment={selectAppointment}
           onSelectTask={selectTask}
+        />
+      );
+    }
+    case "documents": {
+      const { session, documents, filters, allTasks } = state;
+      const back = () => setState({ phase: "home", session });
+      const changeFilters = (nextFilters: DocumentFilters) => {
+        // Filters/chips update immediately (AC: live, no apply step); only the
+        // results re-fetch is debounced, so fast typing in the search box
+        // doesn't fire one request per keystroke.
+        setState({ phase: "documents", session, documents, filters: nextFilters, allTasks });
+        if (documentsFilterTimer.current) clearTimeout(documentsFilterTimer.current);
+        documentsFilterTimer.current = setTimeout(async () => {
+          const nextDocuments = await fetchDocuments(documentFiltersToApiFilter(nextFilters));
+          setState((prev) => (prev.phase === "documents" ? { ...prev, documents: nextDocuments } : prev));
+        }, DOCUMENTS_FILTER_DEBOUNCE_MS);
+      };
+      const selectDocument = (doc: MedicalDocument) =>
+        setState({ phase: "document-detail", session, document: doc, returnTo: "documents", documentsFilters: filters });
+      return (
+        <DocumentsScreen
+          documents={documents}
+          doctors={session.doctors}
+          appointments={session.appointments}
+          openItems={allTasks}
+          filters={filters}
+          onFiltersChange={changeFilters}
+          onSelectDocument={selectDocument}
+          onBack={back}
         />
       );
     }

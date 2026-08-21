@@ -112,6 +112,17 @@ export type DocumentType =
   | "approval"
   | "other";
 
+/** Declaration order — the canonical grouping/display order for document types (mirrors server's VALID_DOCUMENT_TYPES). */
+export const DOCUMENT_TYPES: DocumentType[] = [
+  "test result",
+  "letter",
+  "referral",
+  "appointment invitation",
+  "Form 17",
+  "approval",
+  "other",
+];
+
 export interface UploadedFile {
   fileName: string;
   uniqueFilename: string;
@@ -287,15 +298,26 @@ export async function setAppointmentSummary(id: number, summary: string): Promis
   return res.json();
 }
 
-export async function fetchDocuments(filter?: {
+/** Query params GET /api/documents accepts — see server's DocumentSearchFilters for the search-dimension fields (doctorId/type/query/dateFrom/dateTo); taskId/appointmentId are single-purpose lookups it also supports. */
+export interface DocumentQueryFilter {
   doctorId?: number;
   taskId?: number;
   appointmentId?: number;
-}): Promise<MedicalDocument[]> {
+  type?: DocumentType;
+  query?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export async function fetchDocuments(filter?: DocumentQueryFilter): Promise<MedicalDocument[]> {
   const params = new URLSearchParams();
   if (filter?.doctorId !== undefined) params.set("doctorId", String(filter.doctorId));
   if (filter?.taskId !== undefined) params.set("taskId", String(filter.taskId));
   if (filter?.appointmentId !== undefined) params.set("appointmentId", String(filter.appointmentId));
+  if (filter?.type !== undefined) params.set("type", filter.type);
+  if (filter?.query !== undefined) params.set("query", filter.query);
+  if (filter?.dateFrom !== undefined) params.set("dateFrom", filter.dateFrom);
+  if (filter?.dateTo !== undefined) params.set("dateTo", filter.dateTo);
   const qs = params.toString() ? `?${params.toString()}` : "";
   const res = await fetch(`/api/documents${qs}`, { credentials: "same-origin" });
   if (!res.ok) throw new Error(`Unexpected /api/documents status ${res.status}`);

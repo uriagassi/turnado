@@ -17,6 +17,7 @@ import {
   DocumentNotFoundError,
   InvalidDocumentInputError,
   DocumentCreateInput,
+  DocumentSearchFilters,
   DocumentType,
   UploadedFile,
 } from "./documents/Documents.js";
@@ -405,12 +406,25 @@ export function createApp(options: AppOptions): Express {
     });
 
     app.get("/api/documents", (req, res) => {
-      if (req.query.doctorId !== undefined) {
-        res.json(documents.listByDoctor(Number(req.query.doctorId)));
-      } else if (req.query.taskId !== undefined) {
+      if (req.query.taskId !== undefined) {
         res.json(documents.listByTask(Number(req.query.taskId)));
       } else if (req.query.appointmentId !== undefined) {
         res.json(documents.listByAppointment(Number(req.query.appointmentId)));
+      } else if (
+        req.query.doctorId !== undefined ||
+        req.query.type !== undefined ||
+        req.query.query !== undefined ||
+        req.query.dateFrom !== undefined ||
+        req.query.dateTo !== undefined
+      ) {
+        const filters: DocumentSearchFilters = {
+          doctorId: req.query.doctorId !== undefined ? Number(req.query.doctorId) : undefined,
+          type: req.query.type as DocumentType | undefined,
+          query: req.query.query as string | undefined,
+          dateFrom: req.query.dateFrom as string | undefined,
+          dateTo: req.query.dateTo as string | undefined,
+        };
+        res.json(documents.search(filters));
       } else {
         res.json(documents.list());
       }

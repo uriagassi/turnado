@@ -126,6 +126,34 @@ describe("/api/documents routes", () => {
       expect(filteredRes.body.length).toBe(1);
       expect(filteredRes.body[0].title).toBe("Doc For Dave");
     });
+
+    it("combines type and query filters", async () => {
+      const db = tmpDb();
+      const agent = signedInAgent(db);
+
+      await agent
+        .post("/api/documents")
+        .field("title", "Cardiology Referral")
+        .field("type", "referral")
+        .attach("file", Buffer.from("pdf1"), "doc1.pdf");
+
+      await agent
+        .post("/api/documents")
+        .field("title", "Cardiology Letter")
+        .field("type", "letter")
+        .attach("file", Buffer.from("pdf2"), "doc2.pdf");
+
+      await agent
+        .post("/api/documents")
+        .field("title", "Neurology Referral")
+        .field("type", "referral")
+        .attach("file", Buffer.from("pdf3"), "doc3.pdf");
+
+      const res = await agent.get("/api/documents?type=referral&query=cardiology");
+      expect(res.status).toBe(200);
+      expect(res.body.length).toBe(1);
+      expect(res.body[0].title).toBe("Cardiology Referral");
+    });
   });
 
   describe("GET /api/home", () => {
