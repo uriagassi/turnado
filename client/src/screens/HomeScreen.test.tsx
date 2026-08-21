@@ -36,6 +36,46 @@ describe("HomeScreen", () => {
     expect(onRefresh).toHaveBeenCalledOnce();
   });
 
+  it("renders recent documents and calls onSelectDocument when a document card is clicked", async () => {
+    const user = userEvent.setup();
+    const onSelectDocument = vi.fn();
+
+    const home: HomeData = {
+      nextAppointment: null,
+      openItems: [],
+      recentDocuments: [
+        {
+          id: 101,
+          notebookId: 42,
+          title: "Lab Blood Test",
+          type: "test result",
+          documentDate: "2026-08-10",
+          doctorId: null,
+          notes: null,
+          file: {
+            fileName: "blood.pdf",
+            uniqueFilename: "unique_blood.pdf",
+            mime: "application/pdf",
+            hash: "h",
+            size: 1024,
+          },
+          appointmentIds: [],
+          taskIds: [],
+          createdAt: "",
+          updatedAt: "",
+        },
+      ],
+    };
+
+    render(<HomeScreen home={home} {...noopProps} onSelectDocument={onSelectDocument} />);
+
+    expect(screen.getByText("Recent documents")).toBeInTheDocument();
+    expect(screen.getByText("Lab Blood Test")).toBeInTheDocument();
+
+    await user.click(screen.getByText("Lab Blood Test"));
+    expect(onSelectDocument).toHaveBeenCalledWith(home.recentDocuments[0]);
+  });
+
   it("shows a hero card for the next upcoming appointment when there is one", () => {
     const home: HomeData = {
       nextAppointment: {

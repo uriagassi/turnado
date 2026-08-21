@@ -12,6 +12,42 @@ import { Doctors, DoctorNotFoundError, InvalidDoctorInputError } from "./doctors
 import { Appointments, AppointmentNotFoundError, InvalidAppointmentInputError } from "./appointments/Appointments.js";
 import { selectHeroAppointment } from "./appointments/heroAppointment.js";
 import { Tasks, TaskNotFoundError, InvalidTaskInputError, TaskStatus } from "./tasks/Tasks.js";
+import {
+  Documents,
+  DocumentNotFoundError,
+  InvalidDocumentInputError,
+  DocumentCreateInput,
+  DocumentType,
+  UploadedFile,
+} from "./documents/Documents.js";
+import crypto from "node:crypto";
+import convert from "heic-convert";
+
+async function normalizeImageBuffer(
+  buffer: Buffer,
+  filename: string,
+  mimetype: string,
+): Promise<{ buffer: Buffer; filename: string; mime: string }> {
+  if (/\.(heic|heif)$/i.test(filename) || mimetype === "image/heic" || mimetype === "image/heif") {
+    try {
+      const converted = await convert({
+        buffer,
+        format: "JPEG",
+        quality: 0.9,
+      });
+      const ext = path.extname(filename);
+      const base = ext ? filename.slice(0, -ext.length) : filename;
+      return {
+        buffer: Buffer.from(converted),
+        filename: `${base}.jpg`,
+        mime: "image/jpeg",
+      };
+    } catch {
+      // Fall back to original if conversion fails
+    }
+  }
+  return { buffer, filename, mime: mimetype };
+}
 
 export interface AppOptions {
   authHandler: IAuthHandler;
@@ -20,12 +56,22 @@ export interface AppOptions {
   cookieSecret: string;
   supportedLocales?: string[];
   fallbackLocale?: string;
-  /** The shared DB connection (WAL + busy_timeout already applied — see db.ts). Only used by /api/doctors so far. */
+  /** The shared DB connection (WAL + busy_timeout already applied — see db.ts). */
   db?: Database;
   /** Shared tag every newly-created doctor tag nests under (see Doctors.ts). Only matters when db is set. */
   doctorsParentTagName?: string;
   /** Directory doctor photo uploads are written to (see POST /api/doctors/:id/photo). Only matters when db is set. */
   photosDir?: string;
+  /** Dedicated notebook ID for medical documents in the shared DB. */
+  medicalNotebookId?: number;
+  /** Dedicated notebook name (e.g. "Medical") for medical documents in the shared DB. */
+  medicalNotebookName?: string;
+  /** Parent tag for document types (e.g. medical/document-type). */
+  documentTypeParentTagName?: string;
+  /** Parent tag for specialties (e.g. medical/specialty). */
+  specialtyParentTagName?: string;
+  /** Directory where document attachments are stored. */
+  attachmentsDir?: string;
   /** Built client (client/dist) to serve as the SPA shell. Omitted in tests that only exercise the API. */
   clientDistPath?: string;
 }
@@ -46,7 +92,18 @@ export function createApp(options: AppOptions): Express {
 
   const app = express();
   app.locals.db = db;
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+          "object-src": ["'self'", "blob:"],
+          "frame-src": ["'self'", "blob:"],
+          "img-src": ["'self'", "data:", "blob:"],
+        },
+      },
+    }),
+  );
   app.use(express.json());
   app.use(cookieParser(cookieSecret));
 
@@ -127,30 +184,33 @@ export function createApp(options: AppOptions): Express {
       // system — see Doctors.ts on why a doctor's photo is this app's own
       // file, not a shared-system one.
       const upload = multer({
-        storage: multer.diskStorage({
-          destination: (_req, _file, cb) => cb(null, photosDir),
-          filename: (req, file, cb) => cb(null, `${req.params.id}-${Date.now()}${path.extname(file.originalname)}`),
-        }),
+        storage: multer.memoryStorage(),
         limits: { fileSize: 8 * 1024 * 1024 },
-        fileFilter: (_req, file, cb) => cb(null, file.mimetype.startsWith("image/")),
+        fileFilter: (_req, file, cb) => {
+          const isImage =
+            file.mimetype.startsWith("image/") ||
+            /\.(jpe?g|png|webp|gif|svg|avif|heic|heif|bmp|tiff)$/i.test(file.originalname);
+          cb(null, isImage);
+        },
       });
-      app.post("/api/doctors/:id/photo", upload.single("photo"), (req, res) => {
+      app.post("/api/doctors/:id/photo", upload.single("photo"), async (req, res) => {
         // fileFilter rejecting the file and no file being attached at all
         // both surface here as a missing req.file — both are "no valid
         // photo was uploaded" from the caller's point of view.
         if (!req.file) return res.status(400).json({ error: "photo is required" });
         try {
+          const normalized = await normalizeImageBuffer(req.file.buffer, req.file.originalname, req.file.mimetype);
+          const ext = path.extname(normalized.filename) || ".jpg";
+          const finalFilename = `${req.params.id}-${Date.now()}${ext}`;
+          fs.writeFileSync(path.join(photosDir, finalFilename), normalized.buffer);
+
           const previous = doctors.get(Number(req.params.id));
-          const updated = doctors.setPhoto(Number(req.params.id), req.file.filename);
+          const updated = doctors.setPhoto(Number(req.params.id), finalFilename);
           // Now that the new file is safely recorded, remove the one it
           // replaces so this app's disk storage doesn't accumulate orphans.
           if (previous?.photoPath) fs.rmSync(path.join(photosDir, previous.photoPath), { force: true });
           res.json(updated);
         } catch (err) {
-          // The file's already been written by multer before this handler
-          // runs — clean it up rather than leaving an orphan for a doctor
-          // that turned out not to exist.
-          fs.rmSync(req.file.path, { force: true });
           if (err instanceof DoctorNotFoundError) return res.status(404).json({ error: "Not found" });
           throw err;
         }
@@ -183,7 +243,9 @@ export function createApp(options: AppOptions): Express {
     });
     app.put("/api/appointments/:id", (req, res) => {
       try {
-        res.json(appointments.update(Number(req.params.id), req.body));
+        const updated = appointments.update(Number(req.params.id), req.body);
+        documents.syncDoctorTagsForAppointment(Number(req.params.id));
+        res.json(updated);
       } catch (err) {
         if (err instanceof AppointmentNotFoundError) return res.status(404).json({ error: "Not found" });
         if (err instanceof InvalidAppointmentInputError) return res.status(400).json({ error: err.message });
@@ -228,7 +290,9 @@ export function createApp(options: AppOptions): Express {
     });
     app.put("/api/tasks/:id", (req, res) => {
       try {
-        res.json(tasks.update(Number(req.params.id), req.body));
+        const updated = tasks.update(Number(req.params.id), req.body);
+        documents.syncDoctorTagsForTask(Number(req.params.id));
+        res.json(updated);
       } catch (err) {
         if (err instanceof TaskNotFoundError) return res.status(404).json({ error: "Not found" });
         if (err instanceof InvalidTaskInputError) return res.status(400).json({ error: err.message });
@@ -260,13 +324,110 @@ export function createApp(options: AppOptions): Express {
       }
     });
 
-    // recentDocuments still awaits issue #6.
+    const {
+      medicalNotebookId = 0,
+      medicalNotebookName,
+      documentTypeParentTagName = "medical/document-type",
+      specialtyParentTagName = "medical/specialty",
+      attachmentsDir,
+    } = options;
+
+    if (attachmentsDir) {
+      fs.mkdirSync(attachmentsDir, { recursive: true });
+      app.use("/api/body/attachments", express.static(attachmentsDir));
+      app.use("/attachments", express.static(attachmentsDir));
+    }
+
+    const documents = new Documents(db, {
+      medicalNotebookId,
+      medicalNotebookName,
+      documentTypeParentTagName,
+      doctorsParentTagName,
+      specialtyParentTagName,
+    });
+
+    const docUpload = multer({
+      storage: multer.memoryStorage(),
+      limits: { fileSize: 20 * 1024 * 1024 },
+    });
+
+    app.post("/api/documents", docUpload.single("file"), async (req, res) => {
+      if (!req.file) {
+        return res.status(400).json({ error: "file is required" });
+      }
+
+      let originalName = req.file.originalname;
+      try {
+        const decoded = Buffer.from(req.file.originalname, "latin1").toString("utf8");
+        if (!/[\uFFFD]/.test(decoded)) {
+          originalName = decoded;
+        }
+      } catch {
+        // keep originalName
+      }
+
+      const normalized = await normalizeImageBuffer(req.file.buffer, originalName, req.file.mimetype);
+
+      const hash = crypto.createHash("sha256").update(normalized.buffer).digest("hex");
+      const ext = path.extname(normalized.filename) || "";
+      const baseSafeName = path.basename(normalized.filename, ext).replace(/[^a-zA-Z0-9_-]/g, "_");
+      const uniqueFilename = `${hash}_${baseSafeName}${ext}`;
+
+      if (attachmentsDir) {
+        fs.writeFileSync(path.join(attachmentsDir, uniqueFilename), normalized.buffer);
+      }
+
+      const uploadedFile: UploadedFile = {
+        fileName: normalized.filename,
+        uniqueFilename,
+        mime: normalized.mime || "application/octet-stream",
+        hash,
+        size: normalized.buffer.length,
+      };
+
+      const input: DocumentCreateInput = {
+        title: req.body.title,
+        type: req.body.type as DocumentType,
+        documentDate: req.body.documentDate || null,
+        doctorId: req.body.doctorId ? Number(req.body.doctorId) : null,
+        notes: req.body.notes || null,
+        appointmentIds: parseIdList(req.body.appointmentIds),
+        taskIds: parseIdList(req.body.taskIds),
+      };
+
+      try {
+        const created = documents.create(input, uploadedFile);
+        res.status(201).json(created);
+      } catch (err) {
+        if (err instanceof InvalidDocumentInputError) return res.status(400).json({ error: err.message });
+        throw err;
+      }
+    });
+
+    app.get("/api/documents", (req, res) => {
+      if (req.query.doctorId !== undefined) {
+        res.json(documents.listByDoctor(Number(req.query.doctorId)));
+      } else if (req.query.taskId !== undefined) {
+        res.json(documents.listByTask(Number(req.query.taskId)));
+      } else if (req.query.appointmentId !== undefined) {
+        res.json(documents.listByAppointment(Number(req.query.appointmentId)));
+      } else {
+        res.json(documents.list());
+      }
+    });
+
+    app.get("/api/documents/:id", (req, res) => {
+      const doc = documents.get(Number(req.params.id));
+      if (!doc) return res.status(404).json({ error: "Not found" });
+      res.json(doc);
+    });
+
     app.get("/api/home", (_req, res) => {
       const openItems = tasks.list().filter((t) => t.status !== "done");
       res.json({
         nextAppointment: selectHeroAppointment(appointments.list(), new Date()),
         openItems,
-        recentDocuments: [],
+        recentDocuments: documents.listRecent(5),
       });
     });
   }
@@ -292,3 +453,22 @@ export function createApp(options: AppOptions): Express {
 
   return app;
 }
+
+function parseIdList(raw: unknown): number[] | undefined {
+  if (!raw) return undefined;
+  if (Array.isArray(raw)) return raw.map(Number);
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed.map(Number);
+    } catch {
+      // Fall through to comma-separated string
+    }
+    return raw
+      .split(",")
+      .map((s: string) => Number(s.trim()))
+      .filter((n: number) => !isNaN(n) && n > 0);
+  }
+  return undefined;
+}
+

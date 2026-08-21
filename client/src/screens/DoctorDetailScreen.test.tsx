@@ -157,5 +157,47 @@ describe("DoctorDetailScreen", () => {
     expect(screen.getByText("Get Form 17 for Cardiology")).toBeInTheDocument();
     expect(screen.queryByText("No open items.")).not.toBeInTheDocument();
   });
+
+  it("shows related documents for the doctor and calls onSelectDocument when clicked", async () => {
+    const user = userEvent.setup();
+    const onSelectDocument = vi.fn();
+
+    const doc = {
+      id: 50,
+      notebookId: 42,
+      title: "Cardiology Referral Letter",
+      type: "referral" as const,
+      documentDate: "2026-08-05",
+      doctorId: 1,
+      notes: "Referral to clinic",
+      file: {
+        fileName: "referral.pdf",
+        uniqueFilename: "unique_referral.pdf",
+        mime: "application/pdf",
+        hash: "hash_ref",
+        size: 2048,
+      },
+      appointmentIds: [],
+      taskIds: [],
+      createdAt: "",
+      updatedAt: "",
+    };
+
+    render(
+      <DoctorDetailScreen
+        doctor={doctor()}
+        documents={[doc]}
+        onSelectDocument={onSelectDocument}
+        onBack={() => {}}
+        onEdit={() => {}}
+      />
+    );
+
+    expect(screen.getByText("Cardiology Referral Letter")).toBeInTheDocument();
+    expect(screen.queryByText("No documents.")).not.toBeInTheDocument();
+
+    await user.click(screen.getByText("Cardiology Referral Letter"));
+    expect(onSelectDocument).toHaveBeenCalledWith(doc);
+  });
 });
 

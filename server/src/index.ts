@@ -24,8 +24,19 @@ const app = createApp({
   supportedLocales: config.get<string[]>("i18n.supportedLocales"),
   fallbackLocale: config.get<string>("i18n.fallbackLocale"),
   db,
-  doctorsParentTagName: config.get<string>("doctors.parentTagName"),
+  doctorsParentTagName: config.has("doctors.parentTagName")
+    ? config.get<string>("doctors.parentTagName")
+    : "medical/doctors",
+  documentTypeParentTagName: config.has("documents.documentTypeParentTagName")
+    ? config.get<string>("documents.documentTypeParentTagName")
+    : "medical/document-type",
+  specialtyParentTagName: config.has("documents.specialtyParentTagName")
+    ? config.get<string>("documents.specialtyParentTagName")
+    : "medical/specialty",
   photosDir: expandHome(config.get<string>("doctors.photosDir")),
+  medicalNotebookId: config.has("notebook.medicalNotebookId") ? config.get<number>("notebook.medicalNotebookId") : undefined,
+  medicalNotebookName: config.has("notebook.medicalNotebookName") ? config.get<string>("notebook.medicalNotebookName") : "Medical",
+  attachmentsDir: config.has("attachments.dir") ? expandHome(config.get<string>("attachments.dir")) : undefined,
   clientDistPath: path.resolve(__dirname, "../../client/dist"),
 });
 

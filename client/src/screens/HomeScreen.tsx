@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import type { Appointment, Doctor, HomeData, Task } from "../api";
+import type { Appointment, Doctor, DocumentType, HomeData, MedicalDocument, Task } from "../api";
 import { useRelativeDateTime } from "../hooks/useRelativeDateTime";
 import { getTaskIcon } from "../tasks/taskUtils";
 import { TaskStatusBadge } from "../components/TaskStatusBadge";
@@ -19,6 +19,26 @@ function sortOpenItems(tasks: Task[], appointments: Appointment[] = []): Task[] 
   });
 }
 
+export function getDocumentIcon(type: DocumentType): string {
+  switch (type) {
+    case "test result":
+      return "🩸";
+    case "letter":
+      return "✉️";
+    case "referral":
+      return "📋";
+    case "appointment invitation":
+      return "📎";
+    case "Form 17":
+      return "📄";
+    case "approval":
+      return "✅";
+    case "other":
+    default:
+      return "📑";
+  }
+}
+
 export function HomeScreen({
   home,
   doctors,
@@ -30,6 +50,8 @@ export function HomeScreen({
   onViewHistory,
   onSelectTask,
   onAddTask,
+  onSelectDocument,
+  onAddDocument,
   onRefresh,
 }: {
   home: HomeData;
@@ -43,6 +65,8 @@ export function HomeScreen({
   onViewHistory: () => void;
   onSelectTask?: (task: Task) => void;
   onAddTask?: () => void;
+  onSelectDocument?: (doc: MedicalDocument) => void;
+  onAddDocument?: () => void;
   onRefresh: () => void;
 }) {
   const { t } = useTranslation();
@@ -153,8 +177,51 @@ export function HomeScreen({
         </section>
       )}
 
+      {home.recentDocuments.length > 0 && (
+        <section className="recent-documents-section">
+          <div className="section-header">
+            <h2 className="section-title">{t("home.recentDocuments.title")}</h2>
+            {onAddDocument && (
+              <button type="button" className="btn-small btn-secondary" onClick={onAddDocument}>
+                + {t("home.addDocument")}
+              </button>
+            )}
+          </div>
+          <div className="doc-strip">
+            {home.recentDocuments.map((doc) => (
+              <div
+                className="doc-thumb clickable"
+                key={doc.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => onSelectDocument?.(doc)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onSelectDocument?.(doc);
+                  }
+                }}
+              >
+                <div className="doc-icon" aria-hidden="true">
+                  {getDocumentIcon(doc.type)}
+                </div>
+                <div className="doc-title">{doc.title}</div>
+                <div className="doc-date">
+                  {doc.documentDate ? formatRelative(doc.documentDate) : (doc.createdAt ? formatRelative(doc.createdAt) : "")}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {isEmpty && <p className="empty-state">{t("home.empty")}</p>}
       <nav className="home-nav">
+        {onAddDocument && (
+          <button type="button" className="home-nav-item" onClick={onAddDocument}>
+            {t("home.addDocument")}
+          </button>
+        )}
         {onAddTask && (
           <button type="button" className="home-nav-item" onClick={onAddTask}>
             {t("home.addTask")}

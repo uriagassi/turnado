@@ -50,4 +50,32 @@ export class SharedTags {
   rename(tagId: number, name: string): void {
     this.renameStmt.run(name, tagId);
   }
+
+  /**
+   * Resolves a hierarchy of tags represented as a slash-separated path or array of names.
+   * e.g. "medical/document-type" or ["medical", "document-type"]
+   * 1. Finds or creates "medical" with parentId = null
+   * 2. Finds or creates "document-type" with parentId = medical.tagId
+   * Returns the tagId of the leaf tag ("document-type").
+   */
+  findOrCreatePath(pathOrNames: string | string[], rootParentId: number | null = null): number {
+    const parts = Array.isArray(pathOrNames)
+      ? pathOrNames.filter((p) => p && p.trim().length > 0)
+      : pathOrNames.split("/").map((p) => p.trim()).filter((p) => p.length > 0);
+
+    if (parts.length === 0) {
+      throw new Error("Cannot create tag with empty path");
+    }
+
+    let currentParentId: number | null = rootParentId;
+    for (const part of parts) {
+      const existing = this.findByName(part);
+      if (existing) {
+        currentParentId = existing.tagId;
+      } else {
+        currentParentId = this.create(part, currentParentId);
+      }
+    }
+    return currentParentId!;
+  }
 }

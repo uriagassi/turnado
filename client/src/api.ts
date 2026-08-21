@@ -103,10 +103,42 @@ export interface Task extends TaskInput {
   updatedAt: string;
 }
 
+export type DocumentType =
+  | "test result"
+  | "letter"
+  | "referral"
+  | "appointment invitation"
+  | "Form 17"
+  | "approval"
+  | "other";
+
+export interface UploadedFile {
+  fileName: string;
+  uniqueFilename: string;
+  mime: string;
+  hash: string;
+  size: number;
+}
+
+export interface MedicalDocument {
+  id: number;
+  notebookId: number;
+  title: string;
+  type: DocumentType;
+  documentDate: string | null;
+  doctorId: number | null;
+  notes: string | null;
+  file: UploadedFile;
+  appointmentIds: number[];
+  taskIds: number[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface HomeData {
   nextAppointment: Appointment | null;
   openItems: Task[];
-  recentDocuments: unknown[];
+  recentDocuments: MedicalDocument[];
 }
 
 export async function fetchHome(): Promise<HomeData> {
@@ -252,5 +284,36 @@ export async function setAppointmentSummary(id: number, summary: string): Promis
     body: JSON.stringify({ summary }),
   });
   if (!res.ok) throw new Error(`Unexpected PUT /api/appointments/${id}/summary status ${res.status}`);
+  return res.json();
+}
+
+export async function fetchDocuments(filter?: {
+  doctorId?: number;
+  taskId?: number;
+  appointmentId?: number;
+}): Promise<MedicalDocument[]> {
+  const params = new URLSearchParams();
+  if (filter?.doctorId !== undefined) params.set("doctorId", String(filter.doctorId));
+  if (filter?.taskId !== undefined) params.set("taskId", String(filter.taskId));
+  if (filter?.appointmentId !== undefined) params.set("appointmentId", String(filter.appointmentId));
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  const res = await fetch(`/api/documents${qs}`, { credentials: "same-origin" });
+  if (!res.ok) throw new Error(`Unexpected /api/documents status ${res.status}`);
+  return res.json();
+}
+
+export async function fetchDocument(id: number): Promise<MedicalDocument> {
+  const res = await fetch(`/api/documents/${id}`, { credentials: "same-origin" });
+  if (!res.ok) throw new Error(`Unexpected /api/documents/${id} status ${res.status}`);
+  return res.json();
+}
+
+export async function uploadDocument(formData: FormData): Promise<MedicalDocument> {
+  const res = await fetch("/api/documents", {
+    method: "POST",
+    credentials: "same-origin",
+    body: formData,
+  });
+  if (!res.ok) throw new Error(`Unexpected POST /api/documents status ${res.status}`);
   return res.json();
 }
