@@ -207,6 +207,7 @@ describe("DocumentsScreen", () => {
       notes: "Cardio checkup",
       status: "planned",
       summary: null,
+      missedReminder: null,
     };
     const task: Task = {
       id: 20,
@@ -229,6 +230,7 @@ describe("DocumentsScreen", () => {
       purpose: null,
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
+      missedReminder: null,
     };
     renderScreen([doc({ id: 1, title: "Multi Linked", appointmentIds: [10], taskIds: [20] })], {
       appointments: [appt],

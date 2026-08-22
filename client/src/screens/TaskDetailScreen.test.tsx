@@ -32,6 +32,7 @@ describe("TaskDetailScreen", () => {
       purpose: null,
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
+      missedReminder: null,
     };
 
     render(
@@ -75,6 +76,7 @@ describe("TaskDetailScreen", () => {
       purpose: null,
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
+      missedReminder: null,
     };
 
     render(
@@ -117,6 +119,7 @@ describe("TaskDetailScreen", () => {
       purpose: "Treatment",
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
+      missedReminder: null,
     };
 
     render(
@@ -157,6 +160,7 @@ describe("TaskDetailScreen", () => {
       purpose: null,
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
+      missedReminder: null,
     };
 
     render(
@@ -197,6 +201,7 @@ describe("TaskDetailScreen", () => {
       purpose: null,
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
+      missedReminder: null,
     };
 
     const appointments = [
@@ -208,6 +213,7 @@ describe("TaskDetailScreen", () => {
         notes: "Cardiology follow-up",
         status: "planned" as const,
         summary: null,
+        missedReminder: null,
       },
     ];
 
@@ -252,6 +258,7 @@ describe("TaskDetailScreen", () => {
       purpose: null,
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
+      missedReminder: null,
     };
 
     const docs = [
