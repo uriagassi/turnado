@@ -10,6 +10,7 @@
     "dev": "npm run dev --workspace server",
     "build": "npm run build --workspace client",
     "start": "npm run start --workspace server",
+    "setup_wizard": "tsx scripts/setup_wizard.ts",
     "test": "npm run test --workspace server && npm run test --workspace client"
   },
   "devDependencies": {
