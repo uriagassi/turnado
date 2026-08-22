@@ -12,6 +12,8 @@ import { Doctors, DoctorNotFoundError, InvalidDoctorInputError } from "./doctors
 import { Appointments, AppointmentNotFoundError, InvalidAppointmentInputError } from "./appointments/Appointments.js";
 import { selectHeroAppointment } from "./appointments/heroAppointment.js";
 import { Tasks, TaskNotFoundError, InvalidTaskInputError, TaskStatus } from "./tasks/Tasks.js";
+import { ReminderLog, MissedReason } from "./reminders/ReminderLog.js";
+import type { ReminderItemType } from "./reminders/dueReminders.js";
 import {
   Documents,
   DocumentNotFoundError,
@@ -226,8 +228,9 @@ export function createApp(options: AppOptions): Express {
     }
 
     const appointments = new Appointments(db);
+    const reminderLog = new ReminderLog(db);
     app.get("/api/appointments", (_req, res) => {
-      res.json(appointments.list());
+      res.json(withMissedReminder(appointments.list(), "appointment", reminderLog));
     });
     app.post("/api/appointments", (req, res) => {
       try {
@@ -240,7 +243,7 @@ export function createApp(options: AppOptions): Express {
     app.get("/api/appointments/:id", (req, res) => {
       const appointment = appointments.get(Number(req.params.id));
       if (!appointment) return res.status(404).json({ error: "Not found" });
-      res.json(appointment);
+      res.json(withMissedReminder([appointment], "appointment", reminderLog)[0]);
     });
     app.put("/api/appointments/:id", (req, res) => {
       try {
@@ -274,7 +277,7 @@ export function createApp(options: AppOptions): Express {
     app.get("/api/tasks", (req, res) => {
       const doctorId = req.query.doctorId !== undefined ? Number(req.query.doctorId) : undefined;
       const status = req.query.status as TaskStatus | undefined;
-      res.json(tasks.list({ doctorId, status }));
+      res.json(withMissedReminder(tasks.list({ doctorId, status }), "task", reminderLog));
     });
     app.post("/api/tasks", (req, res) => {
       try {
@@ -287,7 +290,7 @@ export function createApp(options: AppOptions): Express {
     app.get("/api/tasks/:id", (req, res) => {
       const task = tasks.get(Number(req.params.id));
       if (!task) return res.status(404).json({ error: "Not found" });
-      res.json(task);
+      res.json(withMissedReminder([task], "task", reminderLog)[0]);
     });
     app.put("/api/tasks/:id", (req, res) => {
       try {
@@ -476,9 +479,14 @@ export function createApp(options: AppOptions): Express {
     });
 
     app.get("/api/home", (_req, res) => {
-      const openItems = tasks.list().filter((t) => t.status !== "done");
+      const openItems = withMissedReminder(
+        tasks.list().filter((t) => t.status !== "done"),
+        "task",
+        reminderLog,
+      );
+      const appointmentsWithMarker = withMissedReminder(appointments.list(), "appointment", reminderLog);
       res.json({
-        nextAppointment: selectHeroAppointment(appointments.list(), new Date()),
+        nextAppointment: selectHeroAppointment(appointmentsWithMarker, new Date()),
         openItems,
         recentDocuments: documents.listRecent(5),
       });
@@ -505,6 +513,24 @@ export function createApp(options: AppOptions): Express {
   }
 
   return app;
+}
+
+// Attaches issue #10's missed-reminder marker to each item — null unless
+// ReminderLog has a terminal "missed" row for it, in which case the reason
+// itself doubles as the flag (a truthy string is both "missed" and "why").
+// missed() is sorted ascending by targetDate, so if an item was
+// rescheduled and missed more than once, the row for its latest targetDate
+// simply overwrites the earlier one in the map below.
+function withMissedReminder<T extends { id: number }>(
+  items: T[],
+  itemType: ReminderItemType,
+  reminderLog: ReminderLog,
+): (T & { missedReminder: MissedReason | null })[] {
+  const reasons = new Map<number, MissedReason>();
+  for (const entry of reminderLog.missed()) {
+    if (entry.itemType === itemType && entry.missedReason) reasons.set(entry.itemId, entry.missedReason);
+  }
+  return items.map((item) => ({ ...item, missedReminder: reasons.get(item.id) ?? null }));
 }
 
 function parseIdList(raw: unknown): number[] | undefined {
