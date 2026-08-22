@@ -278,6 +278,82 @@ describe("Documents", () => {
     });
   });
 
+  describe("adopt (issue #14: existing document adoption tool)", () => {
+    it("promotes a pre-existing Note into the Document model: moves it into the medical notebook, tags its type, and records the doctor/date", () => {
+      const db = tmpDb();
+      const doctors = new Doctors(db, "Doctors");
+      const documents = tmpDocuments(db);
+      const doctor = doctors.create({ name: "Dr. Cohen" });
+
+      // Simulate a historical Note living in the archive's general
+      // notebook (id 1), predating this app, with no DocumentMeta row.
+      const noteId = Number(
+        db
+          .prepare(
+            `INSERT INTO Notes (notebookId, title, createTime, updateTime) VALUES (1, ?, ?, ?)`,
+          )
+          .run("Referral letter from Dr. Cohen", "2025-11-02", "2025-11-02").lastInsertRowid,
+      );
+
+      const adopted = documents.adopt(noteId, {
+        type: "referral",
+        doctorId: doctor.id,
+        documentDate: "2025-11-02",
+      });
+
+      expect(adopted.id).toBe(noteId);
+      expect(adopted.title).toBe("Referral letter from Dr. Cohen");
+      expect(adopted.type).toBe("referral");
+      expect(adopted.doctorId).toBe(doctor.id);
+      expect(adopted.documentDate).toBe("2025-11-02");
+
+      // get() only finds Notes in the medical notebook, so this also
+      // proves the Note was actually moved there.
+      expect(documents.get(noteId)?.notebookId).toBe(MEDICAL_NOTEBOOK_ID);
+    });
+
+    it("also applies the doctor's transitive tag, same as create()", () => {
+      const db = tmpDb();
+      const doctors = new Doctors(db, "Doctors");
+      const documents = tmpDocuments(db);
+      const doctor = doctors.create({ name: "Dr. Cohen" });
+
+      const noteId = Number(
+        db
+          .prepare(`INSERT INTO Notes (notebookId, title, createTime, updateTime) VALUES (1, ?, ?, ?)`)
+          .run("Old letter", "2025-11-02", "2025-11-02").lastInsertRowid,
+      );
+
+      documents.adopt(noteId, { type: "letter", doctorId: doctor.id });
+
+      const noteTags = db.prepare(`SELECT tagId FROM NoteTags WHERE noteId = ?`).all(noteId) as {
+        tagId: number;
+      }[];
+      expect(noteTags.map((r) => r.tagId)).toContain(doctor.tagId);
+    });
+
+    it("rejects adopting a Note that's already been adopted", () => {
+      const db = tmpDb();
+      const documents = tmpDocuments(db);
+
+      const noteId = Number(
+        db
+          .prepare(`INSERT INTO Notes (notebookId, title, createTime, updateTime) VALUES (1, ?, ?, ?)`)
+          .run("Old letter", "2025-11-02", "2025-11-02").lastInsertRowid,
+      );
+      documents.adopt(noteId, { type: "letter" });
+
+      expect(() => documents.adopt(noteId, { type: "other" })).toThrow(InvalidDocumentInputError);
+    });
+
+    it("rejects adopting a Note id that doesn't exist", () => {
+      const db = tmpDb();
+      const documents = tmpDocuments(db);
+
+      expect(() => documents.adopt(999999, { type: "letter" })).toThrow(DocumentNotFoundError);
+    });
+  });
+
   describe("listing queries", () => {
     it("listRecent returns recently created documents ordered newest first", () => {
       const db = tmpDb();
