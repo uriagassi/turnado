@@ -225,6 +225,27 @@ describe("AppointmentDetailScreen", () => {
     expect(onEdit).toHaveBeenCalledOnce();
   });
 
+  it("shows a missed-reminder marker with the exact reason available on tap, when the appointment has one (issue #10)", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <AppointmentDetailScreen
+        appointment={appointment({ missedReminder: "send failed" })}
+        documents={[]}
+        openItems={[]}
+        allDocuments={[]}
+        onEdit={() => {}}
+        onAttachDocument={() => {}}
+      />,
+    );
+
+    expect(screen.queryByText("The reminder email failed to send.")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Reminder missed" }));
+
+    expect(screen.getByText("The reminder email failed to send.")).toBeInTheDocument();
+  });
+
   it("follows the doctor's name into their own detail view — the natural place for that link now that appointment lists no longer offer it", async () => {
     const user = userEvent.setup();
     const onSelectDoctor = vi.fn();

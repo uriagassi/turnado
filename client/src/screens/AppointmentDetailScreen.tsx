@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { Appointment, Doctor, MedicalDocument, Task, TaskStatus } from "../api";
+import { MissedReminderBadge } from "../components/MissedReminderBadge";
 
 /**
  * Combined readiness for the checklist (issue #9) — the client-side
@@ -135,6 +136,7 @@ export function AppointmentDetailScreen({
           <p className="appointment-detail-doctor">{doctor.name}</p>
         ))}
       {appointment.location && <p className="appointment-detail-location">{appointment.location}</p>}
+      {appointment.missedReminder && <MissedReminderBadge reason={appointment.missedReminder} />}
       <button type="button" className="edit-appointment" onClick={onEdit}>
         {t("doctorDetail.edit")}
       </button>

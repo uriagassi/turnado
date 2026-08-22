@@ -1453,6 +1453,28 @@ html[dir="rtl"] .back-link-arrow {
   gap: 0.25rem;
 }
 
+/* Issue #10: the missed-reminder marker (see MissedReminderBadge) — same
+   click-to-expand shape as .linked-badge above, in the "something's wrong"
+   red rather than the neutral gray, since a missed reminder needs to draw
+   the eye. */
+.missed-reminder-badge {
+  background: var(--color-red-bg);
+  color: var(--color-red);
+  border: none;
+  cursor: pointer;
+}
+
+.missed-reminder-badge:hover {
+  filter: brightness(0.95);
+}
+
+.missed-reminder-detail {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--color-red);
+  margin-top: 0.25rem;
+}
+
 
 
 

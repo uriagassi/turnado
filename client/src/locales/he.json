@@ -166,5 +166,8 @@
   "reminder.appointment.intro": "יש לכם תור מחר:",
   "reminder.task.subject": "תזכורת: {{title}} עד מחר",
   "reminder.task.intro": "המשימה הבאה מגיעה למועד מחר:",
-  "reminder.field.description": "תיאור"
+  "reminder.field.description": "תיאור",
+  "reminder.missed.badge": "תזכורת לא נשלחה",
+  "reminder.missed.sendFailed": "שליחת אימייל התזכורת נכשלה.",
+  "reminder.missed.windowClosed": "חלון הזמן לשליחת התזכורת נסגר לפני שהיא נשלחה."
 }
