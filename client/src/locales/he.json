@@ -79,6 +79,7 @@
   "appointmentHistory.empty": "אין עדיין תורים קודמים.",
   "upcomingAppointments.title": "תורים קרובים",
   "upcomingAppointments.empty": "אין תורים קרובים.",
+  "appointmentCard.details": "פרטים",
   "appointmentCard.edit": "עריכה",
   "appointmentCard.status.label": "סטטוס",
   "appointmentCard.status.planned": "מתוכנן",
@@ -156,5 +157,9 @@
   "documentsScreen.filters.dateTo.label": "עד תאריך",
   "documentsScreen.filters.clearAll": "ניקוי הכל",
   "documentsScreen.linkedBadge_one": "מקושר לפריט אחד",
-  "documentsScreen.linkedBadge_other": "מקושר ל-{{count}} פריטים"
+  "documentsScreen.linkedBadge_other": "מקושר ל-{{count}} פריטים",
+  "appointmentDetail.readiness": "{{ready}} מתוך {{total}} מוכנים",
+  "appointmentDetail.attachDocument.toggle": "צירוף מסמך קיים",
+  "appointmentDetail.attachDocument.search.label": "חיפוש מסמכים",
+  "appointmentDetail.attachDocument.empty": "לא נמצאו מסמכים תואמים."
 }

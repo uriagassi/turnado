@@ -510,6 +510,14 @@ export class Documents {
     this.syncDoctorTags(noteId);
   }
 
+  /** Links an already-created document to an already-created appointment (issue #9: attaching an existing document to an appointment's checklist via the searchable picker, rather than only linking at upload time). Re-syncs doctor tags since the linked appointment may carry its own doctorId. */
+  linkAppointment(noteId: number, appointmentId: number): void {
+    this.db
+      .prepare(`INSERT OR IGNORE INTO AppointmentDocuments (noteId, appointmentId) VALUES (?, ?)`)
+      .run(noteId, appointmentId);
+    this.syncDoctorTags(noteId);
+  }
+
   private getOrThrow(id: number): Document {
     const doc = this.get(id);
     if (!doc) throw new DocumentNotFoundError(id);

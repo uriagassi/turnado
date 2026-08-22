@@ -78,6 +78,7 @@
   "appointmentHistory.empty": "No past appointments yet.",
   "upcomingAppointments.title": "Upcoming appointments",
   "upcomingAppointments.empty": "No upcoming appointments.",
+  "appointmentCard.details": "Details",
   "appointmentCard.edit": "Edit",
   "appointmentCard.status.label": "Status",
   "appointmentCard.status.planned": "Planned",
@@ -155,5 +156,9 @@
   "documentsScreen.filters.dateTo.label": "To",
   "documentsScreen.filters.clearAll": "Clear all",
   "documentsScreen.linkedBadge_one": "Linked to {{count}} item",
-  "documentsScreen.linkedBadge_other": "Linked to {{count}} items"
+  "documentsScreen.linkedBadge_other": "Linked to {{count}} items",
+  "appointmentDetail.readiness": "{{ready}} of {{total}} ready",
+  "appointmentDetail.attachDocument.toggle": "Attach existing document",
+  "appointmentDetail.attachDocument.search.label": "Search documents",
+  "appointmentDetail.attachDocument.empty": "No matching documents."
 }

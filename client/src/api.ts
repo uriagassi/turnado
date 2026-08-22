@@ -324,6 +324,16 @@ export async function fetchDocuments(filter?: DocumentQueryFilter): Promise<Medi
   return res.json();
 }
 
+/** Attaches an already-uploaded document to an appointment's checklist (issue #9's searchable picker) — unlike uploadDocument, no file involved, just linking an existing one. */
+export async function attachAppointmentDocument(appointmentId: number, documentId: number): Promise<MedicalDocument> {
+  const res = await fetch(`/api/appointments/${appointmentId}/documents/${documentId}`, {
+    method: "PUT",
+    credentials: "same-origin",
+  });
+  if (!res.ok) throw new Error(`Unexpected PUT /api/appointments/${appointmentId}/documents/${documentId} status ${res.status}`);
+  return res.json();
+}
+
 export async function fetchDocument(id: number): Promise<MedicalDocument> {
   const res = await fetch(`/api/documents/${id}`, { credentials: "same-origin" });
   if (!res.ok) throw new Error(`Unexpected /api/documents/${id} status ${res.status}`);

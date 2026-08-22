@@ -169,6 +169,45 @@ describe("/api/appointments", () => {
     });
   });
 
+  describe("PUT /api/appointments/:id/documents/:documentId", () => {
+    it("attaches an already-uploaded document to the appointment's checklist", async () => {
+      const agent = signedInAgent(tmpDb());
+      const appt = await agent.post("/api/appointments").send({ notes: "Annual checkup", dateTime: "2026-09-01T10:00:00Z" });
+      const doc = await agent
+        .post("/api/documents")
+        .field("title", "Old referral")
+        .field("type", "referral")
+        .attach("file", Buffer.from("content"), "referral.pdf");
+
+      const res = await agent.put(`/api/appointments/${appt.body.id}/documents/${doc.body.id}`).send();
+
+      expect(res.status).toBe(200);
+      expect(res.body.appointmentIds).toContain(appt.body.id);
+    });
+
+    it("404s for an appointment id that doesn't exist, instead of crashing", async () => {
+      const agent = signedInAgent(tmpDb());
+      const doc = await agent
+        .post("/api/documents")
+        .field("title", "Old referral")
+        .field("type", "referral")
+        .attach("file", Buffer.from("content"), "referral.pdf");
+
+      const res = await agent.put(`/api/appointments/999/documents/${doc.body.id}`).send();
+
+      expect(res.status).toBe(404);
+    });
+
+    it("404s for a document id that doesn't exist, instead of crashing", async () => {
+      const agent = signedInAgent(tmpDb());
+      const appt = await agent.post("/api/appointments").send({ notes: "Annual checkup", dateTime: "2026-09-01T10:00:00Z" });
+
+      const res = await agent.put(`/api/appointments/${appt.body.id}/documents/999`).send();
+
+      expect(res.status).toBe(404);
+    });
+  });
+
   describe("GET /api/home", () => {
     it("includes the soonest planned appointment as nextAppointment", async () => {
       const agent = signedInAgent(tmpDb());

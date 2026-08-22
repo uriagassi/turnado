@@ -457,6 +457,18 @@ export function createApp(options: AppOptions): Express {
       res.json(doc);
     });
 
+    // Attaches an already-uploaded document to an appointment's checklist
+    // (issue #9's searchable picker) — unlike POST /api/documents, no new
+    // file involved, just linking an existing one.
+    app.put("/api/appointments/:id/documents/:documentId", (req, res) => {
+      const appointmentId = Number(req.params.id);
+      const documentId = Number(req.params.documentId);
+      if (!appointments.get(appointmentId)) return res.status(404).json({ error: "Not found" });
+      if (!documents.get(documentId)) return res.status(404).json({ error: "Not found" });
+      documents.linkAppointment(documentId, appointmentId);
+      res.json(documents.get(documentId));
+    });
+
     app.get("/api/home", (_req, res) => {
       const openItems = tasks.list().filter((t) => t.status !== "done");
       res.json({

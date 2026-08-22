@@ -248,6 +248,34 @@ describe("Documents", () => {
       expect(tagIds).toContain(drB.tagId);
       expect(tagIds).toContain(activeNeurologyTag.tagId);
     });
+
+    it("links an already-created document to an already-created appointment via linkAppointment", () => {
+      const db = tmpDb();
+      const doctors = new Doctors(db, "Doctors");
+      const appointments = new Appointments(db);
+      const documents = tmpDocuments(db);
+
+      const doctor = doctors.create({ name: "Dr. Alice" });
+      const appt = appointments.create({
+        doctorId: doctor.id,
+        dateTime: "2026-08-20T10:00:00Z",
+        notes: "Cardio checkup",
+      });
+
+      const file: UploadedFile = {
+        fileName: "referral.pdf",
+        uniqueFilename: "unique_ref.pdf",
+        mime: "application/pdf",
+        hash: "hash_ref",
+        size: 512,
+      };
+      const doc = documents.create({ title: "Referral Letter", type: "referral" }, file);
+      expect(doc.appointmentIds).toEqual([]);
+
+      documents.linkAppointment(doc.id, appt.id);
+
+      expect(documents.get(doc.id)!.appointmentIds).toEqual([appt.id]);
+    });
   });
 
   describe("listing queries", () => {

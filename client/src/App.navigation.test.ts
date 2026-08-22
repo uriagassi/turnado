@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { screenTitle, screenBack, refreshBackStackSessions, type AppState, type Session } from "./App";
-import type { Doctor, HomeData, MedicalDocument, Task } from "./api";
+import type { Appointment, Doctor, HomeData, MedicalDocument, Task } from "./api";
 import type { DocumentFilters } from "./screens/DocumentsScreen";
 
 // screenTitle/screenBack are App.tsx's own navigation logic — the part of
@@ -55,6 +55,19 @@ function task(overrides: Partial<Task> = {}): Task {
     purpose: null,
     createdAt: "2026-08-01",
     updatedAt: "2026-08-01",
+    ...overrides,
+  };
+}
+
+function appointment(overrides: Partial<Appointment> = {}): Appointment {
+  return {
+    id: 1,
+    doctorId: null,
+    dateTime: "2026-09-01T10:00:00Z",
+    location: undefined,
+    notes: "Annual checkup",
+    status: "planned",
+    summary: null,
     ...overrides,
   };
 }
@@ -114,6 +127,20 @@ describe("screenTitle", () => {
     };
 
     expect(screenTitle(state, t)).toBe("Blood panel");
+  });
+
+  it("shows the appointment's own notes on appointment-detail", () => {
+    const state: AppState = {
+      phase: "appointment-detail",
+      session: session(),
+      appointment: appointment({ notes: "Annual checkup" }),
+      documents: [],
+      openItems: [],
+      allDocuments: [],
+      returnTo: "appointment-upcoming",
+    };
+
+    expect(screenTitle(state, t)).toBe("Annual checkup");
   });
 });
 
@@ -206,6 +233,42 @@ describe("screenBack", () => {
     await screenBack(state, setState)?.();
 
     expect(setState).toHaveBeenCalledWith({ phase: "documents", session: s, documents: [], filters, allTasks: [] });
+  });
+
+  it("sends appointment-detail back to the upcoming-appointments list, when returnTo says so", () => {
+    const setState = vi.fn();
+    const s = session();
+    const state: AppState = {
+      phase: "appointment-detail",
+      session: s,
+      appointment: appointment(),
+      documents: [],
+      openItems: [],
+      allDocuments: [],
+      returnTo: "appointment-upcoming",
+    };
+
+    screenBack(state, setState)?.();
+
+    expect(setState).toHaveBeenCalledWith({ phase: "appointment-upcoming", session: s });
+  });
+
+  it("sends appointment-detail back to the appointment-history list, when returnTo says so", () => {
+    const setState = vi.fn();
+    const s = session();
+    const state: AppState = {
+      phase: "appointment-detail",
+      session: s,
+      appointment: appointment(),
+      documents: [],
+      openItems: [],
+      allDocuments: [],
+      returnTo: "appointment-history",
+    };
+
+    screenBack(state, setState)?.();
+
+    expect(setState).toHaveBeenCalledWith({ phase: "appointment-history", session: s });
   });
 });
 

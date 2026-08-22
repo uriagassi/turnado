@@ -6,25 +6,31 @@ import { formatDateTime } from "../formatDateTime";
 /**
  * One appointment row: shared by UpcomingAppointmentsScreen and
  * AppointmentHistoryScreen so "what an appointment row looks like" —
- * including the doctor-name link, the status control, editing, and the
- * post-visit summary — lives in one place instead of being reimplemented
- * per screen (see issue #4 AC: doctor link, four-state status, and summary
- * all need to work from either list).
+ * including the status control, editing, and the post-visit summary — lives
+ * in one place instead of being reimplemented per screen (see issue #4 AC:
+ * four-state status and summary need to work from either list).
+ *
+ * The doctor's name is shown but deliberately not a link here — the doctor
+ * isn't why you're on this list (see issue #4's original doctor-link AC,
+ * superseded by this one); the explicit Details button below is the one
+ * way off this row, and it's the checklist screen it opens where following
+ * through to the doctor now lives (see AppointmentDetailScreen).
  */
 export function AppointmentCard({
   appointment,
   doctor,
-  onSelectDoctor,
   onEdit,
   onStatusChange,
   onSaveSummary,
+  onSelect,
 }: {
   appointment: Appointment;
   doctor?: Doctor;
-  onSelectDoctor: (doctor: Doctor) => void;
   onEdit: (appointment: Appointment) => void;
   onStatusChange: (appointment: Appointment, status: AppointmentStatus) => void;
   onSaveSummary: (appointment: Appointment, summary: string) => void;
+  /** Opens the appointment's own detail/checklist screen (issue #9). */
+  onSelect?: (appointment: Appointment) => void;
 }) {
   const { t, i18n } = useTranslation();
   // Local draft so typing doesn't round-trip through the parent on every
@@ -34,14 +40,15 @@ export function AppointmentCard({
   return (
     <li className="appointment-row">
       <span className="appointment-date">{formatDateTime(appointment.dateTime, i18n.language)}</span>
-      {doctor && (
-        <button type="button" className="appointment-doctor-link" onClick={() => onSelectDoctor(doctor)}>
-          {doctor.name}
-        </button>
-      )}
+      {doctor && <span className="appointment-doctor-name">{doctor.name}</span>}
       <span className="appointment-notes">{appointment.notes}</span>
       {appointment.location && <span className="appointment-location">{appointment.location}</span>}
       <div className="appointment-row-actions">
+        {onSelect && (
+          <button type="button" className="edit-appointment" onClick={() => onSelect(appointment)}>
+            {t("appointmentCard.details")}
+          </button>
+        )}
         <button type="button" className="edit-appointment" onClick={() => onEdit(appointment)}>
           {t("appointmentCard.edit")}
         </button>
