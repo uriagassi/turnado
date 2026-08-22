@@ -78,7 +78,7 @@ describe("/api/tasks routes", () => {
       const agent = signedInAgent(db);
       const missed = await agent.post("/api/tasks").send({ type: "test", title: "Blood test", dueDate: "2026-09-01" });
       const clean = await agent.post("/api/tasks").send({ type: "test", title: "Other test", dueDate: "2026-09-01" });
-      new ReminderLog(db).markMissed("task", missed.body.id, "2026-08-31", "send failed");
+      new ReminderLog(db).markMissed("task", missed.body.id, "2026-09-01", "send failed");
 
       const res = await agent.get("/api/tasks");
 
@@ -86,6 +86,19 @@ describe("/api/tasks routes", () => {
       const cleanBody = res.body.find((t: { id: number }) => t.id === clean.body.id);
       expect(missedBody.missedReminder).toBe("send failed");
       expect(cleanBody.missedReminder).toBeNull();
+    });
+
+    it("clears a stale missedReminder once the task's due date is rescheduled (issue #10)", async () => {
+      const db = tmpDb();
+      const agent = signedInAgent(db);
+      const created = await agent.post("/api/tasks").send({ type: "test", title: "Blood test", dueDate: "2026-09-01" });
+      new ReminderLog(db).markMissed("task", created.body.id, "2026-09-01", "send failed");
+
+      await agent.put(`/api/tasks/${created.body.id}`).send({ type: "test", title: "Blood test", dueDate: "2026-09-15" });
+
+      const res = await agent.get("/api/tasks");
+
+      expect(res.body[0].missedReminder).toBeNull();
     });
   });
 
@@ -146,7 +159,7 @@ describe("/api/tasks routes", () => {
       const db = tmpDb();
       const agent = signedInAgent(db);
       const created = await agent.post("/api/tasks").send({ type: "test", title: "Blood test", dueDate: "2026-09-01" });
-      new ReminderLog(db).markMissed("task", created.body.id, "2026-08-31", "window closed before delivery");
+      new ReminderLog(db).markMissed("task", created.body.id, "2026-09-01", "window closed before delivery");
 
       const res = await agent.get(`/api/tasks/${created.body.id}`);
 
@@ -280,7 +293,7 @@ describe("/api/tasks routes", () => {
       const db = tmpDb();
       const agent = signedInAgent(db);
       const created = await agent.post("/api/tasks").send({ type: "test", title: "Blood test", dueDate: "2026-09-01", status: "open" });
-      new ReminderLog(db).markMissed("task", created.body.id, "2026-08-31", "send failed");
+      new ReminderLog(db).markMissed("task", created.body.id, "2026-09-01", "send failed");
 
       const homeRes = await agent.get("/api/home");
 
