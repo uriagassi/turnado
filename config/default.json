@@ -34,14 +34,17 @@
     "pass": "REPLACE_ME",
     "from": "REPLACE_ME"
   },
+  "reminders": {
+    "timezone": "Asia/Jerusalem"
+  },
   "auth": {
     "handler": "./auth/EmptyAuth.js",
     "devUserName": "user-one"
   },
   "security": {
     "allowList": {
-      "user-one": "en",
-      "user-two": "he"
+      "user-one": { "locale": "en", "email": "REPLACE_ME" },
+      "user-two": { "locale": "he", "email": "REPLACE_ME" }
     },
     "cookieSecret": "REPLACE_ME"
   },
