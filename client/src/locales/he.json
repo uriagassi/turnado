@@ -161,5 +161,10 @@
   "appointmentDetail.readiness": "{{ready}} מתוך {{total}} מוכנים",
   "appointmentDetail.attachDocument.toggle": "צירוף מסמך קיים",
   "appointmentDetail.attachDocument.search.label": "חיפוש מסמכים",
-  "appointmentDetail.attachDocument.empty": "לא נמצאו מסמכים תואמים."
+  "appointmentDetail.attachDocument.empty": "לא נמצאו מסמכים תואמים.",
+  "reminder.appointment.subject": "תזכורת: תור מחר",
+  "reminder.appointment.intro": "יש לכם תור מחר:",
+  "reminder.task.subject": "תזכורת: {{title}} עד מחר",
+  "reminder.task.intro": "המשימה הבאה מגיעה למועד מחר:",
+  "reminder.field.description": "תיאור"
 }

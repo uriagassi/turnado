@@ -160,5 +160,10 @@
   "appointmentDetail.readiness": "{{ready}} of {{total}} ready",
   "appointmentDetail.attachDocument.toggle": "Attach existing document",
   "appointmentDetail.attachDocument.search.label": "Search documents",
-  "appointmentDetail.attachDocument.empty": "No matching documents."
+  "appointmentDetail.attachDocument.empty": "No matching documents.",
+  "reminder.appointment.subject": "Reminder: appointment tomorrow",
+  "reminder.appointment.intro": "You have an appointment tomorrow:",
+  "reminder.task.subject": "Reminder: {{title}} due tomorrow",
+  "reminder.task.intro": "This is due tomorrow:",
+  "reminder.field.description": "Description"
 }
