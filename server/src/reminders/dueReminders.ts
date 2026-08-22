@@ -125,7 +125,10 @@ function wrap<T extends { id: number; ownerUsername: string | null }>(
 // en-CA renders as YYYY-MM-DD, giving this the same shape Task.dueDate and
 // the (itemType, itemId, targetDate) key already use, computed as that
 // timezone's wall-clock calendar date rather than the instant's UTC date.
-function dateOnly(date: Date, timezone: string): string {
+// Exported so ReminderService can compute the same "today" it needs for
+// ReminderLog.sweepMissed() without a second, potentially-diverging
+// implementation of the same timezone math.
+export function dateOnly(date: Date, timezone: string): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(date);
 }
 
