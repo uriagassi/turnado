@@ -1,8 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { resolveLocale } from "../src/i18n/locale.js";
 import { AllowList } from "../src/auth/AllowList.js";
+import { twoUserAllowList } from "./support/allowListFixture.js";
 
-const allowList = new AllowList({ alice: "en", bob: "he" });
+const allowList = new AllowList(twoUserAllowList());
 const supportedLocales = ["en", "he"];
 const fallbackLocale = "en";
 

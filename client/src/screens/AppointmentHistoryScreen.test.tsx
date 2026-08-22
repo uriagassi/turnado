@@ -13,6 +13,7 @@ function appt(overrides: Partial<Appointment>): Appointment {
     notes: "Annual checkup",
     status: "done",
     summary: null,
+    missedReminder: null,
     ...overrides,
   };
 }

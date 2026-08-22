@@ -2,8 +2,9 @@ import { describe, it, expect } from "vitest";
 import request from "supertest";
 import { createApp } from "../src/app.js";
 import { StubAuthHandler } from "./support/StubAuthHandler.js";
+import { twoUserAllowList } from "./support/allowListFixture.js";
 
-const allowList = { alice: "en", bob: "he" };
+const allowList = twoUserAllowList();
 const cookieSecret = "test-secret";
 
 function appWithAllowList() {

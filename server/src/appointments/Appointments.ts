@@ -1,4 +1,5 @@
 import type { Database, Statement } from "better-sqlite3";
+import { ensureColumn } from "../db.js";
 
 export type AppointmentStatus = "planned" | "done" | "cancelled" | "postponed";
 
@@ -15,6 +16,17 @@ export interface Appointment extends AppointmentInput {
   status: AppointmentStatus;
   /** Free-text post-visit summary — null until one's been added via setSummary, deliberately separate from AppointmentInput since it only makes sense once the appointment's happened. */
   summary: string | null;
+  /**
+   * The allow-listed username this appointment belongs to (issue #10:
+   * reminders go to the item's owner, not every allow-listed user) — set
+   * once at creation from the authenticated caller, not part of
+   * AppointmentInput since the client never chooses it directly. Null for
+   * appointments created before this field existed, or via any path that
+   * doesn't pass an owner; ReminderService treats a null owner as "no
+   * reminder due" rather than guessing a recipient. Immutable after
+   * creation: update() never touches this column.
+   */
+  ownerUsername: string | null;
 }
 
 export class AppointmentNotFoundError extends Error {
@@ -62,9 +74,13 @@ export class Appointments {
         summary TEXT
       )
     `);
+    // First column added to an already-shipped table (issue #10) — see
+    // ensureColumn's own doc for why this needs a guard at all.
+    ensureColumn(db, "Appointments", "ownerUsername", "TEXT");
+
     this.insertAppointment = db.prepare(
-      `INSERT INTO Appointments (doctorId, dateTime, location, notes)
-       VALUES ($doctorId, $dateTime, $location, $notes)`,
+      `INSERT INTO Appointments (doctorId, dateTime, location, notes, ownerUsername)
+       VALUES ($doctorId, $dateTime, $location, $notes, $ownerUsername)`,
     );
     this.getAppointment = db.prepare(`SELECT * FROM Appointments WHERE id = ?`);
     this.listAppointments = db.prepare(`SELECT * FROM Appointments ORDER BY dateTime`);
@@ -77,13 +93,19 @@ export class Appointments {
     this.updateSummaryStmt = db.prepare(`UPDATE Appointments SET summary = $summary WHERE id = $id`);
   }
 
-  create(input: AppointmentInput): Appointment {
+  /**
+   * `ownerUsername` is a separate param, not part of AppointmentInput —
+   * it's resolved server-side from the authenticated caller (issue #10),
+   * never something the client body should be trusted to set directly.
+   */
+  create(input: AppointmentInput, ownerUsername: string | null = null): Appointment {
     this.validate(input);
     const result = this.insertAppointment.run({
       doctorId: input.doctorId ?? null,
       dateTime: input.dateTime,
       location: input.location ?? null,
       notes: input.notes,
+      ownerUsername,
     });
     return this.getAppointment.get(result.lastInsertRowid) as Appointment;
   }

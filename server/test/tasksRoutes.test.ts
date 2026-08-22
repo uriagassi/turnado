@@ -6,9 +6,11 @@ import path from "node:path";
 import type { Database } from "better-sqlite3";
 import { createApp } from "../src/app.js";
 import { createDb } from "../src/db.js";
+import { ReminderLog } from "../src/reminders/ReminderLog.js";
 import { StubAuthHandler } from "./support/StubAuthHandler.js";
+import { singleUserAllowList } from "./support/allowListFixture.js";
 
-const allowList = { alice: "en" };
+const allowList = singleUserAllowList();
 const cookieSecret = "test-secret";
 
 describe("/api/tasks routes", () => {
@@ -70,6 +72,34 @@ describe("/api/tasks routes", () => {
       expect(resDoctor5Open.status).toBe(200);
       expect(resDoctor5Open.body).toHaveLength(1);
     });
+
+    it("reports the missed-reminder reason for a task, and null for one with none (issue #10)", async () => {
+      const db = tmpDb();
+      const agent = signedInAgent(db);
+      const missed = await agent.post("/api/tasks").send({ type: "test", title: "Blood test", dueDate: "2026-09-01" });
+      const clean = await agent.post("/api/tasks").send({ type: "test", title: "Other test", dueDate: "2026-09-01" });
+      new ReminderLog(db).markMissed("task", missed.body.id, "2026-09-01", "send failed");
+
+      const res = await agent.get("/api/tasks");
+
+      const missedBody = res.body.find((t: { id: number }) => t.id === missed.body.id);
+      const cleanBody = res.body.find((t: { id: number }) => t.id === clean.body.id);
+      expect(missedBody.missedReminder).toBe("send failed");
+      expect(cleanBody.missedReminder).toBeNull();
+    });
+
+    it("clears a stale missedReminder once the task's due date is rescheduled (issue #10)", async () => {
+      const db = tmpDb();
+      const agent = signedInAgent(db);
+      const created = await agent.post("/api/tasks").send({ type: "test", title: "Blood test", dueDate: "2026-09-01" });
+      new ReminderLog(db).markMissed("task", created.body.id, "2026-09-01", "send failed");
+
+      await agent.put(`/api/tasks/${created.body.id}`).send({ type: "test", title: "Blood test", dueDate: "2026-09-15" });
+
+      const res = await agent.get("/api/tasks");
+
+      expect(res.body[0].missedReminder).toBeNull();
+    });
   });
 
   describe("POST /api/tasks", () => {
@@ -97,6 +127,16 @@ describe("/api/tasks routes", () => {
       });
       expect(res.status).toBe(400);
     });
+
+    it("owns the created task as the signed-in user, ignoring any client-supplied ownerUsername (issue #10)", async () => {
+      const agent = signedInAgent(tmpDb());
+
+      const res = await agent
+        .post("/api/tasks")
+        .send({ type: "test", title: "Blood test", ownerUsername: "someone-else" });
+
+      expect(res.body.ownerUsername).toBe("alice");
+    });
   });
 
   describe("GET /api/tasks/:id", () => {
@@ -113,6 +153,17 @@ describe("/api/tasks routes", () => {
 
       const missing = await agent.get("/api/tasks/9999");
       expect(missing.status).toBe(404);
+    });
+
+    it("reports the missed-reminder reason on the single-item route too (issue #10)", async () => {
+      const db = tmpDb();
+      const agent = signedInAgent(db);
+      const created = await agent.post("/api/tasks").send({ type: "test", title: "Blood test", dueDate: "2026-09-01" });
+      new ReminderLog(db).markMissed("task", created.body.id, "2026-09-01", "window closed before delivery");
+
+      const res = await agent.get(`/api/tasks/${created.body.id}`);
+
+      expect(res.body.missedReminder).toBe("window closed before delivery");
     });
   });
 
@@ -236,6 +287,17 @@ describe("/api/tasks routes", () => {
       expect(homeRes.body.openItems[0].title).toBe("Task with no date");
       expect(homeRes.body.openItems[1].title).toBe("Task 2 (earlier)");
       expect(homeRes.body.openItems[2].title).toBe("Task 1 (later)");
+    });
+
+    it("carries the missed-reminder reason through to an open item (issue #10)", async () => {
+      const db = tmpDb();
+      const agent = signedInAgent(db);
+      const created = await agent.post("/api/tasks").send({ type: "test", title: "Blood test", dueDate: "2026-09-01", status: "open" });
+      new ReminderLog(db).markMissed("task", created.body.id, "2026-09-01", "send failed");
+
+      const homeRes = await agent.get("/api/home");
+
+      expect(homeRes.body.openItems[0].missedReminder).toBe("send failed");
     });
   });
 });

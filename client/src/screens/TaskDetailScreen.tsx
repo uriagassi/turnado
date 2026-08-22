@@ -4,6 +4,7 @@ import { useRelativeDateTime } from "../hooks/useRelativeDateTime";
 import { getTaskIcon, isResolvableTask } from "../tasks/taskUtils";
 import { getDocumentIcon } from "./HomeScreen";
 import { TaskStatusBadge } from "../components/TaskStatusBadge";
+import { MissedReminderBadge } from "../components/MissedReminderBadge";
 
 export function TaskDetailScreen({
   task,
@@ -52,6 +53,7 @@ export function TaskDetailScreen({
           {task.requiresAdvanceScheduling && (
             <span className="badge type-tag">{t("taskDetail.advanceSchedulingNotice")}</span>
           )}
+          {task.missedReminder && <MissedReminderBadge reason={task.missedReminder} />}
         </div>
       </div>
 

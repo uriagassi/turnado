@@ -3,6 +3,7 @@ import type { Appointment, Doctor, DocumentType, HomeData, MedicalDocument, Task
 import { useRelativeDateTime } from "../hooks/useRelativeDateTime";
 import { getTaskIcon } from "../tasks/taskUtils";
 import { TaskStatusBadge } from "../components/TaskStatusBadge";
+import { MissedReminderBadge } from "../components/MissedReminderBadge";
 
 function sortOpenItems(tasks: Task[], appointments: Appointment[] = []): Task[] {
   return [...tasks].sort((a, b) => {
@@ -135,6 +136,7 @@ export function HomeScreen({
               {home.nextAppointment.location ? ` · ${home.nextAppointment.location}` : ""}
             </p>
             <p className="hero-notes">{home.nextAppointment.notes}</p>
+            {home.nextAppointment.missedReminder && <MissedReminderBadge reason={home.nextAppointment.missedReminder} />}
           </div>
         ) : (
           <p className="section-empty">{t("home.hero.empty")}</p>
@@ -180,6 +182,7 @@ export function HomeScreen({
                     <div className="feed-meta">
                       <TaskStatusBadge status={task.status} />
                       {pendingLabel && <span className="badge type-tag">{pendingLabel}</span>}
+                      {task.missedReminder && <MissedReminderBadge reason={task.missedReminder} />}
                     </div>
                   </div>
                 </div>

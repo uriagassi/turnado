@@ -119,6 +119,18 @@ describe("Tasks domain model", () => {
         })
       ).toThrow(InvalidTaskInputError);
     });
+
+    it("defaults ownerUsername to null when none is given", () => {
+      const created = tasks.create({ type: "test", title: "Blood test" });
+
+      expect(created.ownerUsername).toBeNull();
+    });
+
+    it("records the given ownerUsername (issue #10: reminders go to the item's owner)", () => {
+      const created = tasks.create({ type: "test", title: "Blood test" }, "alice");
+
+      expect(created.ownerUsername).toBe("alice");
+    });
   });
 
   describe("list & filter", () => {
@@ -164,6 +176,14 @@ describe("Tasks domain model", () => {
       expect(updated.title).toBe("Updated title");
       expect(updated.status).toBe("in-progress");
       expect(updated.dueDate).toBe("2026-09-01");
+    });
+
+    it("leaves ownerUsername unchanged across an update (immutable after creation)", () => {
+      const created = tasks.create({ type: "test", title: "Initial title" }, "alice");
+
+      const updated = tasks.update(created.id, { type: "test", title: "Updated title" });
+
+      expect(updated.ownerUsername).toBe("alice");
     });
 
     it("transitions status between open, in-progress, and done", () => {

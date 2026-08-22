@@ -73,6 +73,7 @@ describe("HomeScreen", () => {
         notes: "Annual checkup",
         status: "planned",
         summary: null,
+        missedReminder: null,
       },
       openItems: [],
       recentDocuments: [],
@@ -81,6 +82,32 @@ describe("HomeScreen", () => {
     render(<HomeScreen home={home} {...noopProps} />);
 
     expect(screen.getByText("Annual checkup")).toBeInTheDocument();
+  });
+
+  it("shows a missed-reminder marker on the hero card with the exact reason available on tap, when nextAppointment has one (issue #10)", async () => {
+    const user = userEvent.setup();
+    const home: HomeData = {
+      nextAppointment: {
+        id: 1,
+        doctorId: null,
+        dateTime: "2026-09-01T10:00:00Z",
+        location: undefined,
+        notes: "Annual checkup",
+        status: "planned",
+        summary: null,
+        missedReminder: "send failed",
+      },
+      openItems: [],
+      recentDocuments: [],
+    };
+
+    render(<HomeScreen home={home} {...noopProps} />);
+
+    expect(screen.queryByText("The reminder email failed to send.")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Reminder missed" }));
+
+    expect(screen.getByText("The reminder email failed to send.")).toBeInTheDocument();
   });
 
   it("omits the hero card and shows an empty-state message when there's no upcoming appointment", () => {
@@ -124,6 +151,7 @@ describe("HomeScreen", () => {
         notes: "Annual checkup",
         status: "planned",
         summary: null,
+        missedReminder: null,
       },
       openItems: [],
       recentDocuments: [],
@@ -155,6 +183,7 @@ describe("HomeScreen", () => {
         notes: "MRI scan",
         status: "planned",
         summary: null,
+        missedReminder: null,
       },
       openItems: [],
       recentDocuments: [],
@@ -192,6 +221,7 @@ describe("HomeScreen", () => {
           purpose: null,
           createdAt: "2026-08-01",
           updatedAt: "2026-08-01",
+          missedReminder: null,
         },
       ],
       recentDocuments: [],
@@ -204,6 +234,49 @@ describe("HomeScreen", () => {
 
     await user.click(screen.getByText("Get Form 17 for Neurology"));
     expect(onSelectTask).toHaveBeenCalledWith(home.openItems[0]);
+  });
+
+  it("shows a missed-reminder marker on an open item, without triggering onSelectTask when the marker itself is tapped (issue #10)", async () => {
+    const user = userEvent.setup();
+    const onSelectTask = vi.fn();
+    const home: HomeData = {
+      nextAppointment: null,
+      openItems: [
+        {
+          id: 102,
+          type: "test",
+          title: "Blood test (CBC)",
+          status: "open",
+          dueDate: "2026-09-01",
+          doctorId: null,
+          sourceAppointmentId: null,
+          pendingAppointmentId: null,
+          requiresAdvanceScheduling: false,
+          recurrenceWindow: null,
+          approximateDateWindow: null,
+          institution: null,
+          department: null,
+          healthFund: null,
+          codeNumber: null,
+          codeName: null,
+          issuingBody: null,
+          purpose: null,
+          createdAt: "2026-08-01",
+          updatedAt: "2026-08-01",
+          missedReminder: "send failed",
+        },
+      ],
+      recentDocuments: [],
+    };
+
+    render(<HomeScreen home={home} {...noopProps} onSelectTask={onSelectTask} />);
+
+    expect(screen.queryByText("The reminder email failed to send.")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Reminder missed" }));
+
+    expect(screen.getByText("The reminder email failed to send.")).toBeInTheDocument();
+    expect(onSelectTask).not.toHaveBeenCalled();
   });
 
   it("displays pending-appointment tag on an open item linked to an appointment", () => {
@@ -231,6 +304,7 @@ describe("HomeScreen", () => {
           purpose: null,
           createdAt: "2026-08-01",
           updatedAt: "2026-08-01",
+          missedReminder: null,
         },
       ],
       recentDocuments: [],
@@ -245,6 +319,7 @@ describe("HomeScreen", () => {
         notes: "Neurologist visit",
         status: "planned" as const,
         summary: null,
+        missedReminder: null,
       },
     ];
     const doctors: Doctor[] = [

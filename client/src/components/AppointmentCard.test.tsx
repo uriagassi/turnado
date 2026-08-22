@@ -15,6 +15,7 @@ function appointment(overrides: Partial<Appointment> = {}): Appointment {
     notes: "Annual checkup",
     status: "planned",
     summary: null,
+    missedReminder: null,
     ...overrides,
   };
 }
@@ -54,5 +55,36 @@ describe("AppointmentCard", () => {
 
     expect(screen.getByText("Dr. Jane Smith")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Dr. Jane Smith" })).not.toBeInTheDocument();
+  });
+
+  it("shows a missed-reminder marker with the exact reason available on tap, when the appointment has one (issue #10)", async () => {
+    const user = userEvent.setup();
+    render(
+      <AppointmentCard
+        appointment={appointment({ missedReminder: "send failed" })}
+        onEdit={() => {}}
+        onStatusChange={() => {}}
+        onSaveSummary={() => {}}
+      />,
+    );
+
+    expect(screen.queryByText("The reminder email failed to send.")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Reminder missed" }));
+
+    expect(screen.getByText("The reminder email failed to send.")).toBeInTheDocument();
+  });
+
+  it("omits the missed-reminder marker when the appointment has none", () => {
+    render(
+      <AppointmentCard
+        appointment={appointment({ missedReminder: null })}
+        onEdit={() => {}}
+        onStatusChange={() => {}}
+        onSaveSummary={() => {}}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "Reminder missed" })).not.toBeInTheDocument();
   });
 });

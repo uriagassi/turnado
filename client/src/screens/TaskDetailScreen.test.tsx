@@ -32,6 +32,7 @@ describe("TaskDetailScreen", () => {
       purpose: null,
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
+      missedReminder: null,
     };
 
     render(
@@ -48,6 +49,41 @@ describe("TaskDetailScreen", () => {
     expect(screen.getByText("Assuta Hospital")).toBeInTheDocument();
     expect(screen.getByText("Dr. John Doe (Neurology)")).toBeInTheDocument();
     expect(screen.getByText("L0123 — Brain MRI")).toBeInTheDocument();
+  });
+
+  it("shows a missed-reminder marker with the exact reason available on tap, when the task has one (issue #10)", async () => {
+    const user = userEvent.setup();
+    const task: Task = {
+      id: 11,
+      type: "test",
+      title: "Blood test",
+      status: "open",
+      dueDate: "2026-09-01",
+      doctorId: null,
+      sourceAppointmentId: null,
+      pendingAppointmentId: null,
+      requiresAdvanceScheduling: false,
+      recurrenceWindow: null,
+      approximateDateWindow: null,
+      institution: null,
+      department: null,
+      healthFund: null,
+      codeNumber: null,
+      codeName: null,
+      issuingBody: null,
+      purpose: null,
+      createdAt: "2026-08-01",
+      updatedAt: "2026-08-01",
+      missedReminder: "window closed before delivery",
+    };
+
+    render(<TaskDetailScreen task={task} doctors={doctors} onEdit={() => {}} onStatusChange={() => {}} />);
+
+    expect(screen.queryByText("The reminder window closed before it could be sent.")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Reminder missed" }));
+
+    expect(screen.getByText("The reminder window closed before it could be sent.")).toBeInTheDocument();
   });
 
   it("calls onStatusChange with done when 'Mark as completed' is clicked", async () => {
@@ -75,6 +111,7 @@ describe("TaskDetailScreen", () => {
       purpose: null,
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
+      missedReminder: null,
     };
 
     render(
@@ -117,6 +154,7 @@ describe("TaskDetailScreen", () => {
       purpose: "Treatment",
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
+      missedReminder: null,
     };
 
     render(
@@ -157,6 +195,7 @@ describe("TaskDetailScreen", () => {
       purpose: null,
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
+      missedReminder: null,
     };
 
     render(
@@ -197,6 +236,7 @@ describe("TaskDetailScreen", () => {
       purpose: null,
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
+      missedReminder: null,
     };
 
     const appointments = [
@@ -208,6 +248,7 @@ describe("TaskDetailScreen", () => {
         notes: "Cardiology follow-up",
         status: "planned" as const,
         summary: null,
+        missedReminder: null,
       },
     ];
 
@@ -252,6 +293,7 @@ describe("TaskDetailScreen", () => {
       purpose: null,
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
+      missedReminder: null,
     };
 
     const docs = [

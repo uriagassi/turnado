@@ -1,4 +1,5 @@
 import type { Database, Statement } from "better-sqlite3";
+import { ensureColumn } from "../db.js";
 
 export type TaskType = "test" | "doctor_visit" | "form_17" | "general_approval";
 export type TaskStatus = "open" | "in-progress" | "done";
@@ -45,6 +46,8 @@ export interface Task extends TaskInput {
   purpose: string | null;
   createdAt: string;
   updatedAt: string;
+  /** The allow-listed username this task belongs to (issue #10) — see Appointment.ownerUsername for the full rationale; same null-means-no-reminder, immutable-after-creation contract. */
+  ownerUsername: string | null;
 }
 
 export class TaskNotFoundError extends Error {
@@ -98,17 +101,21 @@ export class Tasks {
       )
     `);
 
+    // First column added to an already-shipped table (issue #10) — see
+    // ensureColumn's own doc for why this needs a guard at all.
+    ensureColumn(db, "Tasks", "ownerUsername", "TEXT");
+
     this.insertTask = db.prepare(`
       INSERT INTO Tasks (
         type, title, status, dueDate, doctorId, sourceAppointmentId, pendingAppointmentId,
         requiresAdvanceScheduling, recurrenceWindow, approximateDateWindow,
         institution, department, healthFund, codeNumber, codeName,
-        issuingBody, purpose, createdAt, updatedAt
+        issuingBody, purpose, ownerUsername, createdAt, updatedAt
       ) VALUES (
         $type, $title, $status, $dueDate, $doctorId, $sourceAppointmentId, $pendingAppointmentId,
         $requiresAdvanceScheduling, $recurrenceWindow, $approximateDateWindow,
         $institution, $department, $healthFund, $codeNumber, $codeName,
-        $issuingBody, $purpose, datetime('now'), datetime('now')
+        $issuingBody, $purpose, $ownerUsername, datetime('now'), datetime('now')
       )
     `);
 
@@ -148,7 +155,11 @@ export class Tasks {
     `);
   }
 
-  create(input: TaskInput): Task {
+  /**
+   * `ownerUsername` is a separate param, not part of TaskInput — see
+   * Appointments.create()'s identical reasoning (issue #10).
+   */
+  create(input: TaskInput, ownerUsername: string | null = null): Task {
     this.validate(input);
     const result = this.insertTask.run({
       type: input.type,
@@ -168,6 +179,7 @@ export class Tasks {
       codeName: input.codeName ?? null,
       issuingBody: input.issuingBody ?? null,
       purpose: input.purpose ?? null,
+      ownerUsername,
     });
     return this.mapRow(this.getTask.get(result.lastInsertRowid));
   }

@@ -45,6 +45,9 @@ export interface Doctor extends DoctorInput {
 
 export type AppointmentStatus = "planned" | "done" | "cancelled" | "postponed";
 
+/** Issue #10: why a logged reminder ended up "missed" rather than sent — mirrors the server's ReminderLog.MissedReason. */
+export type MissedReason = "send failed" | "window closed before delivery";
+
 export interface AppointmentInput {
   doctorId?: number | null;
   dateTime: string;
@@ -57,6 +60,8 @@ export interface Appointment extends AppointmentInput {
   doctorId: number | null;
   status: AppointmentStatus;
   summary: string | null;
+  /** Issue #10: null unless this appointment has a currently-missed reminder — see server's app.ts withMissedReminder(). */
+  missedReminder: MissedReason | null;
 }
 
 export type TaskType = "test" | "doctor_visit" | "form_17" | "general_approval";
@@ -101,6 +106,8 @@ export interface Task extends TaskInput {
   purpose: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Issue #10: null unless this task has a currently-missed reminder — see server's app.ts withMissedReminder(). */
+  missedReminder: MissedReason | null;
 }
 
 export type DocumentType =

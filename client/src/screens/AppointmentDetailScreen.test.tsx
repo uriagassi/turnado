@@ -13,6 +13,7 @@ function appointment(overrides: Partial<Appointment> = {}): Appointment {
     notes: "Annual checkup",
     status: "planned",
     summary: null,
+    missedReminder: null,
     ...overrides,
   };
 }
@@ -57,6 +58,7 @@ function task(overrides: Partial<Task> = {}): Task {
     purpose: null,
     createdAt: "",
     updatedAt: "",
+    missedReminder: null,
     ...overrides,
   };
 }
@@ -221,6 +223,27 @@ describe("AppointmentDetailScreen", () => {
     await user.click(screen.getByRole("button", { name: "Edit" }));
 
     expect(onEdit).toHaveBeenCalledOnce();
+  });
+
+  it("shows a missed-reminder marker with the exact reason available on tap, when the appointment has one (issue #10)", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <AppointmentDetailScreen
+        appointment={appointment({ missedReminder: "send failed" })}
+        documents={[]}
+        openItems={[]}
+        allDocuments={[]}
+        onEdit={() => {}}
+        onAttachDocument={() => {}}
+      />,
+    );
+
+    expect(screen.queryByText("The reminder email failed to send.")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Reminder missed" }));
+
+    expect(screen.getByText("The reminder email failed to send.")).toBeInTheDocument();
   });
 
   it("follows the doctor's name into their own detail view — the natural place for that link now that appointment lists no longer offer it", async () => {

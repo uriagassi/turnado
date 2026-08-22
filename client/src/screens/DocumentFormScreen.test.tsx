@@ -10,7 +10,7 @@ const mockDoctors: Doctor[] = [
 ];
 
 const mockAppointments: Appointment[] = [
-  { id: 10, doctorId: 1, dateTime: "2026-08-20T10:00:00Z", notes: "Checkup", status: "planned", summary: null },
+  { id: 10, doctorId: 1, dateTime: "2026-08-20T10:00:00Z", notes: "Checkup", status: "planned", summary: null, missedReminder: null },
 ];
 
 const mockTasks: Task[] = [
@@ -35,6 +35,7 @@ const mockTasks: Task[] = [
     purpose: null,
     createdAt: "",
     updatedAt: "",
+    missedReminder: null,
   },
 ];
 
@@ -161,6 +162,7 @@ describe("DocumentFormScreen", () => {
         purpose: null,
         createdAt: "",
         updatedAt: "",
+        missedReminder: null,
       },
     ];
 
