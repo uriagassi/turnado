@@ -10,10 +10,17 @@ import { Request, Response, NextFunction } from "express";
  * their own reminder emails there, rather than a single household-wide
  * address, so it lives right next to the locale it's already keyed the
  * same way as.
+ *
+ * `personTagName` was added for issue #14 (Existing document adoption
+ * tool): the shared document archive tags a Note's owner with a
+ * "person/<display name>" tag predating this app, using a display name
+ * rather than the login username — so the adoption tool needs this
+ * explicit mapping to know which two person-tags are in scope.
  */
 export interface AllowListEntry {
   locale: string;
   email: string;
+  personTagName?: string;
 }
 
 export type AllowListConfig = Record<string, AllowListEntry>;
@@ -46,6 +53,13 @@ export class AllowList {
 
   emailFor(username: string | undefined): string | undefined {
     return username !== undefined ? this.entries[username]?.email : undefined;
+  }
+
+  /** The `personTagName` of every allow-listed entry that has one configured — the set of "person/<name>" tags the document-adoption tool (issue #14) treats as in-scope. */
+  personTagNames(): string[] {
+    return Object.values(this.entries)
+      .map((entry) => entry.personTagName)
+      .filter((name): name is string => name !== undefined);
   }
 }
 

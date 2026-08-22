@@ -43,8 +43,8 @@
   },
   "security": {
     "allowList": {
-      "user-one": { "locale": "en", "email": "REPLACE_ME" },
-      "user-two": { "locale": "he", "email": "REPLACE_ME" }
+      "user-one": { "locale": "en", "email": "REPLACE_ME", "personTagName": "REPLACE_ME" },
+      "user-two": { "locale": "he", "email": "REPLACE_ME", "personTagName": "REPLACE_ME" }
     },
     "cookieSecret": "REPLACE_ME"
   },
