@@ -15,8 +15,8 @@ import { deepMerge, type ConfigTree } from "./deepMerge.js";
 import { expandHome } from "../paths.js";
 
 export interface PaperlessNodeDefaults {
-  dbPath: string;
-  attachmentsDir: string;
+  dbPath?: string;
+  attachmentsDir?: string;
   httpsKeyPath?: string;
   httpsCertPath?: string;
 }
@@ -31,35 +31,53 @@ export function findPaperlessNodeInstall(candidateDirs: string[]): string | null
   return candidateDirs.find((dir) => fs.existsSync(path.join(dir, "config", "local.json"))) ?? null;
 }
 
+/** Reads and JSON-parses a config file if it exists; {} if it's missing or unparseable — a config file this wizard doesn't own (paperless.node's) shouldn't crash the wizard just because it can't be read, any more than a missing one would. */
 function readJsonIfExists(filePath: string): ConfigTree {
   if (!fs.existsSync(filePath)) return {};
-  return JSON.parse(fs.readFileSync(filePath, "utf-8")) as ConfigTree;
+  try {
+    return JSON.parse(fs.readFileSync(filePath, "utf-8")) as ConfigTree;
+  } catch {
+    return {};
+  }
 }
 
-/** Reads and derives the shared defaults from a known paperless.node install dir, or null if its config doesn't have enough to derive from (no paperless.baseDir). */
+/** Reads a string-valued field two levels deep (e.g. `merged.paperless`, `"baseDir"`) out of a merged config tree, or undefined if that branch isn't there / isn't a string. */
+function readStringField(section: ConfigTree[string], field: string): string | undefined {
+  if (typeof section !== "object" || section === null) return undefined;
+  const value = section[field];
+  return typeof value === "string" ? value : undefined;
+}
+
+/**
+ * Reads and derives the shared defaults from a known paperless.node install
+ * dir, or null if nothing usable came out of it. The DB/attachments
+ * derivation (needs `paperless.baseDir`) and the HTTPS derivation (needs
+ * `https.use === true`) are independent of each other — an install missing
+ * one can still contribute the other.
+ */
 export function readPaperlessNodeDefaults(installDir: string): PaperlessNodeDefaults | null {
   const defaults = readJsonIfExists(path.join(installDir, "config", "default.json"));
   const local = readJsonIfExists(path.join(installDir, "config", "local.json"));
   const merged = deepMerge(defaults, local);
 
-  const paperless = merged.paperless;
-  const baseDir =
-    typeof paperless === "object" && paperless !== null && typeof paperless.baseDir === "string"
-      ? expandHome(paperless.baseDir)
-      : undefined;
-  if (!baseDir) return null;
+  const result: PaperlessNodeDefaults = {};
 
-  const result: PaperlessNodeDefaults = {
-    dbPath: path.join(baseDir, "paperless.sqlite"),
-    attachmentsDir: path.join(baseDir, "attachments"),
-  };
+  const rawBaseDir = readStringField(merged.paperless, "baseDir");
+  if (rawBaseDir) {
+    const baseDir = expandHome(rawBaseDir);
+    result.dbPath = path.join(baseDir, "paperless.sqlite");
+    result.attachmentsDir = path.join(baseDir, "attachments");
+  }
 
   const https = merged.https;
   if (typeof https === "object" && https !== null && https.use === true) {
-    if (typeof https.key === "string") result.httpsKeyPath = https.key;
-    if (typeof https.cert === "string") result.httpsCertPath = https.cert;
+    const keyPath = readStringField(https, "key");
+    const certPath = readStringField(https, "cert");
+    if (keyPath) result.httpsKeyPath = keyPath;
+    if (certPath) result.httpsCertPath = certPath;
   }
-  return result;
+
+  return Object.keys(result).length > 0 ? result : null;
 }
 
 /** Scans candidateDirs (see wellKnownPaperlessNodeDirs) for a paperless.node install and derives this app's shared defaults from it, or returns null if none was found / usable. */

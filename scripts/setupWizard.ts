@@ -10,9 +10,12 @@
 // the next runs so quitting partway doesn't lose progress), adapted to
 // this repo's readline/promises + async/await CLI style
 // (scripts/adoptDocuments.ts) instead of paperless.node's older
-// callback-based readline.
+// callback-based readline, and to this repo's scripts/*.ts camelCase
+// file-naming convention.
 //
-// Run: npx tsx scripts/setup_wizard.ts
+// Run: npm run setup_wizard  (kept snake_case as the command name, to
+// match the familiar `yarn setup_wizard` a paperless.node deployer already
+// knows — only the source filename follows this repo's own convention.)
 import readline from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import { mergeLocalConfig } from "../server/src/setup/localConfigFile.js";
@@ -26,15 +29,17 @@ const rl = readline.createInterface({ input: stdin, output: stdout });
 
 console.log("turnado setup wizard — press Enter at any prompt to accept the bracketed default.");
 
-const detected = detectPaperlessNodeInstall();
+const { installDir, defaults } = detectPaperlessNodeInstall();
 console.log(
-  detected
-    ? "\nFound a paperless.node install nearby — proposing its shared DB/attachments/TLS paths as defaults below."
-    : "\nNo paperless.node install found in the usual places (../paperless.node, ~/paperless.node) — proceeding with the manual flow."
+  !installDir
+    ? "\nNo paperless.node install found in the usual places (../paperless.node, ~/paperless.node) — proceeding with the manual flow."
+    : defaults
+      ? `\nFound a paperless.node install at ${installDir} — proposing its shared DB/attachments/TLS paths as defaults below.`
+      : `\nFound a paperless.node install at ${installDir}, but couldn't derive any shared values from its config — proceeding with the manual flow.`
 );
 
-mergeLocalConfig(localConfigPath, await setupStorage(rl, detected));
-mergeLocalConfig(localConfigPath, await setupHttps(rl, detected));
+mergeLocalConfig(localConfigPath, await setupStorage(rl, defaults));
+mergeLocalConfig(localConfigPath, await setupHttps(rl, defaults));
 mergeLocalConfig(localConfigPath, await setupMail(rl));
 mergeLocalConfig(localConfigPath, await setupSecurity(rl));
 

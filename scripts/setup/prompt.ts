@@ -13,6 +13,16 @@ export async function ask(rl: Interface, question: string, defaultValue: string)
   return answer.length > 0 ? answer : defaultValue;
 }
 
+/** Same as ask(), but the proposed default is a detected paperless.node value when there is one, falling back to whatever's already configured otherwise — the shape every paperless.node-overlapping prompt (storage, HTTPS) shares. */
+export async function askDetected(
+  rl: Interface,
+  question: string,
+  detectedValue: string | undefined,
+  configuredValue: string
+): Promise<string> {
+  return ask(rl, question, detectedValue ?? configuredValue);
+}
+
 /** Same as ask(), but parses the answer as a number; a non-numeric answer is treated as declining and falls back to defaultValue. */
 export async function askNumber(rl: Interface, question: string, defaultValue: number): Promise<number> {
   const answer = await ask(rl, question, String(defaultValue));

@@ -3,9 +3,10 @@
 // designed to front the same hostname, so the same cert covers both.
 import type { Interface } from "node:readline/promises";
 import config from "../../server/src/config.js";
+import { expandHome } from "../../server/src/paths.js";
 import type { PaperlessNodeDefaults } from "../../server/src/setup/detectPaperlessNode.js";
 import type { ConfigTree } from "../../server/src/setup/deepMerge.js";
-import { ask, askYesNo } from "./prompt.js";
+import { askDetected, askYesNo } from "./prompt.js";
 
 export async function setupHttps(
   rl: Interface,
@@ -21,15 +22,17 @@ export async function setupHttps(
   if (detected?.httpsKeyPath && detected?.httpsCertPath) {
     console.log("Detected paperless.node's TLS cert — proposing it below (this app can share the same cert).");
   }
-  const keyPath = await ask(
+  const keyPath = await askDetected(
     rl,
     "Path to the TLS private key (e.g. privkey.pem)?",
-    detected?.httpsKeyPath ?? config.get<string>("https.keyPath")
+    detected?.httpsKeyPath,
+    expandHome(config.get<string>("https.keyPath"))
   );
-  const certPath = await ask(
+  const certPath = await askDetected(
     rl,
     "Path to the TLS certificate (e.g. fullchain.pem)?",
-    detected?.httpsCertPath ?? config.get<string>("https.certPath")
+    detected?.httpsCertPath,
+    expandHome(config.get<string>("https.certPath"))
   );
 
   return { https: { use: true, keyPath, certPath } };

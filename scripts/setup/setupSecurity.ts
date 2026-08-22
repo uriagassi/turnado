@@ -2,10 +2,10 @@
 // cookie secret (issue #36). No paperless.node overlap — confirmed during
 // triage — so these are always manual prompts, one per user already listed
 // in config/default.json's security.allowList (today: user-one, user-two).
-import crypto from "node:crypto";
 import type { Interface } from "node:readline/promises";
 import config from "../../server/src/config.js";
 import type { ConfigTree } from "../../server/src/setup/deepMerge.js";
+import { pickCookieSecretDefault } from "../../server/src/setup/cookieSecret.js";
 import { ask } from "./prompt.js";
 
 interface AllowListEntry {
@@ -34,9 +34,7 @@ export async function setupSecurity(rl: Interface): Promise<ConfigTree> {
   const currentSecret = config.has("security.cookieSecret")
     ? config.get<string>("security.cookieSecret")
     : undefined;
-  const suggestedSecret =
-    currentSecret && currentSecret !== "REPLACE_ME" ? currentSecret : crypto.randomBytes(32).toString("hex");
-  const cookieSecret = await ask(rl, "Cookie secret?", suggestedSecret);
+  const cookieSecret = await ask(rl, "Cookie secret?", pickCookieSecretDefault(currentSecret));
 
   return { security: { allowList, cookieSecret } };
 }

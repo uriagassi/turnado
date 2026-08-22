@@ -111,9 +111,42 @@ describe("findPaperlessNodeInstall / detectPaperlessNode", () => {
     expect(detected?.httpsCertPath).toBeUndefined();
   });
 
-  it("returns null when the merged config has no usable paperless.baseDir", () => {
+  it("returns null when the merged config has neither a usable paperless.baseDir nor https.use", () => {
     const install = tmpDir();
     writeInstall(install, {}, {});
     expect(detectPaperlessNode([install])).toBeNull();
+  });
+
+  it("derives https paths even when paperless.baseDir is absent — the two derivations are independent", () => {
+    const install = tmpDir();
+    writeInstall(
+      install,
+      {},
+      { https: { use: true, key: "/certs/key.pem", cert: "/certs/cert.pem" } }
+    );
+    expect(detectPaperlessNode([install])).toEqual({
+      httpsKeyPath: "/certs/key.pem",
+      httpsCertPath: "/certs/cert.pem",
+    });
+  });
+
+  it("derives db.path/attachments.dir even when https isn't usable — the two derivations are independent", () => {
+    const install = tmpDir();
+    writeInstall(install, { paperless: { baseDir: "/data/paperless" } }, {});
+    expect(detectPaperlessNode([install])).toEqual({
+      dbPath: path.join("/data/paperless", "paperless.sqlite"),
+      attachmentsDir: path.join("/data/paperless", "attachments"),
+    });
+  });
+
+  it("treats an unparseable config/local.json as absent rather than throwing", () => {
+    const install = tmpDir();
+    fs.mkdirSync(path.join(install, "config"), { recursive: true });
+    fs.writeFileSync(path.join(install, "config", "default.json"), JSON.stringify({ paperless: { baseDir: "/data/paperless" } }));
+    fs.writeFileSync(path.join(install, "config", "local.json"), "{ this is not valid json");
+    expect(detectPaperlessNode([install])).toEqual({
+      dbPath: path.join("/data/paperless", "paperless.sqlite"),
+      attachmentsDir: path.join("/data/paperless", "attachments"),
+    });
   });
 });

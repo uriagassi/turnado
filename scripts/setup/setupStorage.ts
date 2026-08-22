@@ -5,18 +5,27 @@
 import os from "node:os";
 import type { Interface } from "node:readline/promises";
 import config from "../../server/src/config.js";
+import { expandHome } from "../../server/src/paths.js";
 import {
-  detectPaperlessNode,
+  findPaperlessNodeInstall,
+  readPaperlessNodeDefaults,
   wellKnownPaperlessNodeDirs,
   type PaperlessNodeDefaults,
 } from "../../server/src/setup/detectPaperlessNode.js";
 import type { ConfigTree } from "../../server/src/setup/deepMerge.js";
 import { repoRoot } from "./repoPaths.js";
-import { ask } from "./prompt.js";
+import { askDetected } from "./prompt.js";
 
-/** Scans the well-known locations (see wellKnownPaperlessNodeDirs) for a paperless.node install; null if none was found. */
-export function detectPaperlessNodeInstall(): PaperlessNodeDefaults | null {
-  return detectPaperlessNode(wellKnownPaperlessNodeDirs(repoRoot, os.homedir()));
+/** installDir is set whenever a well-known location had a config/local.json at all, independent of whether `defaults` came out non-null — the wizard's start-of-run message needs both to avoid conflating "no install found" with "install found, nothing usable in it". */
+export interface PaperlessNodeDetection {
+  installDir: string | null;
+  defaults: PaperlessNodeDefaults | null;
+}
+
+/** Scans the well-known locations (see wellKnownPaperlessNodeDirs) for a paperless.node install. */
+export function detectPaperlessNodeInstall(): PaperlessNodeDetection {
+  const installDir = findPaperlessNodeInstall(wellKnownPaperlessNodeDirs(repoRoot, os.homedir()));
+  return { installDir, defaults: installDir ? readPaperlessNodeDefaults(installDir) : null };
 }
 
 export async function setupStorage(
@@ -24,21 +33,23 @@ export async function setupStorage(
   detected: PaperlessNodeDefaults | null
 ): Promise<ConfigTree> {
   console.log("\n-- Database & attachments --");
-  if (detected) {
+  if (detected?.dbPath) {
     console.log(
       "Detected a paperless.node install — proposing its DB/attachments paths below (edit or accept each)."
     );
   }
 
-  const dbPath = await ask(
+  const dbPath = await askDetected(
     rl,
     "What path should the shared paperless DB file be at?",
-    detected?.dbPath ?? config.get<string>("db.path")
+    detected?.dbPath,
+    expandHome(config.get<string>("db.path"))
   );
-  const attachmentsDir = await ask(
+  const attachmentsDir = await askDetected(
     rl,
     "What directory holds shared attachments?",
-    detected?.attachmentsDir ?? config.get<string>("attachments.dir")
+    detected?.attachmentsDir,
+    expandHome(config.get<string>("attachments.dir"))
   );
 
   return { db: { path: dbPath }, attachments: { dir: attachmentsDir } };
