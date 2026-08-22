@@ -1,7 +1,7 @@
 # Handover: issue #10 "Reminders"
 
-**Branch:** `reminders-issue-10` (branched off `main`, not pushed)
-**Latest code commit:** `096b2a2` — "Reminders (#10): Mailer adapter and ReminderService.runOnce()" (this doc may be committed after it — check `git log` for the true HEAD)
+**Branch:** `reminders-issue-10` (branched off `main`; a remote `origin/reminders-issue-10` exists but local HEAD is 2 commits ahead of it as of this doc — not yet pushed)
+**Latest code commit:** `5278353` — "Reminders (#10): seam 6 code review fix - stale missedReminder on reschedule" (this doc may be committed after it — check `git log` for the true HEAD)
 **GitHub issue:** [uriagassi/turnado#10](https://github.com/uriagassi/turnado/issues/10) (assigned, `ready-for-agent`)
 **Workflow:** built with `/tdd` — one seam at a time, red→green, `/code-review` (Standards + Spec axes) after each slice.
 
@@ -60,10 +60,17 @@ Both sub-slices passed `/code-review` (Standards + Spec); Spec was clean both ti
 
 Full suite: **205/205 green**, typecheck clean (same pre-existing unrelated `heic-convert` error).
 
-## What's left (seams 6–7)
+**Seam 6 — route-level exposure of the "missed" marker** (two commits, `3a5f373` then a same-session review-fix `5278353`)
 
-6. **Route-level exposure of the "missed" marker** — e.g. `GET /api/appointments`/`/api/tasks` (or `/api/home`) including a `missedReminder` flag + reason, sourced from `ReminderLog.missed()`, tested via `supertest` like the existing `*Routes.test.ts` files.
-7. **Server wiring + client badge** — hourly `setInterval` + run-on-startup in `index.ts`, constructing the real `ReminderService` (real `Doctors`/`Appointments`/`Tasks`/`ReminderLog`/`AllowList`/`NodemailerMailer`, `config.get("reminders.timezone")`) and calling `runOnce()`; plus a small marker component in the client, tappable/hoverable for the exact reason. Mostly glue, minimal new tests expected.
+`GET /api/appointments`, `GET /api/appointments/:id`, `GET /api/tasks`, `GET /api/tasks/:id`, and `GET /api/home` (both `nextAppointment` and `openItems`) now attach `missedReminder: MissedReason | null` to each item — the reason string itself doubles as the flag, confirmed with the user before writing tests (rejected a separate `missedReminder: boolean` + `missedReminderReason` pair as more verbose for no benefit). A `withMissedReminder()` route-glue helper in [server/src/app.ts](../server/src/app.ts) joins items to `ReminderLog.missed()`.
+
+`/code-review` (Standards clean; Spec caught a real bug): `ReminderLog.missed()` returns every historical missed row keyed on the item's *old* `targetDate` — rescheduling an item after it was marked missed left the stale reason showing forever, since the fresh pending row lives under a new key and never touches the old one. Fixed by having `withMissedReminder` take a `currentTargetDateOf` callback and only surface the reason when the logged row's `targetDate` still matches the item's *current* date (appointment: `dateTime` via the household timezone; task: `dueDate` as-is, no timezone conversion, same reasoning as decision 4). This needed threading a `remindersTimezone` option through `AppOptions`/`index.ts` (from `config.get("reminders.timezone")`, defaulting to `"Asia/Jerusalem"`) — previously nothing in `app.ts` read that config key at all. Confirmed with the user which of three options to take (fix now / defer as a known gap / treat as intended) before implementing — "fix now" was chosen.
+
+Full suite: **214/214 green**, typecheck clean (same pre-existing unrelated `heic-convert` error).
+
+## What's left (seam 7)
+
+7. **Server wiring + client badge** — hourly `setInterval` + run-on-startup in `index.ts`, constructing the real `ReminderService` (real `Doctors`/`Appointments`/`Tasks`/`ReminderLog`/`AllowList`/`NodemailerMailer`, `config.get("reminders.timezone")` — `remindersTimezone` is now already threaded into `createApp()` by seam 6, so this just needs the same value handed to `ReminderService` too) and calling `runOnce()`; plus a small marker component in the client, tappable/hoverable for the exact reason (`missedReminder` is already on the wire from every relevant route — seam 7 is purely consuming it). Mostly glue, minimal new tests expected.
 
 ## Before this ships
 
@@ -73,4 +80,4 @@ Full suite: **205/205 green**, typecheck clean (same pre-existing unrelated `hei
 
 ## Resuming
 
-Pick up with `/tdd` — seam 6 (route-level "missed" marker exposure) is next. Decisions 1, 3–7 above are settled — no need to re-ask about mail transport, timezone, the "window closed before delivery" split, email localization, or the single-owner model. Re-run `/code-review` (fixed point: `main`, or `origin/main` if still unpushed) after each new slice, same as seams 1–5.
+Pick up with `/tdd` — seam 7 (server wiring + client badge) is next, and is the last one. Decisions 1, 3–7 above are settled — no need to re-ask about mail transport, timezone, the "window closed before delivery" split, email localization, or the single-owner model. Re-run `/code-review` (fixed point: `main`, or `origin/main` if still unpushed) after the new slice, same as seams 1–6.
