@@ -27,4 +27,22 @@ describe("AllowList", () => {
 
     expect(allowList.isAllowed("alice")).toBe(true);
   });
+
+  it("lists the personTagName of every allow-listed entry that has one", () => {
+    const allowList = new AllowList({
+      alice: { locale: "en", email: "alice@example.com", personTagName: "Alice" },
+      bob: { locale: "he", email: "bob@example.com", personTagName: "Bob" },
+    });
+
+    expect(allowList.personTagNames()).toEqual(["Alice", "Bob"]);
+  });
+
+  it("omits an entry from personTagNames when it has no personTagName configured", () => {
+    const allowList = new AllowList({
+      alice: { locale: "en", email: "alice@example.com", personTagName: "Alice" },
+      bob: { locale: "he", email: "bob@example.com" },
+    });
+
+    expect(allowList.personTagNames()).toEqual(["Alice"]);
+  });
 });
