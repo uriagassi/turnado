@@ -7,8 +7,9 @@ import type { Database } from "better-sqlite3";
 import { createApp } from "../src/app.js";
 import { createDb } from "../src/db.js";
 import { StubAuthHandler } from "./support/StubAuthHandler.js";
+import { singleUserAllowList } from "./support/allowListFixture.js";
 
-const allowList = { alice: "en" };
+const allowList = singleUserAllowList();
 const cookieSecret = "test-secret";
 
 describe("/api/doctors", () => {
