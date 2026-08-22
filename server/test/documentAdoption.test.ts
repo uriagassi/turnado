@@ -150,6 +150,69 @@ describe("DocumentAdoption", () => {
     expect(adoption.discoverCandidates().map((c) => c.noteId)).toEqual([newest, middle, oldest]);
   });
 
+  it("guesses the doctor from an existing doctor-tag on the note, when one is present", () => {
+    const db = tmpDb();
+    const tags = new SharedTags(db);
+    db.exec(`
+      CREATE TABLE Doctors (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        tagId INTEGER NOT NULL
+      );
+    `);
+    const doctorTagId = tags.findOrCreatePath("Dr. Cohen");
+    const doctorId = Number(
+      db.prepare(`INSERT INTO Doctors (name, tagId) VALUES (?, ?)`).run("Dr. Cohen", doctorTagId)
+        .lastInsertRowid,
+    );
+
+    const noteId = insertNote(db, "Some untitled scan result");
+    tagNote(db, noteId, doctorTagId);
+
+    const adoption = new DocumentAdoption(db, ["Alice"]);
+
+    expect(adoption.guessDoctorId(noteId, "Some untitled scan result")).toBe(doctorId);
+  });
+
+  it("falls back to parsing the title for a known doctor's name, when the note has no doctor-tag", () => {
+    const db = tmpDb();
+    const tags = new SharedTags(db);
+    db.exec(`
+      CREATE TABLE Doctors (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        tagId INTEGER NOT NULL
+      );
+    `);
+    const doctorTagId = tags.findOrCreatePath("Dr. Cohen");
+    const doctorId = Number(
+      db.prepare(`INSERT INTO Doctors (name, tagId) VALUES (?, ?)`).run("Dr. Cohen", doctorTagId)
+        .lastInsertRowid,
+    );
+
+    const noteId = insertNote(db, "Referral letter from Dr. Cohen");
+
+    const adoption = new DocumentAdoption(db, ["Alice"]);
+
+    expect(adoption.guessDoctorId(noteId, "Referral letter from Dr. Cohen")).toBe(doctorId);
+  });
+
+  it("returns null when the note has no doctor-tag and no known doctor's name in the title", () => {
+    const db = tmpDb();
+    db.exec(`
+      CREATE TABLE Doctors (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        tagId INTEGER NOT NULL
+      );
+    `);
+    const noteId = insertNote(db, "Quarterly pension statement");
+
+    const adoption = new DocumentAdoption(db, ["Alice"]);
+
+    expect(adoption.guessDoctorId(noteId, "Quarterly pension statement")).toBeNull();
+  });
+
   it("excludes a note owned by a person outside the configured in-scope list", () => {
     const db = tmpDb();
     const tags = new SharedTags(db);

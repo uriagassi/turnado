@@ -22,6 +22,7 @@ export class SharedTags {
   private readonly findByNameStmt: Statement;
   private readonly insertStmt: Statement;
   private readonly renameStmt: Statement;
+  private readonly findChildrenStmt: Statement;
 
   constructor(db: Database) {
     db.exec(`
@@ -37,6 +38,7 @@ export class SharedTags {
     this.findByNameStmt = db.prepare(`SELECT tagId, parentId FROM Tags WHERE name = ?`);
     this.insertStmt = db.prepare(`INSERT INTO Tags (name, parentId, isExpanded) VALUES ($name, $parentId, 0)`);
     this.renameStmt = db.prepare(`UPDATE Tags SET name = ? WHERE tagId = ?`);
+    this.findChildrenStmt = db.prepare(`SELECT tagId FROM Tags WHERE parentId = ?`);
   }
 
   findByName(name: string): SharedTag | undefined {
@@ -49,6 +51,16 @@ export class SharedTags {
 
   rename(tagId: number, name: string): void {
     this.renameStmt.run(name, tagId);
+  }
+
+  /** A tag and every tag nested under it, transitively — includes `tagId` itself. Used by DocumentAdoption.ts to resolve the existing "medical" tag subtree, which may itself have sub-categories (e.g. a pre-existing "medical/legacy-scans"). */
+  descendantIds(tagId: number): number[] {
+    const ids = [tagId];
+    const children = this.findChildrenStmt.all(tagId) as { tagId: number }[];
+    for (const child of children) {
+      ids.push(...this.descendantIds(child.tagId));
+    }
+    return ids;
   }
 
   /**
