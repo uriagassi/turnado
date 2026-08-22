@@ -12,6 +12,8 @@ export interface DueReminder {
   itemType: ReminderItemType;
   itemId: number;
   targetDate: string;
+  /** The source item's owner (issue #10) — null flows through as-is; ReminderService treats a null owner as "no reminder due" rather than guessing a recipient. */
+  ownerUsername: string | null;
 }
 
 /**
@@ -48,17 +50,76 @@ export function selectDueReminders(appointments: Appointment[], tasks: Task[], n
   return [...dueAppointments, ...dueTasks];
 }
 
+/**
+ * Every appointment/task whose own date has already passed `now` (issue
+ * #10's "window closed before delivery" case) — same reminder-eligibility
+ * filter as selectDueReminders (planned appointment / open-or-in-progress
+ * task with a due date), just for `date < today` instead of `date ===
+ * tomorrow`. ReminderService cross-references this against ReminderLog: an
+ * item here with zero log history means the server was down for that
+ * item's *entire* one-day-ahead window, since selectDueReminders would
+ * have surfaced it — and therefore created a log row — on some earlier
+ * tick otherwise.
+ */
+export function selectPastDueItems(appointments: Appointment[], tasks: Task[], now: Date, timezone: string): DueReminder[] {
+  const today = dateOnly(now, timezone);
+
+  const pastAppointments = pastDueItems(
+    appointments,
+    (a) => a.status === "planned",
+    "appointment",
+    (a) => dateOnly(new Date(a.dateTime), timezone),
+    today,
+  );
+  const pastTasks = pastDueItems(
+    tasks,
+    (t) => (t.status === "open" || t.status === "in-progress") && !!t.dueDate,
+    "task",
+    (t) => t.dueDate!,
+    today,
+  );
+
+  return [...pastAppointments, ...pastTasks];
+}
+
+// Mirrors dueItems below, but each item's targetDate is its own date rather
+// than one shared "tomorrow" — so targetDateOf is computed once per item
+// (via the intermediate map) instead of once for the filter and again for
+// the wrap, the way a single combined filter+map predicate would otherwise
+// require.
+function pastDueItems<T extends { id: number; ownerUsername: string | null }>(
+  items: T[],
+  isEligible: (item: T) => boolean,
+  itemType: ReminderItemType,
+  targetDateOf: (item: T) => string,
+  today: string,
+): DueReminder[] {
+  return items
+    .filter(isEligible)
+    .map((item) => ({ item, targetDate: targetDateOf(item) }))
+    .filter(({ targetDate }) => targetDate < today)
+    .map(({ item, targetDate }) => wrap(item, itemType, targetDate));
+}
+
 // Shared filter->wrap shape behind both branches above: keep only the items
 // due today, and wrap each into the (itemType, itemId, targetDate) key —
 // the one thing an appointment-due-tomorrow and a task-due-tomorrow really
 // have in common here, once "is it due" is left to the caller's predicate.
-function dueItems<T extends { id: number }>(
+function dueItems<T extends { id: number; ownerUsername: string | null }>(
   items: T[],
   isDue: (item: T) => boolean,
   itemType: ReminderItemType,
   targetDate: string,
 ): DueReminder[] {
-  return items.filter(isDue).map((item) => ({ itemType, itemId: item.id, targetDate }));
+  return items.filter(isDue).map((item) => wrap(item, itemType, targetDate));
+}
+
+function wrap<T extends { id: number; ownerUsername: string | null }>(
+  item: T,
+  itemType: ReminderItemType,
+  targetDate: string,
+): DueReminder {
+  return { itemType, itemId: item.id, targetDate, ownerUsername: item.ownerUsername };
 }
 
 // en-CA renders as YYYY-MM-DD, giving this the same shape Task.dueDate and

@@ -231,7 +231,7 @@ export function createApp(options: AppOptions): Express {
     });
     app.post("/api/appointments", (req, res) => {
       try {
-        res.status(201).json(appointments.create(req.body));
+        res.status(201).json(appointments.create(req.body, req.userName ?? null));
       } catch (err) {
         if (err instanceof InvalidAppointmentInputError) return res.status(400).json({ error: err.message });
         throw err;
@@ -278,7 +278,7 @@ export function createApp(options: AppOptions): Express {
     });
     app.post("/api/tasks", (req, res) => {
       try {
-        res.status(201).json(tasks.create(req.body));
+        res.status(201).json(tasks.create(req.body, req.userName ?? null));
       } catch (err) {
         if (err instanceof InvalidTaskInputError) return res.status(400).json({ error: err.message });
         throw err;
@@ -416,12 +416,18 @@ export function createApp(options: AppOptions): Express {
         const appointment = appointments.get(appointmentId);
         if (!appointment) continue;
         const doctor = appointment.doctorId ? doctors.get(appointment.doctorId) : undefined;
-        const form17Task = tasks.create({
-          type: "form_17",
-          title: doctor ? `Form 17 for ${doctor.name}` : "Form 17",
-          doctorId: appointment.doctorId,
-          sourceAppointmentId: appointment.id,
-        });
+        // Owned by the source appointment's owner, not the uploader (issue
+        // #10) — this task exists because of that appointment, so its
+        // reminders should reach whoever is already tracking it.
+        const form17Task = tasks.create(
+          {
+            type: "form_17",
+            title: doctor ? `Form 17 for ${doctor.name}` : "Form 17",
+            doctorId: appointment.doctorId,
+            sourceAppointmentId: appointment.id,
+          },
+          appointment.ownerUsername,
+        );
         documents.linkTask(invitation.id, form17Task.id);
       }
     }

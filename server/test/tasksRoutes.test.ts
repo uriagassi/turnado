@@ -98,6 +98,16 @@ describe("/api/tasks routes", () => {
       });
       expect(res.status).toBe(400);
     });
+
+    it("owns the created task as the signed-in user, ignoring any client-supplied ownerUsername (issue #10)", async () => {
+      const agent = signedInAgent(tmpDb());
+
+      const res = await agent
+        .post("/api/tasks")
+        .send({ type: "test", title: "Blood test", ownerUsername: "someone-else" });
+
+      expect(res.body.ownerUsername).toBe("alice");
+    });
   });
 
   describe("GET /api/tasks/:id", () => {

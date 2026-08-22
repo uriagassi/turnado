@@ -59,6 +59,25 @@ describe("Appointments", () => {
       expect(created.notes).toBe("Annual checkup");
       expect(created.dateTime).toBe("2026-09-01T10:00:00Z");
     });
+
+    it("defaults ownerUsername to null when none is given", () => {
+      const appointments = tmpAppointments();
+
+      const created = appointments.create({ notes: "Annual checkup", dateTime: "2026-09-01T10:00:00Z" });
+
+      expect(created.ownerUsername).toBeNull();
+    });
+
+    it("records the given ownerUsername (issue #10: reminders go to the item's owner)", () => {
+      const appointments = tmpAppointments();
+
+      const created = appointments.create(
+        { notes: "Annual checkup", dateTime: "2026-09-01T10:00:00Z" },
+        "alice",
+      );
+
+      expect(created.ownerUsername).toBe("alice");
+    });
   });
 
   describe("list", () => {
@@ -98,6 +117,21 @@ describe("Appointments", () => {
         location: "Clinic B",
       });
       expect(appointments.list()).toHaveLength(1);
+    });
+
+    it("leaves ownerUsername unchanged across an update (immutable after creation)", () => {
+      const appointments = tmpAppointments();
+      const created = appointments.create(
+        { notes: "Annual checkup", dateTime: "2026-09-01T10:00:00Z" },
+        "alice",
+      );
+
+      const updated = appointments.update(created.id, {
+        notes: "Annual checkup, rescheduled",
+        dateTime: "2026-09-08T10:00:00Z",
+      });
+
+      expect(updated.ownerUsername).toBe("alice");
     });
 
     it("throws AppointmentNotFoundError for an id that doesn't exist, instead of crashing", () => {

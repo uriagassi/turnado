@@ -14,6 +14,7 @@ function appt(overrides: Partial<Appointment> = {}): Appointment {
     notes: "Bring insurance card",
     status: "planned",
     summary: null,
+    ownerUsername: null,
     ...overrides,
   };
 }
@@ -40,6 +41,7 @@ function task(overrides: Partial<Task> = {}): Task {
     purpose: null,
     createdAt: "",
     updatedAt: "",
+    ownerUsername: null,
     ...overrides,
   };
 }
