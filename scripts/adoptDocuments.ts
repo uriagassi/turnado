@@ -18,6 +18,7 @@ import { Documents, VALID_DOCUMENT_TYPES, type DocumentType } from "../server/sr
 import { DocumentAdoption } from "../server/src/documents/DocumentAdoption.js";
 import { guessDocumentType } from "../server/src/documents/guessDocumentType.js";
 import { Doctors } from "../server/src/doctors/Doctors.js";
+import { isolate } from "./terminalText.js";
 
 /**
  * Thrown by checkControlAnswer() to unwind reviewOne() when the reviewer
@@ -85,8 +86,19 @@ if (candidates.length === 0) {
 }
 
 const doctorNamesById = new Map(doctors.list().map((d) => [d.id, d.name]));
-console.log(`Known doctors: ${doctors.list().map((d) => `${d.id}=${d.name}`).join(", ") || "(none)"}`);
-console.log(`${candidates.length} candidate document(s) to review, newest first.\n`);
+console.log("Known doctors:");
+if (doctors.list().length === 0) {
+  console.log("  (none)");
+} else {
+  // One doctor per line, not one comma-joined line — a Hebrew name mixed
+  // inline with "id=", ",", and an English name right after it is exactly
+  // the kind of bidi-adjacent-to-ASCII-punctuation line terminals mangle
+  // worst (see terminalText.ts).
+  for (const d of doctors.list()) {
+    console.log(`  ${d.id}: ${isolate(d.name)}`);
+  }
+}
+console.log(`\n${candidates.length} candidate document(s) to review, newest first.\n`);
 
 const rl = readline.createInterface({ input: stdin, output: stdout });
 
@@ -99,9 +111,12 @@ for (const [index, candidate] of candidates.entries()) {
   const guessedDoctorName = guessedDoctorId !== null ? doctorNamesById.get(guessedDoctorId) : undefined;
 
   console.log(`\n[${index + 1}/${candidates.length}] Note #${candidate.noteId} (${candidate.createTime})`);
-  console.log(`  "${candidate.title}"`);
+  // No quote marks wrapped directly around the title — with RTL text those
+  // routinely get mirrored to the wrong side by the terminal instead of
+  // framing it cleanly (see terminalText.ts).
+  console.log(`  Title: ${isolate(candidate.title)}`);
   console.log(`  Proposed type: ${guessedType}`);
-  console.log(`  Proposed doctor: ${guessedDoctorName ?? "(none)"}`);
+  console.log(`  Proposed doctor: ${guessedDoctorName ? isolate(guessedDoctorName) : "(none)"}`);
 
   let quit = false;
   try {
