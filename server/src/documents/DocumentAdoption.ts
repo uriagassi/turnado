@@ -1,5 +1,6 @@
 import type { Database } from "better-sqlite3";
 import { SharedTags } from "../doctors/SharedTags.js";
+import { guessDoctorFromTitle } from "./guessDoctor.js";
 
 /**
  * Default title keywords for the second candidate-discovery source (issue
@@ -39,12 +40,6 @@ export interface AdoptionCandidate {
   createTime: string;
 }
 
-interface CandidateRow {
-  noteId: number;
-  title: string;
-  createTime: string;
-}
-
 /**
  * One-time discovery of historical medical documents already sitting in the
  * shared document archive, not yet promoted into this app's Document model
@@ -79,14 +74,39 @@ export class DocumentAdoption {
     const byTag = this.findByMedicalTag(personTagIds);
     const byKeyword = this.findByTitleKeyword(personTagIds);
 
-    const byNoteId = new Map<number, CandidateRow>();
-    for (const row of [...byTag, ...byKeyword]) {
-      byNoteId.set(row.noteId, row);
+    const byNoteId = new Map<number, AdoptionCandidate>();
+    for (const candidate of [...byTag, ...byKeyword]) {
+      byNoteId.set(candidate.noteId, candidate);
     }
 
-    return Array.from(byNoteId.values())
-      .sort((a, b) => (a.createTime < b.createTime ? 1 : a.createTime > b.createTime ? -1 : b.noteId - a.noteId))
-      .map((r) => ({ noteId: r.noteId, title: r.title, createTime: r.createTime }));
+    return Array.from(byNoteId.values()).sort((a, b) =>
+      a.createTime < b.createTime ? 1 : a.createTime > b.createTime ? -1 : b.noteId - a.noteId,
+    );
+  }
+
+  /**
+   * Guesses which doctor a candidate belongs to (issue #14): an existing
+   * doctor-tag already on the Note wins first — it reflects a real prior
+   * link, not a guess — falling back to matching a known doctor's name
+   * against the free-text title only when no such tag is present.
+   */
+  guessDoctorId(noteId: number, title: string): number | null {
+    const tagMatch = this.db
+      .prepare(
+        `SELECT d.id FROM Doctors d
+         JOIN NoteTags nt ON nt.tagId = d.tagId
+         WHERE nt.noteId = ?
+         LIMIT 1`,
+      )
+      .get(noteId) as { id: number } | undefined;
+    if (tagMatch) return tagMatch.id;
+
+    const doctors = this.db.prepare(`SELECT id, name, tagId FROM Doctors`).all() as {
+      id: number;
+      name: string;
+      tagId: number;
+    }[];
+    return guessDoctorFromTitle(title, doctors)?.id ?? null;
   }
 
   // Tag names are globally unique (Tags.name has a unique index — see
@@ -101,50 +121,52 @@ export class DocumentAdoption {
   }
 
   /** Source 1: Notes under the existing "medical" tag subtree, owned by an in-scope person, not yet adopted. */
-  private findByMedicalTag(personTagIds: number[]): CandidateRow[] {
+  private findByMedicalTag(personTagIds: number[]): AdoptionCandidate[] {
     const medicalTag = this.tags.findByName("medical");
     if (!medicalTag) return [];
-    const medicalTagIds = this.subtreeTagIds(medicalTag.tagId);
-
+    const medicalTagIds = this.tags.descendantIds(medicalTag.tagId);
     const medicalPlaceholders = medicalTagIds.map(() => "?").join(",");
-    const personPlaceholders = personTagIds.map(() => "?").join(",");
-    return this.db
-      .prepare(
-        `SELECT n.noteId, n.title, n.createTime FROM Notes n
-         JOIN NoteTags medicalNt ON medicalNt.noteId = n.noteId AND medicalNt.tagId IN (${medicalPlaceholders})
-         JOIN NoteTags personNt ON personNt.noteId = n.noteId AND personNt.tagId IN (${personPlaceholders})
-         LEFT JOIN DocumentMeta dm ON dm.noteId = n.noteId
-         WHERE dm.noteId IS NULL`,
-      )
-      .all(...medicalTagIds, ...personTagIds) as CandidateRow[];
+
+    return this.findUnadoptedOwnedNotes(
+      personTagIds,
+      `JOIN NoteTags medicalNt ON medicalNt.noteId = n.noteId AND medicalNt.tagId IN (${medicalPlaceholders})`,
+      medicalTagIds,
+    );
   }
 
-  /** Source 2: Notes with no medical tag at all, whose title matches a medical keyword, owned by an in-scope person, not yet adopted. */
-  private findByTitleKeyword(personTagIds: number[]): CandidateRow[] {
+  /**
+   * Source 2: Notes whose title matches a medical keyword, owned by an
+   * in-scope person, not yet adopted. Doesn't itself exclude Notes that
+   * also carry the "medical" tag — `discoverCandidates()`'s noteId-keyed
+   * merge with source 1 is what keeps a doubly-matching Note from
+   * appearing twice, rather than this query filtering it out.
+   */
+  private findByTitleKeyword(personTagIds: number[]): AdoptionCandidate[] {
     if (this.titleKeywords.length === 0) return [];
 
-    const personPlaceholders = personTagIds.map(() => "?").join(",");
     const keywordConditions = this.titleKeywords.map(() => `n.title LIKE ? COLLATE NOCASE`).join(" OR ");
     const keywordParams = this.titleKeywords.map((k) => `%${k}%`);
+
+    return this.findUnadoptedOwnedNotes(personTagIds, "", [], `AND (${keywordConditions})`, keywordParams);
+  }
+
+  /** Shared query shape both discovery sources need: unadopted Notes owned by an in-scope person, plus whatever extra join/predicate distinguishes the source. */
+  private findUnadoptedOwnedNotes(
+    personTagIds: number[],
+    extraJoinSql: string,
+    extraJoinParams: unknown[],
+    extraWhereSql = "",
+    extraWhereParams: unknown[] = [],
+  ): AdoptionCandidate[] {
+    const personPlaceholders = personTagIds.map(() => "?").join(",");
     return this.db
       .prepare(
         `SELECT n.noteId, n.title, n.createTime FROM Notes n
+         ${extraJoinSql}
          JOIN NoteTags personNt ON personNt.noteId = n.noteId AND personNt.tagId IN (${personPlaceholders})
          LEFT JOIN DocumentMeta dm ON dm.noteId = n.noteId
-         WHERE dm.noteId IS NULL AND (${keywordConditions})`,
+         WHERE dm.noteId IS NULL ${extraWhereSql}`,
       )
-      .all(...personTagIds, ...keywordParams) as CandidateRow[];
-  }
-
-  /** A tag and every tag nested under it, transitively (the "medical" subtree may itself have sub-categories, e.g. a pre-existing "medical/legacy-scans"). */
-  private subtreeTagIds(rootTagId: number): number[] {
-    const ids = [rootTagId];
-    const children = this.db.prepare(`SELECT tagId FROM Tags WHERE parentId = ?`).all(rootTagId) as {
-      tagId: number;
-    }[];
-    for (const child of children) {
-      ids.push(...this.subtreeTagIds(child.tagId));
-    }
-    return ids;
+      .all(...extraJoinParams, ...personTagIds, ...extraWhereParams) as AdoptionCandidate[];
   }
 }
