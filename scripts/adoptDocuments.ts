@@ -81,6 +81,19 @@ console.log(`\nDone for this session: ${confirmed} adopted, ${skipped} skipped. 
 rl.close();
 db.close();
 
+/** Thrown by a prompt helper below to unwind reviewOne() when the reviewer quits, skips, or gives unparseable input at any of its three prompts — so every prompt is a real stopping/skip point, not just the first one. */
+class ReviewControl extends Error {
+  constructor(public readonly action: "quit" | "skip") {
+    super(action);
+  }
+}
+
+/** `q`/`s` are recognized at every prompt in reviewOne(), not only the first — issue #14 review: "stop at any point" should hold mid-candidate too. */
+function checkControlAnswer(answer: string): void {
+  if (answer === "q") throw new ReviewControl("quit");
+  if (answer === "s") throw new ReviewControl("skip");
+}
+
 /** Reviews one candidate; returns true if the reviewer asked to quit. */
 async function reviewOne(candidate: AdoptionCandidate, index: number): Promise<boolean> {
   const guessedType = guessDocumentType(candidate.title);
@@ -92,43 +105,53 @@ async function reviewOne(candidate: AdoptionCandidate, index: number): Promise<b
   console.log(`  Proposed type: ${guessedType}`);
   console.log(`  Proposed doctor: ${guessedDoctorName ?? "(none)"}`);
 
-  const typeAnswer = (
-    await rl.question(`  Type [Enter=${guessedType}, or one of ${[...VALID_DOCUMENT_TYPES].join("/")}, s=skip, q=quit]: `)
-  ).trim();
-  if (typeAnswer === "q") return true;
-  if (typeAnswer === "s") {
-    skipped++;
-    return false;
-  }
-  const type: DocumentType = typeAnswer === "" ? guessedType : (typeAnswer as DocumentType);
-  if (!VALID_DOCUMENT_TYPES.has(type)) {
-    console.log(`  Unrecognized type "${typeAnswer}" — skipping this candidate.`);
-    skipped++;
-    return false;
-  }
-
-  const doctorAnswer = (
-    await rl.question(`  Doctor id [Enter=${guessedDoctorId ?? "none"}, or a doctor id, or "none"]: `)
-  ).trim();
-  const doctorId =
-    doctorAnswer === ""
-      ? guessedDoctorId
-      : doctorAnswer === "none"
-        ? null
-        : Number.isFinite(Number(doctorAnswer))
-          ? Number(doctorAnswer)
-          : guessedDoctorId;
-
-  const dateAnswer = (await rl.question(`  Document date [YYYY-MM-DD, Enter to leave blank]: `)).trim();
-  const documentDate = dateAnswer === "" ? null : dateAnswer;
-
   try {
+    const typeAnswer = (
+      await rl.question(
+        `  Type [Enter=${guessedType}, or one of ${[...VALID_DOCUMENT_TYPES].join("/")}, s=skip, q=quit]: `,
+      )
+    ).trim();
+    checkControlAnswer(typeAnswer);
+    const type: DocumentType = typeAnswer === "" ? guessedType : (typeAnswer as DocumentType);
+    if (!VALID_DOCUMENT_TYPES.has(type)) {
+      console.log(`  Unrecognized type "${typeAnswer}" — skipping this candidate.`);
+      throw new ReviewControl("skip");
+    }
+
+    const doctorAnswer = (
+      await rl.question(`  Doctor id [Enter=${guessedDoctorId ?? "none"}, or a doctor id, "none", s, q]: `)
+    ).trim();
+    checkControlAnswer(doctorAnswer);
+    let doctorId: number | null;
+    if (doctorAnswer === "") {
+      doctorId = guessedDoctorId;
+    } else if (doctorAnswer === "none") {
+      doctorId = null;
+    } else if (Number.isFinite(Number(doctorAnswer))) {
+      doctorId = Number(doctorAnswer);
+    } else {
+      console.log(`  Unrecognized doctor id "${doctorAnswer}" — skipping this candidate.`);
+      throw new ReviewControl("skip");
+    }
+
+    const dateAnswer = (
+      await rl.question(`  Document date [YYYY-MM-DD, Enter to leave blank, s, q]: `)
+    ).trim();
+    checkControlAnswer(dateAnswer);
+    const documentDate = dateAnswer === "" ? null : dateAnswer;
+
     const adopted = documents.adopt(candidate.noteId, { type, doctorId, documentDate });
     console.log(`  Adopted as Document #${adopted.id}.`);
     confirmed++;
+    return false;
   } catch (err) {
+    if (err instanceof ReviewControl) {
+      if (err.action === "quit") return true;
+      skipped++;
+      return false;
+    }
     console.log(`  Failed to adopt: ${(err as Error).message}`);
     skipped++;
+    return false;
   }
-  return false;
 }
