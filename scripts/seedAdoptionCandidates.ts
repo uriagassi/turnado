@@ -12,18 +12,39 @@
 //   - an out-of-scope person (should never surface)
 //   - an already-adopted note (should never resurface)
 //
+// Idempotent: every fixture Note also carries a "dev-fixture/adoption-
+// candidates" marker tag, and re-running this script deletes anything
+// already carrying that tag before inserting fresh rows — re-running it
+// (by hand, or by anything else that decides to) can't silently double up
+// fixtures the way a plain unconditional INSERT would.
+//
 // Run: npx tsx scripts/seedAdoptionCandidates.ts
 import config from "../server/src/config.js";
 import { createDb } from "../server/src/db.js";
 import { expandHome } from "../server/src/paths.js";
 import { SharedTags } from "../server/src/doctors/SharedTags.js";
 import { Doctors } from "../server/src/doctors/Doctors.js";
+import { isolate } from "./terminalText.js";
 
 const dbPath = expandHome(config.get<string>("db.path"));
 const db = createDb(dbPath, config.get<number>("db.busyTimeoutMs"));
 
 const tags = new SharedTags(db);
 const doctors = new Doctors(db, "medical/doctors");
+
+const fixtureMarkerTagId = tags.findOrCreatePath("dev-fixture/adoption-candidates");
+
+const previouslySeededNoteIds = (
+  db.prepare(`SELECT noteId FROM NoteTags WHERE tagId = ?`).all(fixtureMarkerTagId) as { noteId: number }[]
+).map((r) => r.noteId);
+
+if (previouslySeededNoteIds.length > 0) {
+  const placeholders = previouslySeededNoteIds.map(() => "?").join(",");
+  db.prepare(`DELETE FROM NoteTags WHERE noteId IN (${placeholders})`).run(...previouslySeededNoteIds);
+  db.prepare(`DELETE FROM DocumentMeta WHERE noteId IN (${placeholders})`).run(...previouslySeededNoteIds);
+  db.prepare(`DELETE FROM Notes WHERE noteId IN (${placeholders})`).run(...previouslySeededNoteIds);
+  console.log(`Removed ${previouslySeededNoteIds.length} previously-seeded fixture Note(s) before reseeding.`);
+}
 
 // The "person/Dana" tag matches config/local.json's security.allowList
 // .user-one.personTagName ("Dana") — see docs/handover-issue-14.md.
@@ -42,11 +63,13 @@ const archiveNotebookId = (
 )?.notebookId ?? 1;
 
 function insertNote(title: string, createTime: string): number {
-  return Number(
+  const noteId = Number(
     db
       .prepare(`INSERT INTO Notes (notebookId, title, createTime, updateTime) VALUES (?, ?, ?, ?)`)
       .run(archiveNotebookId, title, createTime, createTime).lastInsertRowid,
   );
+  tagNote(noteId, fixtureMarkerTagId);
+  return noteId;
 }
 
 function tagNote(noteId: number, tagId: number): void {
@@ -102,7 +125,7 @@ console.log("Seeded adoption-candidate fixtures:");
 console.log(`  ${bloodTest} "Old lab printout" — tag-subtree ("medical")`);
 console.log(`  ${legacyScan} "2019 imaging, box 3" — tag-subtree (nested "medical/legacy-scans")`);
 console.log(`  ${referral} "Referral letter from Dr. Dan Cohen" — title keyword, doctor guessed from title`);
-console.log(`  ${approval} "אישור ביטוח נסיעות לחו\"ל" — title keyword (Hebrew)`);
+console.log(`  ${approval} ${isolate("אישור ביטוח נסיעות לחו\"ל")} — title keyword (Hebrew)`);
 console.log(`  ${taggedToDoctor} "Old test report" — tag-subtree, doctor guessed from existing doctor-tag`);
 console.log(`  ${otherPerson} "Guy's old scan" — should NOT appear (out-of-scope person)`);
 console.log(`  ${alreadyAdopted} "Already-handled letter" — should NOT appear (already adopted)`);
