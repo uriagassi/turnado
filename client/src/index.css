@@ -298,6 +298,29 @@ h1 {
   color: var(--color-text-dim);
 }
 
+/* Open items on the appointment checklist (issue #9 follow-up): a real
+   checkbox beside the title rather than the plain .item-row's
+   space-between layout, so checking one off reads as ticking a list, not
+   as two unrelated ends of a card. */
+.checklist-item {
+  justify-content: flex-start;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.checklist-checkbox {
+  flex-shrink: 0;
+  width: 1.125rem;
+  height: 1.125rem;
+  cursor: pointer;
+  accent-color: var(--color-primary);
+}
+
+.checklist-item-title.done {
+  text-decoration: line-through;
+  color: var(--color-text-dim);
+}
+
 /* Read-only status pill — same palette as the interactive
    .appointment-status-field.status-* select, for contexts (like this
    next-appointment card) that only display a status rather than edit it. */
@@ -622,9 +645,27 @@ html[dir="rtl"] .back-link-arrow {
   font-weight: 600;
 }
 
+.appointment-open-link {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: start;
+  cursor: pointer;
+}
+
 .appointment-location {
   font-size: 0.8125rem;
   color: var(--color-text-dim);
+}
+
+/* Plain-text doctor name on an appointment list row (issue #9 follow-up) —
+   not a link here, see AppointmentCard's own doc comment on why. */
+.appointment-doctor-name {
+  font-weight: 600;
 }
 
 .appointment-doctor-link {

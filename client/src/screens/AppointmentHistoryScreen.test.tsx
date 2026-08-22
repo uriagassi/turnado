@@ -26,14 +26,7 @@ describe("AppointmentHistoryScreen", () => {
     const appointments = [appt({ id: 1, notes: "Annual checkup" }), appt({ id: 2, notes: "MRI scan" })];
 
     render(
-      <AppointmentHistoryScreen
-        appointments={appointments}
-        doctors={doctors}
-        onSelectDoctor={noop}
-        onEdit={noop}
-        onStatusChange={noop}
-        onSaveSummary={noop}
-      />,
+      <AppointmentHistoryScreen appointments={appointments} doctors={doctors} onEdit={noop} onStatusChange={noop} onSaveSummary={noop} />,
     );
 
     expect(screen.getByText("Annual checkup")).toBeInTheDocument();
@@ -41,52 +34,37 @@ describe("AppointmentHistoryScreen", () => {
   });
 
   it("shows an empty state when there are no past appointments", () => {
-    render(
-      <AppointmentHistoryScreen
-        appointments={[]}
-        doctors={doctors}
-        onSelectDoctor={noop}
-        onEdit={noop}
-        onStatusChange={noop}
-        onSaveSummary={noop}
-      />,
-    );
+    render(<AppointmentHistoryScreen appointments={[]} doctors={doctors} onEdit={noop} onStatusChange={noop} onSaveSummary={noop} />);
 
     expect(screen.getByText("No past appointments yet.")).toBeInTheDocument();
   });
 
-  it("links a card's doctor name into that doctor's detail view (issue #4 AC)", async () => {
-    const user = userEvent.setup();
-    const onSelectDoctor = vi.fn();
+  it("shows a card's doctor name (not a link — see AppointmentCard)", () => {
     render(
       <AppointmentHistoryScreen
         appointments={[appt({ doctorId: 1 })]}
         doctors={doctors}
-        onSelectDoctor={onSelectDoctor}
         onEdit={noop}
         onStatusChange={noop}
         onSaveSummary={noop}
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Dr. Jane Smith" }));
-
-    expect(onSelectDoctor).toHaveBeenCalledWith(doctors[0]);
+    expect(screen.getByText("Dr. Jane Smith")).toBeInTheDocument();
   });
 
-  it("omits the doctor link for an appointment with no doctor attached", () => {
+  it("omits the doctor name for an appointment with no doctor attached", () => {
     render(
       <AppointmentHistoryScreen
         appointments={[appt({ doctorId: null })]}
         doctors={doctors}
-        onSelectDoctor={noop}
         onEdit={noop}
         onStatusChange={noop}
         onSaveSummary={noop}
       />,
     );
 
-    expect(screen.queryByRole("button", { name: "Dr. Jane Smith" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Dr. Jane Smith")).not.toBeInTheDocument();
   });
 
   it("calls onEdit with the appointment when its edit control is activated", async () => {
@@ -94,14 +72,7 @@ describe("AppointmentHistoryScreen", () => {
     const onEdit = vi.fn();
     const appointment = appt({ id: 7 });
     render(
-      <AppointmentHistoryScreen
-        appointments={[appointment]}
-        doctors={doctors}
-        onSelectDoctor={noop}
-        onEdit={onEdit}
-        onStatusChange={noop}
-        onSaveSummary={noop}
-      />,
+      <AppointmentHistoryScreen appointments={[appointment]} doctors={doctors} onEdit={onEdit} onStatusChange={noop} onSaveSummary={noop} />,
     );
 
     await user.click(screen.getByRole("button", { name: "Edit" }));
@@ -117,7 +88,6 @@ describe("AppointmentHistoryScreen", () => {
       <AppointmentHistoryScreen
         appointments={[appointment]}
         doctors={doctors}
-        onSelectDoctor={noop}
         onEdit={noop}
         onStatusChange={onStatusChange}
         onSaveSummary={noop}
@@ -134,7 +104,6 @@ describe("AppointmentHistoryScreen", () => {
       <AppointmentHistoryScreen
         appointments={[appt({ status: "planned" })]}
         doctors={doctors}
-        onSelectDoctor={noop}
         onEdit={noop}
         onStatusChange={noop}
         onSaveSummary={noop}
@@ -146,7 +115,6 @@ describe("AppointmentHistoryScreen", () => {
       <AppointmentHistoryScreen
         appointments={[appt({ status: "done" })]}
         doctors={doctors}
-        onSelectDoctor={noop}
         onEdit={noop}
         onStatusChange={noop}
         onSaveSummary={noop}
@@ -163,7 +131,6 @@ describe("AppointmentHistoryScreen", () => {
       <AppointmentHistoryScreen
         appointments={[appointment]}
         doctors={doctors}
-        onSelectDoctor={noop}
         onEdit={noop}
         onStatusChange={noop}
         onSaveSummary={onSaveSummary}
@@ -181,7 +148,6 @@ describe("AppointmentHistoryScreen", () => {
       <AppointmentHistoryScreen
         appointments={[appt({ status: "done", summary: "Already recorded" })]}
         doctors={doctors}
-        onSelectDoctor={noop}
         onEdit={noop}
         onStatusChange={noop}
         onSaveSummary={noop}
@@ -189,5 +155,26 @@ describe("AppointmentHistoryScreen", () => {
     );
 
     expect(screen.getByRole("button", { name: "Save summary" })).toBeDisabled();
+  });
+
+  it("calls onSelect with the appointment when its Details button is clicked", async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    const appointment = appt({ notes: "Annual checkup" });
+
+    render(
+      <AppointmentHistoryScreen
+        appointments={[appointment]}
+        doctors={doctors}
+        onEdit={noop}
+        onStatusChange={noop}
+        onSaveSummary={noop}
+        onSelect={onSelect}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Details" }));
+
+    expect(onSelect).toHaveBeenCalledWith(appointment);
   });
 });
