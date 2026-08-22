@@ -55,6 +55,7 @@ describe("DoctorDetailScreen", () => {
       notes: "Annual checkup",
       status: "planned" as const,
       summary: null,
+      missedReminder: null,
     };
 
     render(<DoctorDetailScreen doctor={doctor()} appointments={[nextAppointment]} onEdit={() => {}} />);
@@ -72,6 +73,7 @@ describe("DoctorDetailScreen", () => {
       notes: "Annual checkup",
       status: "planned" as const,
       summary: null,
+      missedReminder: null,
     };
     const later = {
       id: 2,
@@ -81,6 +83,7 @@ describe("DoctorDetailScreen", () => {
       notes: "Follow-up",
       status: "planned" as const,
       summary: null,
+      missedReminder: null,
     };
 
     render(<DoctorDetailScreen doctor={doctor()} appointments={[soonest, later]} onEdit={() => {}} />);
@@ -133,6 +136,7 @@ describe("DoctorDetailScreen", () => {
       purpose: null,
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
+      missedReminder: null,
     };
 
     render(

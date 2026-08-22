@@ -103,6 +103,7 @@ describe("AppointmentFormScreen", () => {
       notes: "Annual checkup",
       status: "planned" as const,
       summary: null,
+      missedReminder: null,
     };
 
     render(<AppointmentFormScreen appointment={appointment} doctors={doctors} onSubmit={() => {}} onCancel={() => {}} />);

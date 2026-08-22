@@ -158,6 +158,7 @@ describe("TaskFormScreen", () => {
       purpose: null,
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
+      missedReminder: null,
     };
 
     render(
@@ -199,6 +200,7 @@ describe("TaskFormScreen", () => {
       purpose: null,
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
+      missedReminder: null,
     };
 
     render(

@@ -127,6 +127,7 @@ describe("DoctorsScreen", () => {
       notes: "Checkup",
       status: "planned",
       summary: null,
+      missedReminder: null,
     };
     renderScreen([jane], { nextAppointments: new Map([[1, appointment]]) });
 
