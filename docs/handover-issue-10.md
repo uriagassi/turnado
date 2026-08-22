@@ -1,13 +1,13 @@
-# Handover: issue #10 "Reminders"
+# Handover: issue #10 "Reminders" — COMPLETE (all 7 seams)
 
-**Branch:** `reminders-issue-10` (branched off `main`; a remote `origin/reminders-issue-10` exists but local HEAD is 2 commits ahead of it as of this doc — not yet pushed)
-**Latest code commit:** `5278353` — "Reminders (#10): seam 6 code review fix - stale missedReminder on reschedule" (this doc may be committed after it — check `git log` for the true HEAD)
+**Branch:** `reminders-issue-10` (branched off `main`; a remote `origin/reminders-issue-10` exists but local HEAD is several commits ahead of it as of this doc — not yet pushed, and not yet merged to `main`)
+**Latest code commit:** `c31ffb4` — "Reminders (#10): client missed-reminder badge" (this doc may be committed after it — check `git log` for the true HEAD)
 **GitHub issue:** [uriagassi/turnado#10](https://github.com/uriagassi/turnado/issues/10) (assigned, `ready-for-agent`)
 **Workflow:** built with `/tdd` — one seam at a time, red→green, `/code-review` (Standards + Spec axes) after each slice.
 
 ## What the ticket wants
 
-A user gets a one-day-ahead email reminder for anything with a date (appointment, or task due date), with a visible "missed" marker in the app if a reminder ever failed to go out. Full AC is in the issue; email delivery (sending, not content), UI marker, and poll wiring are not yet touched — see "What's left" below.
+A user gets a one-day-ahead email reminder for anything with a date (appointment, or task due date), with a visible "missed" marker in the app if a reminder ever failed to go out. Full AC is in the issue. **All of it is now implemented** across 7 seams — see below. What's left is deployment prep, not code: see "Before this ships".
 
 ## Decisions made this session (not fully spelled out in the bare issue text)
 
@@ -68,9 +68,21 @@ Full suite: **205/205 green**, typecheck clean (same pre-existing unrelated `hei
 
 Full suite: **214/214 green**, typecheck clean (same pre-existing unrelated `heic-convert` error).
 
-## What's left (seam 7)
+**Seam 7 — server wiring + client badge (final seam)** (three commits: `7381fb3`, `a3e51cf`, `c31ffb4`)
 
-7. **Server wiring + client badge** — hourly `setInterval` + run-on-startup in `index.ts`, constructing the real `ReminderService` (real `Doctors`/`Appointments`/`Tasks`/`ReminderLog`/`AllowList`/`NodemailerMailer`, `config.get("reminders.timezone")` — `remindersTimezone` is now already threaded into `createApp()` by seam 6, so this just needs the same value handed to `ReminderService` too) and calling `runOnce()`; plus a small marker component in the client, tappable/hoverable for the exact reason (`missedReminder` is already on the wire from every relevant route — seam 7 is purely consuming it). Mostly glue, minimal new tests expected.
+Two independent halves, both closing out the same AC lines:
+
+*Server: hourly poll + run-on-startup.* New `schedulePolling(fn, intervalMs)` ([server/src/reminders/schedulePolling.ts](../server/src/reminders/schedulePolling.ts)) runs `fn` immediately then every `intervalMs`, unit-tested with fake timers (run-on-start, hourly recurrence, `stop()`, and — a real gap the TDD loop itself caught, not `/code-review` — a rejected tick getting caught/logged instead of left as an unhandled rejection or silently ending future ticks). [server/src/index.ts](../server/src/index.ts) now constructs the real `ReminderService` (real `Appointments`/`Tasks`/`Doctors`/`ReminderLog`/`AllowList`/`NodemailerMailer`, `config`'s `mail.*` block and `reminders.timezone` — the latter now shared with `createApp()` via one hoisted `remindersTimezone` const, since seam 6 already needed it there) and schedules it hourly. `index.ts`'s own call site is untested glue, consistent with its other wiring.
+
+*Client: the missed-reminder badge.* `client/src/api.ts`'s `Appointment`/`Task` types gained a required `missedReminder: MissedReason | null` (touched ~12 test fixture files — pure type-safety upkeep, no behavior change). New `MissedReminderBadge` ([client/src/components/MissedReminderBadge.tsx](../client/src/components/MissedReminderBadge.tsx)) — same click-to-expand shape as `DocumentsScreen`'s existing `.linked-badge` — covers hover via the native `title` attribute and tap via click-to-expand. Wired into `HomeScreen` (hero card + open-items feed), `AppointmentCard` (so `UpcomingAppointmentsScreen`/`AppointmentHistoryScreen` rows show it too), `AppointmentDetailScreen`, and `TaskDetailScreen`. New `reminder.missed.*` locale keys (en/he). The badge component itself has no dedicated test file — verified through each consuming screen's test, the same convention this codebase already uses for `TaskStatusBadge` and `.linked-badge`.
+
+`/code-review` (Standards + Spec) on seam 7: Spec clean, no findings. Standards flagged two "hard" findings that on inspection turned out not to be real — verified directly rather than acted on: (1) the new `mail.*` config reads look like they skip `index.ts`'s `.has()`-guard pattern, but that pattern is only used for keys with a genuine fallback default; required keys with none (`cookieSecret`, `security.allowList`, `mail.*` — you can't default an SMTP password) are read unconditionally throughout the file, so `mail.*` actually matches the existing convention. (2) `MissedReminderBadge`'s `stopPropagation` is only load-bearing at 1 of 5 call sites (HomeScreen's clickable feed row) — true, but a deliberate, defensible choice: a shared component being unconditionally defensive about ancestor click handlers is reasonable encapsulation, not a smell, and the JSDoc already scopes the reasoning rather than implying universal need. Two minor judgement-call smells (the repeated one-line `{item.missedReminder && <MissedReminderBadge .../>}` guard, and `index.ts` constructing `AllowList` twice from the same config) were left alone as genuinely too minor to act on.
+
+Full suite: server **218/218 green**, client **162/162 green**, both typecheck clean (server: same pre-existing unrelated `heic-convert` error as every prior seam).
+
+## Issue #10 is done — all 7 seams shipped, on this branch, not yet merged
+
+Nothing left to build. What's left is entirely deployment prep — see "Before this ships" below — plus the actual `git push`/PR/merge to `main`, which no session has done yet (confirm with the user before doing so; it wasn't asked for as part of this work).
 
 ## Before this ships
 
@@ -80,4 +92,4 @@ Full suite: **214/214 green**, typecheck clean (same pre-existing unrelated `hei
 
 ## Resuming
 
-Pick up with `/tdd` — seam 7 (server wiring + client badge) is next, and is the last one. Decisions 1, 3–7 above are settled — no need to re-ask about mail transport, timezone, the "window closed before delivery" split, email localization, or the single-owner model. Re-run `/code-review` (fixed point: `main`, or `origin/main` if still unpushed) after the new slice, same as seams 1–6.
+There's no more implementation to resume — all 7 seams are built, tested, and reviewed. A future session picking this up should go straight to "Before this ships": fill in real config values, then decide with the user whether/how to push, open a PR, and merge to `main`.
