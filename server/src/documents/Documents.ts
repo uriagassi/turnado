@@ -50,6 +50,13 @@ export interface DocumentCreateInput {
   taskIds?: number[];
 }
 
+/** Input to `Documents.adopt()` (issue #14) — no title/notes/file, since those already exist on the Note being promoted. */
+export interface AdoptInput {
+  type: DocumentType;
+  documentDate?: string | null;
+  doctorId?: number | null;
+}
+
 export interface Document {
   id: number; // noteId
   notebookId: number;
@@ -516,6 +523,57 @@ export class Documents {
       .prepare(`INSERT OR IGNORE INTO AppointmentDocuments (noteId, appointmentId) VALUES (?, ?)`)
       .run(noteId, appointmentId);
     this.syncDoctorTags(noteId);
+  }
+
+  /**
+   * Promotes an already-existing Note in the shared archive into this
+   * app's Document model (issue #14's adoption tool) — as opposed to
+   * `create()`, which writes a brand-new Note/Attachment from an upload.
+   * The Note's title/notes/attachment are left exactly as they already
+   * are; adoption only moves it into the medical notebook (so `get()`/
+   * `list()`/`search()` — which all filter on notebookId — find it),
+   * tags its type, and records the doctor/date the same way `create()`
+   * does.
+   */
+  adopt(noteId: number, input: AdoptInput): Document {
+    const note = this.db.prepare(`SELECT noteId FROM Notes WHERE noteId = ?`).get(noteId) as
+      | { noteId: number }
+      | undefined;
+    if (!note) throw new DocumentNotFoundError(noteId);
+
+    if (!input.type || !VALID_DOCUMENT_TYPES.has(input.type)) {
+      throw new InvalidDocumentInputError(`type must be one of: ${Array.from(VALID_DOCUMENT_TYPES).join(", ")}`);
+    }
+
+    const existingMeta = this.db.prepare(`SELECT noteId FROM DocumentMeta WHERE noteId = ?`).get(noteId);
+    if (existingMeta) {
+      throw new InvalidDocumentInputError(`Note ${noteId} has already been adopted`);
+    }
+
+    const typeTagId = this.findOrCreateDocumentTypeTag(input.type);
+
+    const tx = this.db.transaction(() => {
+      this.db
+        .prepare(`UPDATE Notes SET notebookId = ? WHERE noteId = ?`)
+        .run(this.medicalNotebookId, noteId);
+
+      this.db
+        .prepare(`INSERT INTO DocumentMeta (noteId, documentDate, doctorId) VALUES (@noteId, @documentDate, @doctorId)`)
+        .run({
+          noteId,
+          documentDate: input.documentDate ?? null,
+          doctorId: input.doctorId ?? null,
+        });
+
+      this.db
+        .prepare(`INSERT OR IGNORE INTO NoteTags (noteId, tagId) VALUES (?, ?)`)
+        .run(noteId, typeTagId);
+
+      this.syncDoctorTags(noteId);
+    });
+    tx();
+
+    return this.getOrThrow(noteId);
   }
 
   private getOrThrow(id: number): Document {
