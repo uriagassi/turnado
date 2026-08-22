@@ -1,7 +1,7 @@
 # Handover: issue #10 "Reminders"
 
 **Branch:** `reminders-issue-10` (branched off `main`, not pushed)
-**Latest commit:** `096b2a2` — "Reminders (#10): Mailer adapter and ReminderService.runOnce()"
+**Latest code commit:** `096b2a2` — "Reminders (#10): Mailer adapter and ReminderService.runOnce()" (this doc may be committed after it — check `git log` for the true HEAD)
 **GitHub issue:** [uriagassi/turnado#10](https://github.com/uriagassi/turnado/issues/10) (assigned, `ready-for-agent`)
 **Workflow:** built with `/tdd` — one seam at a time, red→green, `/code-review` (Standards + Spec axes) after each slice.
 
