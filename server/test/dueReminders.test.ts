@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { selectDueReminders } from "../src/reminders/dueReminders.js";
+import { selectDueReminders, selectPastDueItems } from "../src/reminders/dueReminders.js";
 import type { Appointment } from "../src/appointments/Appointments.js";
 import type { Task } from "../src/tasks/Tasks.js";
 
@@ -12,6 +12,7 @@ function appt(overrides: Partial<Appointment>): Appointment {
     notes: "notes",
     status: "planned",
     summary: null,
+    ownerUsername: "alice",
     ...overrides,
   };
 }
@@ -38,6 +39,7 @@ function task(overrides: Partial<Task>): Task {
     purpose: null,
     createdAt: "",
     updatedAt: "",
+    ownerUsername: "alice",
     ...overrides,
   };
 }
@@ -49,7 +51,16 @@ describe("selectDueReminders", () => {
 
     const due = selectDueReminders([tomorrow], [], now, "UTC");
 
-    expect(due).toEqual([{ itemType: "appointment", itemId: 1, targetDate: "2026-08-23" }]);
+    expect(due).toEqual([{ itemType: "appointment", itemId: 1, targetDate: "2026-08-23", ownerUsername: "alice" }]);
+  });
+
+  it("carries the item's own ownerUsername through, including null for an unowned item (issue #10)", () => {
+    const now = new Date("2026-08-22T09:00:00Z");
+    const unowned = appt({ id: 1, dateTime: "2026-08-23T10:00:00Z", ownerUsername: null });
+
+    const due = selectDueReminders([unowned], [], now, "UTC");
+
+    expect(due).toEqual([{ itemType: "appointment", itemId: 1, targetDate: "2026-08-23", ownerUsername: null }]);
   });
 
   it("excludes a planned appointment that isn't exactly one day out", () => {
@@ -73,7 +84,7 @@ describe("selectDueReminders", () => {
 
     const due = selectDueReminders([], [dueTomorrow], now, "UTC");
 
-    expect(due).toEqual([{ itemType: "task", itemId: 5, targetDate: "2026-08-23" }]);
+    expect(due).toEqual([{ itemType: "task", itemId: 5, targetDate: "2026-08-23", ownerUsername: "alice" }]);
   });
 
   it("never includes a task with no due date, regardless of status", () => {
@@ -90,7 +101,7 @@ describe("selectDueReminders", () => {
 
     const due = selectDueReminders([], [inProgress, done], now, "UTC");
 
-    expect(due).toEqual([{ itemType: "task", itemId: 5, targetDate: "2026-08-23" }]);
+    expect(due).toEqual([{ itemType: "task", itemId: 5, targetDate: "2026-08-23", ownerUsername: "alice" }]);
   });
 
   it("computes today/tomorrow in the given timezone, not UTC", () => {
@@ -106,8 +117,65 @@ describe("selectDueReminders", () => {
     const due = selectDueReminders([dueTomorrowInIsrael], [dueTomorrowTask], now, "Asia/Jerusalem");
 
     expect(due).toEqual([
-      { itemType: "appointment", itemId: 1, targetDate: "2026-08-24" },
-      { itemType: "task", itemId: 7, targetDate: "2026-08-24" },
+      { itemType: "appointment", itemId: 1, targetDate: "2026-08-24", ownerUsername: "alice" },
+      { itemType: "task", itemId: 7, targetDate: "2026-08-24", ownerUsername: "alice" },
     ]);
+  });
+});
+
+describe("selectPastDueItems", () => {
+  it("includes a planned appointment whose date has already passed", () => {
+    const now = new Date("2026-08-22T09:00:00Z");
+    const overdue = appt({ id: 1, dateTime: "2026-08-20T10:00:00Z" });
+
+    const pastDue = selectPastDueItems([overdue], [], now, "UTC");
+
+    expect(pastDue).toEqual([{ itemType: "appointment", itemId: 1, targetDate: "2026-08-20", ownerUsername: "alice" }]);
+  });
+
+  it("excludes an appointment due today or in the future", () => {
+    const now = new Date("2026-08-22T09:00:00Z");
+    const today = appt({ id: 1, dateTime: "2026-08-22T10:00:00Z" });
+    const future = appt({ id: 2, dateTime: "2026-08-23T10:00:00Z" });
+
+    expect(selectPastDueItems([today, future], [], now, "UTC")).toEqual([]);
+  });
+
+  it("excludes a past-dated appointment that isn't planned (cancelled/done never generated a reminder to miss)", () => {
+    const now = new Date("2026-08-22T09:00:00Z");
+    const cancelled = appt({ id: 1, dateTime: "2026-08-20T10:00:00Z", status: "cancelled" });
+    const done = appt({ id: 2, dateTime: "2026-08-20T10:00:00Z", status: "done" });
+
+    expect(selectPastDueItems([cancelled, done], [], now, "UTC")).toEqual([]);
+  });
+
+  it("includes an open or in-progress task whose due date has already passed", () => {
+    const now = new Date("2026-08-22T09:00:00Z");
+    const overdueOpen = task({ id: 5, status: "open", dueDate: "2026-08-20" });
+    const overdueInProgress = task({ id: 6, status: "in-progress", dueDate: "2026-08-21" });
+
+    const pastDue = selectPastDueItems([], [overdueOpen, overdueInProgress], now, "UTC");
+
+    expect(pastDue).toEqual([
+      { itemType: "task", itemId: 5, targetDate: "2026-08-20", ownerUsername: "alice" },
+      { itemType: "task", itemId: 6, targetDate: "2026-08-21", ownerUsername: "alice" },
+    ]);
+  });
+
+  it("excludes a done task and a task with no due date, regardless of how old", () => {
+    const now = new Date("2026-08-22T09:00:00Z");
+    const done = task({ id: 5, status: "done", dueDate: "2026-08-20" });
+    const flexible = task({ id: 6, status: "open", dueDate: null });
+
+    expect(selectPastDueItems([], [done, flexible], now, "UTC")).toEqual([]);
+  });
+
+  it("carries a null ownerUsername through unchanged", () => {
+    const now = new Date("2026-08-22T09:00:00Z");
+    const unowned = appt({ id: 1, dateTime: "2026-08-20T10:00:00Z", ownerUsername: null });
+
+    const pastDue = selectPastDueItems([unowned], [], now, "UTC");
+
+    expect(pastDue).toEqual([{ itemType: "appointment", itemId: 1, targetDate: "2026-08-20", ownerUsername: null }]);
   });
 });

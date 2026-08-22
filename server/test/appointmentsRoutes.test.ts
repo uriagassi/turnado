@@ -75,6 +75,16 @@ describe("/api/appointments", () => {
 
       expect(res.status).toBe(400);
     });
+
+    it("owns the created appointment as the signed-in user, ignoring any client-supplied ownerUsername (issue #10)", async () => {
+      const agent = signedInAgent(tmpDb());
+
+      const res = await agent
+        .post("/api/appointments")
+        .send({ notes: "Annual checkup", dateTime: "2026-09-01T10:00:00Z", ownerUsername: "someone-else" });
+
+      expect(res.body.ownerUsername).toBe("alice");
+    });
   });
 
   describe("GET /api/appointments/:id", () => {
