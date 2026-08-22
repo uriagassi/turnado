@@ -1,6 +1,15 @@
 import type { Database } from "better-sqlite3";
 import { SharedTags } from "../doctors/SharedTags.js";
 import { guessDoctorFromTitle } from "./guessDoctor.js";
+import { ALL_TYPE_KEYWORD_TERMS } from "./guessDocumentType.js";
+
+/**
+ * Terms that suggest a Note is medical but aren't specific to any one
+ * DocumentType (unlike guessDocumentType.ts's per-type terms, reused below
+ * so the two lists don't hand-maintain overlapping vocab independently —
+ * issue #14 review).
+ */
+const GENERIC_MEDICAL_KEYWORDS = ["prescription", "diagnosis", "clinic", "hospital", "doctor", "מרשם", "אבחון", "מרפאה", "בית חולים", "רופא"];
 
 /**
  * Default title keywords for the second candidate-discovery source (issue
@@ -11,27 +20,7 @@ import { guessDoctorFromTitle } from "./guessDoctor.js";
  * before anything commits, so false positives cost a "skip", not a bad
  * write.
  */
-const DEFAULT_TITLE_KEYWORDS = [
-  "referral",
-  "prescription",
-  "diagnosis",
-  "clinic",
-  "hospital",
-  "doctor",
-  "blood test",
-  "x-ray",
-  "mri",
-  "form 17",
-  "הפניה",
-  "מרשם",
-  "אבחון",
-  "מרפאה",
-  "בית חולים",
-  "רופא",
-  "בדיקת דם",
-  "רנטגן",
-  "טופס 17",
-];
+const DEFAULT_TITLE_KEYWORDS = [...GENERIC_MEDICAL_KEYWORDS, ...ALL_TYPE_KEYWORD_TERMS];
 
 /** One historical Note the reviewer hasn't yet confirmed, corrected, or skipped (issue #14). */
 export interface AdoptionCandidate {
