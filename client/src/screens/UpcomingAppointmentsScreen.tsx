@@ -5,18 +5,18 @@ import { AppointmentCard } from "../components/AppointmentCard";
 export function UpcomingAppointmentsScreen({
   appointments,
   doctors,
-  onSelectDoctor,
   onEdit,
   onStatusChange,
   onSaveSummary,
+  onSelect,
 }: {
   appointments: Appointment[];
   doctors: Doctor[];
-  /** Follows an appointment card's doctor-name link into that doctor's detail view (see issue #4 AC). */
-  onSelectDoctor: (doctor: Doctor) => void;
   onEdit: (appointment: Appointment) => void;
   onStatusChange: (appointment: Appointment, status: AppointmentStatus) => void;
   onSaveSummary: (appointment: Appointment, summary: string) => void;
+  /** Opens the appointment's own detail/checklist screen (issue #9). */
+  onSelect?: (appointment: Appointment) => void;
 }) {
   const { t } = useTranslation();
 
@@ -32,10 +32,10 @@ export function UpcomingAppointmentsScreen({
               key={appointment.id}
               appointment={appointment}
               doctor={appointment.doctorId ? doctors.find((d) => d.id === appointment.doctorId) : undefined}
-              onSelectDoctor={onSelectDoctor}
               onEdit={onEdit}
               onStatusChange={onStatusChange}
               onSaveSummary={onSaveSummary}
+              onSelect={onSelect}
             />
           ))}
         </ul>

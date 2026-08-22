@@ -23,6 +23,7 @@ import {
   fetchDocuments,
   fetchDocument,
   uploadDocument,
+  attachAppointmentDocument,
   AuthClientData,
   Appointment,
   AppointmentInput,
@@ -52,6 +53,7 @@ import { TaskDetailScreen } from "./screens/TaskDetailScreen";
 import { DocumentFormScreen, getDocumentTypeForTask } from "./screens/DocumentFormScreen";
 import { DocumentDetailScreen } from "./screens/DocumentDetailScreen";
 import { DocumentsScreen, type DocumentFilters } from "./screens/DocumentsScreen";
+import { AppointmentDetailScreen } from "./screens/AppointmentDetailScreen";
 import { ConfirmationModal } from "./components/ConfirmationModal";
 import { NavBar, type NavDestination } from "./components/NavBar";
 
@@ -156,6 +158,46 @@ function openItemsForDoctor(openItems: Task[], doctorId: number): Task[] {
 }
 
 /**
+ * Every task tied to an appointment — the client-side counterpart of the
+ * server's selectAppointmentTasks (see server/src/appointments/appointmentChecklist.ts).
+ * Unlike openItemsForDoctor above, this doesn't drop done tasks: the
+ * appointment checklist shows them too, checked off, rather than making
+ * them disappear once resolved.
+ */
+function selectAppointmentTasks(tasks: Task[], appointmentId: number): Task[] {
+  return tasks.filter((t) => t.sourceAppointmentId === appointmentId || t.pendingAppointmentId === appointmentId);
+}
+
+/**
+ * Fetches everything the "appointment-detail" phase needs and builds its
+ * state — shared by the appointment-upcoming/-history cards' onSelect and
+ * the checklist's own attach-document action, which both need a freshly
+ * reloaded checklist afterwards.
+ */
+async function loadAppointmentDetail(
+  session: Session,
+  appointment: Appointment,
+  returnTo: "appointment-upcoming" | "appointment-history",
+): Promise<Extract<AppState, { phase: "appointment-detail" }>> {
+  const [documents, allDocuments, allTasks] = await Promise.all([
+    fetchDocuments({ appointmentId: appointment.id }),
+    fetchDocuments(),
+    fetchTasks(),
+  ]);
+  const doctor = appointment.doctorId ? session.doctors.find((d) => d.id === appointment.doctorId) : undefined;
+  return {
+    phase: "appointment-detail",
+    session,
+    appointment,
+    doctor,
+    documents,
+    openItems: selectAppointmentTasks(allTasks, appointment.id),
+    allDocuments,
+    returnTo,
+  };
+}
+
+/**
  * Orders doctors by their soonest upcoming appointment (ascending) rather
  * than the list's base name order — a doctor you're about to see should
  * surface above one you have no appointment with. Doctors with no upcoming
@@ -235,6 +277,19 @@ export type AppState =
       /** Every task regardless of status — unlike session.home.openItems (open-only), so a document's
           "linked to N items" badge can expand to the full detail even when a linked task is done. */
       allTasks: Task[];
+    }
+  | {
+      phase: "appointment-detail";
+      session: Session;
+      appointment: Appointment;
+      doctor?: Doctor;
+      /** Documents attached to this appointment (server's listByAppointment). */
+      documents: MedicalDocument[];
+      /** Tasks tied to this appointment either way (see selectAppointmentTasks's server counterpart) — regardless of status, so a done one still shows on the checklist as ready rather than disappearing. */
+      openItems: Task[];
+      /** Every document, for the checklist's "attach existing document" picker to search across. */
+      allDocuments: MedicalDocument[];
+      returnTo: "appointment-upcoming" | "appointment-history";
     };
 
 const EMPTY_DOCUMENT_FILTERS: DocumentFilters = { query: "", type: "", doctorId: "", dateFrom: "", dateTo: "" };
@@ -304,6 +359,8 @@ export function screenTitle(state: AppState, t: (key: string) => string): string
       return state.document.title;
     case "documents":
       return t("documentsScreen.title");
+    case "appointment-detail":
+      return state.appointment.notes;
   }
 }
 
@@ -344,6 +401,10 @@ export function screenBack(state: AppState, setState: (s: AppState) => void): ((
         returnTo === "doctor-detail" && doctor
           ? setState({ phase: "doctor-detail", session, doctors: session.doctors, doctor })
           : setState({ phase: "home", session });
+    }
+    case "appointment-detail": {
+      const { session, returnTo } = state;
+      return () => setState({ phase: returnTo, session });
     }
     default:
       return undefined;
@@ -786,7 +847,6 @@ export function App() {
     }
     case "appointment-upcoming": {
       const { session } = state;
-      const selectDoctor = (doctor: Doctor) => goTo({ phase: "doctor-detail", session, doctors: session.doctors, doctor });
       const editAppointment = (appointment: Appointment) =>
         setState({ phase: "appointment-form", session, appointment, returnTo: "appointment-upcoming" });
       const changeStatus = async (appointment: Appointment, status: AppointmentStatus) => {
@@ -798,20 +858,21 @@ export function App() {
         const saved = await setAppointmentSummary(appointment.id, summary);
         setState({ phase: "appointment-upcoming", session: withSavedAppointment(session, saved, true) });
       };
+      const selectAppointment = async (appointment: Appointment) =>
+        goTo(await loadAppointmentDetail(session, appointment, "appointment-upcoming"));
       return (
         <UpcomingAppointmentsScreen
           appointments={upcomingAppointments(session.appointments, new Date())}
           doctors={session.doctors}
-          onSelectDoctor={selectDoctor}
           onEdit={editAppointment}
           onStatusChange={changeStatus}
           onSaveSummary={saveSummary}
+          onSelect={selectAppointment}
         />
       );
     }
     case "appointment-history": {
       const { session } = state;
-      const selectDoctor = (doctor: Doctor) => goTo({ phase: "doctor-detail", session, doctors: session.doctors, doctor });
       const editAppointment = (appointment: Appointment) =>
         setState({ phase: "appointment-form", session, appointment, returnTo: "appointment-history" });
       const changeStatus = async (appointment: Appointment, status: AppointmentStatus) => {
@@ -823,14 +884,56 @@ export function App() {
         const saved = await setAppointmentSummary(appointment.id, summary);
         setState({ phase: "appointment-history", session: withSavedAppointment(session, saved, true) });
       };
+      const selectAppointment = async (appointment: Appointment) =>
+        goTo(await loadAppointmentDetail(session, appointment, "appointment-history"));
       return (
         <AppointmentHistoryScreen
           appointments={pastAppointments(session.appointments, new Date())}
           doctors={session.doctors}
-          onSelectDoctor={selectDoctor}
           onEdit={editAppointment}
           onStatusChange={changeStatus}
           onSaveSummary={saveSummary}
+          onSelect={selectAppointment}
+        />
+      );
+    }
+    case "appointment-detail": {
+      const { session, appointment, doctor, documents, openItems, allDocuments, returnTo } = state;
+      const selectDocument = (document: MedicalDocument) =>
+        goTo({ phase: "document-detail", session, document, returnTo: "home" });
+      const selectTask = (t: Task) => goTo({ phase: "task-detail", session, task: t, returnTo: "home" });
+      const selectDoctor = (d: Doctor) => goTo({ phase: "doctor-detail", session, doctors: session.doctors, doctor: d });
+      // Edit leaves the checklist for the appointment form, same as editing
+      // straight from the upcoming/history list — it doesn't try to return
+      // to this same checklist afterwards (see loadAppointmentDetail's own
+      // returnTo, which the form doesn't accept as a destination).
+      const edit = () => setState({ phase: "appointment-form", session, appointment, returnTo });
+      const attachDocument = async (document: MedicalDocument) => {
+        await attachAppointmentDocument(appointment.id, document.id);
+        setState(await loadAppointmentDetail(session, appointment, returnTo));
+      };
+      // Checking/unchecking an open item straight from the checklist (see
+      // OpenItemRow) — also refreshes home, same as task-detail's own
+      // changeStatus, since a task's status change here can add/remove it
+      // from the home screen's open-items feed too.
+      const changeTaskStatus = async (t: Task, status: TaskStatus) => {
+        await setTaskStatus(t.id, status);
+        const home = await fetchHome();
+        setState(await loadAppointmentDetail({ ...session, home }, appointment, returnTo));
+      };
+      return (
+        <AppointmentDetailScreen
+          appointment={appointment}
+          doctor={doctor}
+          documents={documents}
+          openItems={openItems}
+          allDocuments={allDocuments}
+          onEdit={edit}
+          onAttachDocument={attachDocument}
+          onSelectDocument={selectDocument}
+          onSelectTask={selectTask}
+          onTaskStatusChange={changeTaskStatus}
+          onSelectDoctor={selectDoctor}
         />
       );
     }
