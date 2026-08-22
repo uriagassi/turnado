@@ -13,7 +13,7 @@ import { Appointments, AppointmentNotFoundError, InvalidAppointmentInputError } 
 import { selectHeroAppointment } from "./appointments/heroAppointment.js";
 import { Tasks, TaskNotFoundError, InvalidTaskInputError, TaskStatus } from "./tasks/Tasks.js";
 import { ReminderLog, MissedReason } from "./reminders/ReminderLog.js";
-import type { ReminderItemType } from "./reminders/dueReminders.js";
+import { dateOnly, type ReminderItemType } from "./reminders/dueReminders.js";
 import {
   Documents,
   DocumentNotFoundError,
@@ -77,6 +77,8 @@ export interface AppOptions {
   attachmentsDir?: string;
   /** Built client (client/dist) to serve as the SPA shell. Omitted in tests that only exercise the API. */
   clientDistPath?: string;
+  /** Household timezone (config's reminders.timezone, issue #10) — used only to tell whether a logged missedReminder is still current for an appointment's date (see withMissedReminder). Defaults to the same "Asia/Jerusalem" default the config file itself uses. */
+  remindersTimezone?: string;
 }
 
 export function createApp(options: AppOptions): Express {
@@ -90,6 +92,7 @@ export function createApp(options: AppOptions): Express {
     doctorsParentTagName = "Doctors",
     photosDir,
     clientDistPath,
+    remindersTimezone = "Asia/Jerusalem",
   } = options;
   const allowList = new AllowList(allowListConfig);
 
@@ -229,8 +232,14 @@ export function createApp(options: AppOptions): Express {
 
     const appointments = new Appointments(db);
     const reminderLog = new ReminderLog(db);
+    // The (itemType, itemId, targetDate) key a missed reminder was logged
+    // under is only "current" while the item's own date still matches it —
+    // see withMissedReminder's doc comment.
+    const appointmentTargetDate = (a: { dateTime: string }) => dateOnly(new Date(a.dateTime), remindersTimezone);
+    const taskTargetDate = (t: { dueDate: string | null }) => t.dueDate ?? "";
+
     app.get("/api/appointments", (_req, res) => {
-      res.json(withMissedReminder(appointments.list(), "appointment", reminderLog));
+      res.json(withMissedReminder(appointments.list(), "appointment", reminderLog, appointmentTargetDate));
     });
     app.post("/api/appointments", (req, res) => {
       try {
@@ -243,7 +252,7 @@ export function createApp(options: AppOptions): Express {
     app.get("/api/appointments/:id", (req, res) => {
       const appointment = appointments.get(Number(req.params.id));
       if (!appointment) return res.status(404).json({ error: "Not found" });
-      res.json(withMissedReminder([appointment], "appointment", reminderLog)[0]);
+      res.json(withMissedReminder([appointment], "appointment", reminderLog, appointmentTargetDate)[0]);
     });
     app.put("/api/appointments/:id", (req, res) => {
       try {
@@ -277,7 +286,7 @@ export function createApp(options: AppOptions): Express {
     app.get("/api/tasks", (req, res) => {
       const doctorId = req.query.doctorId !== undefined ? Number(req.query.doctorId) : undefined;
       const status = req.query.status as TaskStatus | undefined;
-      res.json(withMissedReminder(tasks.list({ doctorId, status }), "task", reminderLog));
+      res.json(withMissedReminder(tasks.list({ doctorId, status }), "task", reminderLog, taskTargetDate));
     });
     app.post("/api/tasks", (req, res) => {
       try {
@@ -290,7 +299,7 @@ export function createApp(options: AppOptions): Express {
     app.get("/api/tasks/:id", (req, res) => {
       const task = tasks.get(Number(req.params.id));
       if (!task) return res.status(404).json({ error: "Not found" });
-      res.json(withMissedReminder([task], "task", reminderLog)[0]);
+      res.json(withMissedReminder([task], "task", reminderLog, taskTargetDate)[0]);
     });
     app.put("/api/tasks/:id", (req, res) => {
       try {
@@ -483,8 +492,9 @@ export function createApp(options: AppOptions): Express {
         tasks.list().filter((t) => t.status !== "done"),
         "task",
         reminderLog,
+        taskTargetDate,
       );
-      const appointmentsWithMarker = withMissedReminder(appointments.list(), "appointment", reminderLog);
+      const appointmentsWithMarker = withMissedReminder(appointments.list(), "appointment", reminderLog, appointmentTargetDate);
       res.json({
         nextAppointment: selectHeroAppointment(appointmentsWithMarker, new Date()),
         openItems,
@@ -516,21 +526,32 @@ export function createApp(options: AppOptions): Express {
 }
 
 // Attaches issue #10's missed-reminder marker to each item — null unless
-// ReminderLog has a terminal "missed" row for it, in which case the reason
-// itself doubles as the flag (a truthy string is both "missed" and "why").
-// missed() is sorted ascending by targetDate, so if an item was
-// rescheduled and missed more than once, the row for its latest targetDate
-// simply overwrites the earlier one in the map below.
+// ReminderLog has a terminal "missed" row for it *whose targetDate still
+// matches the item's own current date*. That currency check is what keeps
+// the marker from going stale: rescheduling an item to a new date doesn't
+// touch its old (now-orphaned) missed row — that row's targetDate simply
+// stops matching, a fresh pending row exists under the new key instead, and
+// this function has nothing left to show for the old key. missed() is
+// sorted ascending by targetDate, so if an item was missed more than once
+// (e.g. missed, rescheduled, missed again), the row for its latest
+// targetDate is what survives into the lookup map below.
 function withMissedReminder<T extends { id: number }>(
   items: T[],
   itemType: ReminderItemType,
   reminderLog: ReminderLog,
+  currentTargetDateOf: (item: T) => string,
 ): (T & { missedReminder: MissedReason | null })[] {
-  const reasons = new Map<number, MissedReason>();
+  const reasons = new Map<number, { targetDate: string; reason: MissedReason }>();
   for (const entry of reminderLog.missed()) {
-    if (entry.itemType === itemType && entry.missedReason) reasons.set(entry.itemId, entry.missedReason);
+    if (entry.itemType === itemType && entry.missedReason) {
+      reasons.set(entry.itemId, { targetDate: entry.targetDate, reason: entry.missedReason });
+    }
   }
-  return items.map((item) => ({ ...item, missedReminder: reasons.get(item.id) ?? null }));
+  return items.map((item) => {
+    const missed = reasons.get(item.id);
+    const isCurrent = missed !== undefined && missed.targetDate === currentTargetDateOf(item);
+    return { ...item, missedReminder: isCurrent ? missed.reason : null };
+  });
 }
 
 function parseIdList(raw: unknown): number[] | undefined {

@@ -33,6 +33,7 @@ const app = createApp({
   specialtyParentTagName: config.has("documents.specialtyParentTagName")
     ? config.get<string>("documents.specialtyParentTagName")
     : "medical/specialty",
+  remindersTimezone: config.has("reminders.timezone") ? config.get<string>("reminders.timezone") : "Asia/Jerusalem",
   photosDir: expandHome(config.get<string>("doctors.photosDir")),
   medicalNotebookId: config.has("notebook.medicalNotebookId") ? config.get<number>("notebook.medicalNotebookId") : undefined,
   medicalNotebookName: config.has("notebook.medicalNotebookName") ? config.get<string>("notebook.medicalNotebookName") : "Medical",
