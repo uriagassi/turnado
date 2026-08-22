@@ -6,9 +6,12 @@ import path from "node:path";
 import type { Database } from "better-sqlite3";
 import { createApp } from "../src/app.js";
 import { createDb } from "../src/db.js";
+import { ReminderLog } from "../src/reminders/ReminderLog.js";
+import { dateOnly } from "../src/reminders/dueReminders.js";
 import { StubAuthHandler } from "./support/StubAuthHandler.js";
+import { singleUserAllowList } from "./support/allowListFixture.js";
 
-const allowList = { alice: "en" };
+const allowList = singleUserAllowList();
 const cookieSecret = "test-secret";
 
 describe("/api/appointments", () => {
@@ -54,6 +57,41 @@ describe("/api/appointments", () => {
       expect(res.status).toBe(200);
       expect(res.body).toEqual([]);
     });
+
+    it("reports missedReminder: null for an appointment with no missed reminder (issue #10)", async () => {
+      const agent = signedInAgent(tmpDb());
+      await agent.post("/api/appointments").send({ notes: "Annual checkup", dateTime: "2026-09-01T10:00:00Z" });
+
+      const res = await agent.get("/api/appointments");
+
+      expect(res.body[0].missedReminder).toBeNull();
+    });
+
+    it("reports the reason when the appointment has a missed reminder logged (issue #10)", async () => {
+      const db = tmpDb();
+      const agent = signedInAgent(db);
+      const created = await agent.post("/api/appointments").send({ notes: "Annual checkup", dateTime: "2026-09-01T10:00:00Z" });
+      new ReminderLog(db).markMissed("appointment", created.body.id, "2026-09-01", "send failed");
+
+      const res = await agent.get("/api/appointments");
+
+      expect(res.body[0].missedReminder).toBe("send failed");
+    });
+
+    it("clears a stale missedReminder once the appointment is rescheduled to a new date (issue #10)", async () => {
+      const db = tmpDb();
+      const agent = signedInAgent(db);
+      const created = await agent.post("/api/appointments").send({ notes: "Annual checkup", dateTime: "2026-08-31T10:00:00Z" });
+      new ReminderLog(db).markMissed("appointment", created.body.id, "2026-08-31", "send failed");
+
+      // Reschedule: the appointment's date-derived key no longer matches the
+      // stale missed row's targetDate, so it shouldn't show as missed.
+      await agent.put(`/api/appointments/${created.body.id}`).send({ notes: "Annual checkup", dateTime: "2026-09-15T10:00:00Z" });
+
+      const res = await agent.get("/api/appointments");
+
+      expect(res.body[0].missedReminder).toBeNull();
+    });
   });
 
   describe("POST /api/appointments", () => {
@@ -74,6 +112,16 @@ describe("/api/appointments", () => {
 
       expect(res.status).toBe(400);
     });
+
+    it("owns the created appointment as the signed-in user, ignoring any client-supplied ownerUsername (issue #10)", async () => {
+      const agent = signedInAgent(tmpDb());
+
+      const res = await agent
+        .post("/api/appointments")
+        .send({ notes: "Annual checkup", dateTime: "2026-09-01T10:00:00Z", ownerUsername: "someone-else" });
+
+      expect(res.body.ownerUsername).toBe("alice");
+    });
   });
 
   describe("GET /api/appointments/:id", () => {
@@ -93,6 +141,17 @@ describe("/api/appointments", () => {
       const res = await agent.get("/api/appointments/999");
 
       expect(res.status).toBe(404);
+    });
+
+    it("reports the missed-reminder reason on the single-item route too (issue #10)", async () => {
+      const db = tmpDb();
+      const agent = signedInAgent(db);
+      const created = await agent.post("/api/appointments").send({ notes: "Annual checkup", dateTime: "2026-09-01T10:00:00Z" });
+      new ReminderLog(db).markMissed("appointment", created.body.id, "2026-09-01", "window closed before delivery");
+
+      const res = await agent.get(`/api/appointments/${created.body.id}`);
+
+      expect(res.body.missedReminder).toBe("window closed before delivery");
     });
   });
 
@@ -226,6 +285,18 @@ describe("/api/appointments", () => {
       const res = await agent.get("/api/home");
 
       expect(res.body.nextAppointment).toBeNull();
+    });
+
+    it("carries the missed-reminder reason through to nextAppointment (issue #10)", async () => {
+      const db = tmpDb();
+      const agent = signedInAgent(db);
+      const farFuture = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+      const created = await agent.post("/api/appointments").send({ notes: "Annual checkup", dateTime: farFuture });
+      new ReminderLog(db).markMissed("appointment", created.body.id, dateOnly(new Date(farFuture), "Asia/Jerusalem"), "send failed");
+
+      const res = await agent.get("/api/home");
+
+      expect(res.body.nextAppointment.missedReminder).toBe("send failed");
     });
   });
 });

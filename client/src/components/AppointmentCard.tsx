@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Appointment, AppointmentStatus, Doctor } from "../api";
 import { formatDateTime } from "../formatDateTime";
+import { MissedReminderBadge } from "./MissedReminderBadge";
 
 /**
  * One appointment row: shared by UpcomingAppointmentsScreen and
@@ -43,6 +44,7 @@ export function AppointmentCard({
       {doctor && <span className="appointment-doctor-name">{doctor.name}</span>}
       <span className="appointment-notes">{appointment.notes}</span>
       {appointment.location && <span className="appointment-location">{appointment.location}</span>}
+      {appointment.missedReminder && <MissedReminderBadge reason={appointment.missedReminder} />}
       <div className="appointment-row-actions">
         {onSelect && (
           <button type="button" className="edit-appointment" onClick={() => onSelect(appointment)}>

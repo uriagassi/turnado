@@ -11,6 +11,7 @@ function appt(overrides: Partial<Appointment>): Appointment {
     notes: "notes",
     status: "planned",
     summary: null,
+    ownerUsername: null,
     ...overrides,
   };
 }

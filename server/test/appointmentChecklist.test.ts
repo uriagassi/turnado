@@ -43,6 +43,7 @@ function task(overrides: Partial<Task>): Task {
     purpose: null,
     createdAt: "",
     updatedAt: "",
+    ownerUsername: null,
     ...overrides,
   };
 }
