@@ -536,38 +536,30 @@ export class Documents {
    * does.
    */
   adopt(noteId: number, input: AdoptInput): Document {
-    const note = this.db.prepare(`SELECT noteId FROM Notes WHERE noteId = ?`).get(noteId) as
-      | { noteId: number }
-      | undefined;
-    if (!note) throw new DocumentNotFoundError(noteId);
-
-    if (!input.type || !VALID_DOCUMENT_TYPES.has(input.type)) {
-      throw new InvalidDocumentInputError(`type must be one of: ${Array.from(VALID_DOCUMENT_TYPES).join(", ")}`);
-    }
-
-    const existingMeta = this.db.prepare(`SELECT noteId FROM DocumentMeta WHERE noteId = ?`).get(noteId);
-    if (existingMeta) {
-      throw new InvalidDocumentInputError(`Note ${noteId} has already been adopted`);
-    }
+    this.validateAdopt(noteId, input);
 
     const typeTagId = this.findOrCreateDocumentTypeTag(input.type);
 
+    const updateNotebook = this.db.prepare(`UPDATE Notes SET notebookId = @notebookId WHERE noteId = @noteId`);
+    const insertMeta = this.db.prepare(`
+      INSERT INTO DocumentMeta (noteId, documentDate, doctorId)
+      VALUES (@noteId, @documentDate, @doctorId)
+    `);
+    const insertNoteTag = this.db.prepare(`
+      INSERT OR IGNORE INTO NoteTags (noteId, tagId)
+      VALUES (@noteId, @tagId)
+    `);
+
     const tx = this.db.transaction(() => {
-      this.db
-        .prepare(`UPDATE Notes SET notebookId = ? WHERE noteId = ?`)
-        .run(this.medicalNotebookId, noteId);
+      updateNotebook.run({ notebookId: this.medicalNotebookId, noteId });
 
-      this.db
-        .prepare(`INSERT INTO DocumentMeta (noteId, documentDate, doctorId) VALUES (@noteId, @documentDate, @doctorId)`)
-        .run({
-          noteId,
-          documentDate: input.documentDate ?? null,
-          doctorId: input.doctorId ?? null,
-        });
+      insertMeta.run({
+        noteId,
+        documentDate: input.documentDate || null,
+        doctorId: input.doctorId ?? null,
+      });
 
-      this.db
-        .prepare(`INSERT OR IGNORE INTO NoteTags (noteId, tagId) VALUES (?, ?)`)
-        .run(noteId, typeTagId);
+      insertNoteTag.run({ noteId, tagId: typeTagId });
 
       this.syncDoctorTags(noteId);
     });
@@ -731,11 +723,30 @@ export class Documents {
     if (!input.title?.trim()) {
       throw new InvalidDocumentInputError("title is required");
     }
-    if (!input.type || !VALID_DOCUMENT_TYPES.has(input.type)) {
-      throw new InvalidDocumentInputError(`type must be one of: ${Array.from(VALID_DOCUMENT_TYPES).join(", ")}`);
-    }
+    this.validateType(input.type);
     if (!file || !file.fileName || !file.uniqueFilename) {
       throw new InvalidDocumentInputError("file is required");
+    }
+  }
+
+  /** Shared by validate() and validateAdopt() — the one piece both create() and adopt() actually check the same way. */
+  private validateType(type: DocumentType | undefined): void {
+    if (!type || !VALID_DOCUMENT_TYPES.has(type)) {
+      throw new InvalidDocumentInputError(`type must be one of: ${Array.from(VALID_DOCUMENT_TYPES).join(", ")}`);
+    }
+  }
+
+  private validateAdopt(noteId: number, input: AdoptInput): void {
+    const note = this.db.prepare(`SELECT noteId FROM Notes WHERE noteId = ?`).get(noteId) as NoteIdRow | undefined;
+    if (!note) throw new DocumentNotFoundError(noteId);
+
+    this.validateType(input.type);
+
+    const existingMeta = this.db.prepare(`SELECT noteId FROM DocumentMeta WHERE noteId = ?`).get(noteId) as
+      | NoteIdRow
+      | undefined;
+    if (existingMeta) {
+      throw new InvalidDocumentInputError(`Note ${noteId} has already been adopted`);
     }
   }
 }

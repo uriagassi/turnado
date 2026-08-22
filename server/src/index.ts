@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import config from "./config.js";
 import { createDb } from "./db.js";
+import { expandHome } from "./paths.js";
 import { createApp } from "./app.js";
 import type { IAuthHandler } from "./auth/Auth.js";
 import { AllowList, type AllowListConfig } from "./auth/AllowList.js";
@@ -87,11 +88,4 @@ if (config.has("https.use") && config.get("https.use") === true) {
   app.listen(port, hostname, () => {
     console.log(`turnado server listening on http://${hostname}:${port}`);
   });
-}
-
-function expandHome(p: string): string {
-  if (p.startsWith("~")) {
-    return path.join(process.env.HOME ?? process.env.USERPROFILE ?? "", p.slice(1));
-  }
-  return p;
 }
