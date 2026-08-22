@@ -29,9 +29,15 @@ Along the way: `SharedTags` gained a tested `descendantIds()` method (moved out 
 
 Full suite: **240/240 green**, typecheck clean (one pre-existing unrelated `heic-convert` error, not touched by this work — same as every prior issue's handover notes).
 
-## Before this ships
+## Dev-env mock data (this session)
 
-- **`config/local.json` needs real `personTagName` values.** Both `config/default.json` placeholders are `"REPLACE_ME"`; until the two allow-listed users' entries get the actual `"person/<display name>"` tag names used in the real archive, `scripts/adoptDocuments.ts` finds no candidates (verified: it exits safely with no writes in this state, not an error).
+`scripts/seedAdoptionCandidates.ts` seeds fixture data into the real configured dev DB (`config/local.json`'s `db.path` — `data/paperless.sqlite`) so `scripts/adoptDocuments.ts` has something to actually show: a direct-"medical"-tag Note, a nested-descendant-tag Note, English and Hebrew title-keyword Notes, a Note with an existing doctor-tag, an out-of-scope-person Note (must not surface), and an already-adopted Note (must not resurface). `config/local.json` (gitignored) got `"personTagName": "Dana"` on `user-one` to match. Run it again any time to re-seed (it only inserts, never touches existing rows).
+
+Running the real script against this data live caught a genuine bug: `ReviewControl` (a `class`) was declared *after* the top-level `await` loop that triggers it. Unlike a `function` declaration, a `class` binding isn't hoisted for early use — it was still in its temporal-dead-zone the first time `reviewOne()`'s `catch` block referenced it, crashing on the very first candidate with `Cannot access 'ReviewControl' before initialization`. Fixed by moving the class (and `checkControlAnswer`, which depends on it) above the main flow. Re-verified via a throwaway read-only script calling `discoverCandidates()`/`guessDocumentType()`/`guessDoctorId()` directly: all 5 in-scope candidates surface newest-first with correct guesses, and the two exclusions hold. The 5 fixtures are left uncommitted (not adopted) so an actual interactive run has something to work through.
+
+## Before this ships against the real household archive
+
+- **`config/local.json` needs the two allow-listed users' real `personTagName` values** — the actual `"person/<display name>"` tag names used in the real archive, replacing the dev-only `"Dana"` fixture above and `config/default.json`'s `"REPLACE_ME"` placeholders.
 - Run `npx tsx scripts/adoptDocuments.ts` from the repo root once that's filled in. It's interactive and manual — no server wiring, no scheduled job.
 
 ## Resuming
