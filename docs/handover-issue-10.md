@@ -86,10 +86,16 @@ Nothing left to build. What's left is entirely deployment prep — see "Before t
 
 ## Before this ships
 
-- Fill in real email addresses in `config/local.json` (gitignored) for `security.allowList.*.email` and the `mail.*` SMTP block — `config/default.json` only has placeholders.
-- Generate a Gmail App Password for whichever account sends the mail.
-- Existing (pre-migration) appointments/tasks in the live DB will have `ownerUsername = NULL` and — per the user's explicit choice (decision 7) — will never generate a reminder until edited... except `Appointments.update()`/`Tasks.update()` never set `ownerUsername` either (it's immutable by design), so a `NULL` owner is currently permanent once seam 5 ships. If that turns out to matter for real pre-existing data, it needs its own small decision (e.g. a one-off backfill) — not addressed by any seam so far.
+- Fill in real email addresses in `config/local.json` (gitignored) for `security.allowList.*.email` and the `mail.*` SMTP block — `config/default.json` only has placeholders. The gitignored `config/local.json` now has the right *keys* stubbed in (`mail.host`/`port` prefilled for Gmail SMTP; `user`/`pass`/`from`/`security.allowList.user-one.email` still `REPLACE_ME`) — only the actual secret values are outstanding.
+- Generate a Gmail App Password for whichever account sends the mail, and put it in `mail.pass` above.
+- ~~Existing (pre-migration) appointments/tasks...~~ **Done for this deployment's DB**: the 3 pre-existing rows in `data/paperless.sqlite` (2 appointments, 1 task) had `ownerUsername = NULL` and were backfilled by hand to `'user-one'` via a one-off `sqlite3 UPDATE` (not scripted into the codebase — a fresh DB doesn't need it, since `create()` sets the owner from day one). If this app is ever deployed against a *different* pre-existing DB, the same one-off fix — assign the sole/appropriate allow-listed username to any `ownerUsername IS NULL` row — needs repeating there.
 
 ## Resuming
 
-There's no more implementation to resume — all 7 seams are built, tested, and reviewed. A future session picking this up should go straight to "Before this ships": fill in real config values, then decide with the user whether/how to push, open a PR, and merge to `main`.
+All 7 seams are built, tested, and reviewed; nothing left to implement. Deployment prep in progress:
+
+- Branch pushed, [PR #33](https://github.com/uriagassi/turnado/pull/33) open against `main` (not yet merged — confirm with the user before merging).
+- `config/local.json` scaffolded with `mail.*`/`security.allowList` keys; real secret values (Gmail address, App Password, recipient email) still need to be filled in by the user.
+- This deployment's pre-existing NULL-owner rows already backfilled (see above).
+
+A future session picking this up should check whether the `REPLACE_ME` values have been filled in and the SMTP send actually verified end-to-end, then check PR #33's merge status.
