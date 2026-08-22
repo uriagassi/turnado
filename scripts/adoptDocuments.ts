@@ -15,9 +15,30 @@ import { createDb } from "../server/src/db.js";
 import { expandHome } from "../server/src/paths.js";
 import { AllowList, type AllowListConfig } from "../server/src/auth/AllowList.js";
 import { Documents, VALID_DOCUMENT_TYPES, type DocumentType } from "../server/src/documents/Documents.js";
-import { DocumentAdoption, type AdoptionCandidate } from "../server/src/documents/DocumentAdoption.js";
+import { DocumentAdoption } from "../server/src/documents/DocumentAdoption.js";
 import { guessDocumentType } from "../server/src/documents/guessDocumentType.js";
 import { Doctors } from "../server/src/doctors/Doctors.js";
+
+/**
+ * Thrown by checkControlAnswer() to unwind reviewOne() when the reviewer
+ * quits, skips, or gives unparseable input at any of its three prompts —
+ * so every prompt is a real stopping/skip point, not just the first one.
+ * Declared before the main flow's loop below, which is what actually
+ * triggers reviewOne() — a `class` isn't hoisted the way a `function`
+ * declaration is, so this has to already be defined by the time it's
+ * first needed, not merely declared somewhere later in the file.
+ */
+class ReviewControl extends Error {
+  constructor(public readonly action: "quit" | "skip") {
+    super(action);
+  }
+}
+
+/** `q`/`s` are recognized at every prompt in reviewOne(), not only the first — issue #14 review: "stop at any point" should hold mid-candidate too. */
+function checkControlAnswer(answer: string): void {
+  if (answer === "q") throw new ReviewControl("quit");
+  if (answer === "s") throw new ReviewControl("skip");
+}
 
 const dbPath = expandHome(config.get<string>("db.path"));
 const db = createDb(dbPath, config.get<number>("db.busyTimeoutMs"));
@@ -73,29 +94,6 @@ let confirmed = 0;
 let skipped = 0;
 
 for (const [index, candidate] of candidates.entries()) {
-  const stop = await reviewOne(candidate, index);
-  if (stop) break;
-}
-
-console.log(`\nDone for this session: ${confirmed} adopted, ${skipped} skipped. Re-run to continue with the rest.`);
-rl.close();
-db.close();
-
-/** Thrown by a prompt helper below to unwind reviewOne() when the reviewer quits, skips, or gives unparseable input at any of its three prompts — so every prompt is a real stopping/skip point, not just the first one. */
-class ReviewControl extends Error {
-  constructor(public readonly action: "quit" | "skip") {
-    super(action);
-  }
-}
-
-/** `q`/`s` are recognized at every prompt in reviewOne(), not only the first — issue #14 review: "stop at any point" should hold mid-candidate too. */
-function checkControlAnswer(answer: string): void {
-  if (answer === "q") throw new ReviewControl("quit");
-  if (answer === "s") throw new ReviewControl("skip");
-}
-
-/** Reviews one candidate; returns true if the reviewer asked to quit. */
-async function reviewOne(candidate: AdoptionCandidate, index: number): Promise<boolean> {
   const guessedType = guessDocumentType(candidate.title);
   const guessedDoctorId = adoption.guessDoctorId(candidate.noteId, candidate.title);
   const guessedDoctorName = guessedDoctorId !== null ? doctorNamesById.get(guessedDoctorId) : undefined;
@@ -105,6 +103,7 @@ async function reviewOne(candidate: AdoptionCandidate, index: number): Promise<b
   console.log(`  Proposed type: ${guessedType}`);
   console.log(`  Proposed doctor: ${guessedDoctorName ?? "(none)"}`);
 
+  let quit = false;
   try {
     const typeAnswer = (
       await rl.question(
@@ -143,15 +142,18 @@ async function reviewOne(candidate: AdoptionCandidate, index: number): Promise<b
     const adopted = documents.adopt(candidate.noteId, { type, doctorId, documentDate });
     console.log(`  Adopted as Document #${adopted.id}.`);
     confirmed++;
-    return false;
   } catch (err) {
     if (err instanceof ReviewControl) {
-      if (err.action === "quit") return true;
+      if (err.action === "quit") quit = true;
+      else skipped++;
+    } else {
+      console.log(`  Failed to adopt: ${(err as Error).message}`);
       skipped++;
-      return false;
     }
-    console.log(`  Failed to adopt: ${(err as Error).message}`);
-    skipped++;
-    return false;
   }
+  if (quit) break;
 }
+
+console.log(`\nDone for this session: ${confirmed} adopted, ${skipped} skipped. Re-run to continue with the rest.`);
+rl.close();
+db.close();
