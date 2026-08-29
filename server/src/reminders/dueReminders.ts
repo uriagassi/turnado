@@ -122,14 +122,28 @@ function wrap<T extends { id: number; ownerUsername: string | null }>(
   return { itemType, itemId: item.id, targetDate, ownerUsername: item.ownerUsername };
 }
 
-// en-CA renders as YYYY-MM-DD, giving this the same shape Task.dueDate and
-// the (itemType, itemId, targetDate) key already use, computed as that
-// timezone's wall-clock calendar date rather than the instant's UTC date.
-// Exported so ReminderService can compute the same "today" it needs for
+// Builds YYYY-MM-DD from formatToParts' numeric fields rather than trusting
+// en-CA's locale template to render that shape directly — on a small-icu
+// Node build (Synology's packaged Node.js, at least), en-CA silently falls
+// back to a different locale's format (e.g. "8/29/2026") instead of
+// throwing, which then breaks addDays()'s YYYY-MM-DD parsing downstream.
+// formatToParts still gives correct per-field values under small-icu (only
+// the locale-specific *arrangement* of those fields is what's missing), so
+// assembling the string ourselves sidesteps the gap regardless of which
+// locale data happens to be installed. Computed as that timezone's
+// wall-clock calendar date rather than the instant's UTC date. Exported so
+// ReminderService can compute the same "today" it needs for
 // ReminderLog.sweepMissed() without a second, potentially-diverging
 // implementation of the same timezone math.
 export function dateOnly(date: Date, timezone: string): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(date);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const part = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
 function addDays(dateStr: string, days: number): string {
