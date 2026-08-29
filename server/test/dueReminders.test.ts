@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { selectDueReminders, selectPastDueItems } from "../src/reminders/dueReminders.js";
+import { selectDueReminders, selectPastDueItems, dateOnly } from "../src/reminders/dueReminders.js";
 import type { Appointment } from "../src/appointments/Appointments.js";
 import type { Task } from "../src/tasks/Tasks.js";
 
@@ -177,5 +177,26 @@ describe("selectPastDueItems", () => {
     const pastDue = selectPastDueItems([unowned], [], now, "UTC");
 
     expect(pastDue).toEqual([{ itemType: "appointment", itemId: 1, targetDate: "2026-08-20", ownerUsername: null }]);
+  });
+});
+
+// Regression coverage for a real deployment bug: dateOnly() used to build
+// its YYYY-MM-DD string from Intl.DateTimeFormat("en-CA", {...}).format(),
+// trusting the en-CA locale template to render that shape. On a small-icu
+// Node build (Synology's packaged Node.js, at least), that locale's actual
+// formatting data isn't present and format() silently falls back to a
+// different shape (e.g. "8/29/2026") instead of throwing — which then broke
+// addDays()'s YYYY-MM-DD parsing downstream. These pin the zero-padded
+// YYYY-MM-DD contract directly, independent of which Intl locale data
+// happens to be installed.
+describe("dateOnly", () => {
+  it("zero-pads single-digit month and day", () => {
+    expect(dateOnly(new Date("2026-01-05T12:00:00Z"), "UTC")).toBe("2026-01-05");
+  });
+
+  it("uses the given timezone's wall-clock date, not the instant's UTC date", () => {
+    // 2026-08-22T23:30:00Z is already 2026-08-23 in Asia/Jerusalem (UTC+3).
+    expect(dateOnly(new Date("2026-08-22T23:30:00Z"), "Asia/Jerusalem")).toBe("2026-08-23");
+    expect(dateOnly(new Date("2026-08-22T23:30:00Z"), "UTC")).toBe("2026-08-22");
   });
 });
