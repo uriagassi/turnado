@@ -12,6 +12,24 @@ export interface AuthClientData {
 
 export type UserResult = { status: "ok"; user: UserInfo } | { status: "not-authorized" } | { status: "unauthenticated" };
 
+// The Synology SSO redirect (SignInScreen's loginHref) comes back with the
+// token as a URL fragment — `#access_token=...` — not a query string.
+// Browsers never send a fragment to the server, so the server-side
+// SimpleOAuth handler (which checks query/body/header/cookie) never sees a
+// query-string token here; it has to be read client-side and forwarded
+// explicitly, same as the sibling document-archive app's own client does.
+// Captured once at module load, before anything else touches the URL, and
+// the fragment is then stripped from the visible URL/history so a refresh
+// doesn't keep re-exposing the raw token in the address bar.
+function accessTokenFromHash(): string | null {
+  if (!window.location.hash) return null;
+  const token = new URLSearchParams(window.location.hash.slice(1)).get("access_token");
+  if (token) history.replaceState(null, "", window.location.pathname + window.location.search);
+  return token;
+}
+
+const hashAccessToken = accessTokenFromHash();
+
 export async function fetchAuthInfo(): Promise<AuthClientData> {
   const res = await fetch("/auth", { credentials: "same-origin" });
   return res.json();
@@ -20,7 +38,10 @@ export async function fetchAuthInfo(): Promise<AuthClientData> {
 export async function fetchCurrentUser(): Promise<UserResult> {
   // Propagate the page's own query string so a self-testing `?lang=he`
   // override reaches the server's locale resolution.
-  const res = await fetch("/api/user" + window.location.search, { credentials: "same-origin" });
+  const res = await fetch("/api/user" + window.location.search, {
+    credentials: "same-origin",
+    headers: hashAccessToken ? { "x-access-token": hashAccessToken } : undefined,
+  });
   if (res.status === 403) return { status: "not-authorized" };
   if (res.status === 401) return { status: "unauthenticated" };
   if (!res.ok) throw new Error(`Unexpected /api/user status ${res.status}`);
