@@ -7,6 +7,9 @@ coverage
 # local config (real deployment values)
 config/local.json
 
+# NAS deployment notes (real host/IP/account details, not for public repo)
+docs/nas-deployment-notes.md
+
 # dev-only sqlite file (config/local.json's db.path default)
 /data
 /server/data
