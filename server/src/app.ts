@@ -504,9 +504,10 @@ export function createApp(options: AppOptions): Express {
   }
 
   app.get("/api/logout", (req, res) => {
-    // Both stores: the auth cookies (x-token-user, x-access-token) are
-    // signed, so cookie-parser puts them in req.signedCookies, not
-    // req.cookies — clearing only the latter left them behind.
+    // Both stores: the auth cookies (turnado-x-token-user,
+    // turnado-x-access-token) are signed, so cookie-parser puts them in
+    // req.signedCookies, not req.cookies — clearing only the latter left
+    // them behind.
     const cookieNames = new Set([...Object.keys(req.cookies ?? {}), ...Object.keys(req.signedCookies ?? {})]);
     for (const name of cookieNames) {
       res.clearCookie(name);

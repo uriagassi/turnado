@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { setAuthCookie } from "./cookies.js";
+import { setAuthCookie, SESSION_COOKIE_NAME } from "./cookies.js";
 
 // Duplicated (deliberately, not extracted into a shared package) from the
 // sibling document-archive app's own SSO validation code — see
@@ -42,8 +42,8 @@ export class Auth {
     // Signed, not just present: cookie-parser only populates
     // signedCookies for a value whose HMAC matches config's
     // security.cookieSecret, so a client can't just send an arbitrary
-    // `x-token-user=someone` and be trusted as that user.
-    const session = req.signedCookies?.["x-token-user"];
+    // `turnado-x-token-user=someone` and be trusted as that user.
+    const session = req.signedCookies?.[SESSION_COOKIE_NAME];
     if (session) {
       const identity = parseSession(session);
       if (identity) {
@@ -59,7 +59,7 @@ export class Auth {
       this.authHandler.authorize(req, res, (data) => {
         req.userId = data.user_id;
         req.userName = data.user_name;
-        setAuthCookie(res, "x-token-user", JSON.stringify({ userId: data.user_id, userName: data.user_name }));
+        setAuthCookie(res, SESSION_COOKIE_NAME, JSON.stringify({ userId: data.user_id, userName: data.user_name }));
         return next();
       });
     } catch (err) {
