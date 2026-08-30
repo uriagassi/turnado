@@ -13,8 +13,8 @@ function appWithAllowList() {
 
 /**
  * Logs in as the given user via a fresh handshake and returns the signed
- * `x-token-user` session cookie the server set — for reuse against a
- * separate app instance whose StubAuthHandler has no fixed user, proving
+ * `turnado-x-token-user` session cookie the server set — for reuse against
+ * a separate app instance whose StubAuthHandler has no fixed user, proving
  * the request was satisfied by the cookie shortcut and not a fresh
  * handshake (see StubAuthHandler's own doc comment).
  */
@@ -26,8 +26,8 @@ async function signedInCookie(userId: string, userName: string): Promise<string>
   });
   const res = await request(app).get("/api/home");
   const setCookie = ([] as string[]).concat(res.headers["set-cookie"] ?? []);
-  const tokenCookie = setCookie.find((c) => c.startsWith("x-token-user="));
-  if (!tokenCookie) throw new Error("expected a x-token-user cookie to be set on first login");
+  const tokenCookie = setCookie.find((c) => c.startsWith("turnado-x-token-user="));
+  if (!tokenCookie) throw new Error("expected a turnado-x-token-user cookie to be set on first login");
   return tokenCookie.split(";")[0];
 }
 
@@ -98,13 +98,13 @@ describe("auth allow-list, across every route in the app", () => {
     expect(res.body.handler).toBe("StubAuthHandler");
   });
 
-  it("rejects a forged, unsigned x-token-user cookie instead of trusting it as a session shortcut", async () => {
+  it("rejects a forged, unsigned turnado-x-token-user cookie instead of trusting it as a session shortcut", async () => {
     // Regression test for the auth-bypass fix: Auth.ts's cookie shortcut
     // must only trust a cryptographically signed cookie value, never an
     // arbitrary client-supplied one. With no signed cookie present, this
     // falls through to StubAuthHandler().authorize(), which — with no
     // fixed user configured — throws, which Auth.ts turns into a 401.
-    const res = await request(appWithAllowList()).get("/api/home").set("Cookie", "x-token-user=alice");
+    const res = await request(appWithAllowList()).get("/api/home").set("Cookie", "turnado-x-token-user=alice");
     expect(res.status).toBe(401);
   });
 });

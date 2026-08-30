@@ -1,5 +1,5 @@
 import { IAuthHandler, IUserData } from "./Auth.js";
-import { setAuthCookie } from "./cookies.js";
+import { setAuthCookie, ACCESS_TOKEN_COOKIE_NAME } from "./cookies.js";
 import https from "node:https";
 import axios from "axios";
 import { Request, Response } from "express";
@@ -14,7 +14,7 @@ export abstract class SimpleOAuth implements IAuthHandler {
       req.query?.token ||
       req.body?.token ||
       req.headers["x-access-token"] ||
-      req.signedCookies?.["x-access-token"];
+      req.signedCookies?.[ACCESS_TOKEN_COOKIE_NAME];
     if (!tok) {
       // No token yet is the *normal* first-visit state (before the user
       // has followed the SSO login link) — 401 so the client treats it
@@ -37,7 +37,7 @@ export abstract class SimpleOAuth implements IAuthHandler {
           console.error(response.data);
           return res.status(401).send("Invalid Token");
         }
-        setAuthCookie(res, "x-access-token", token);
+        setAuthCookie(res, ACCESS_TOKEN_COOKIE_NAME, token);
         callback(response.data.data);
       })
       .catch((error) => {
