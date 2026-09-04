@@ -20,10 +20,16 @@ function getAvatarColor(id: number): string {
   return `hsl(${hue}, 55%, 45%)`;
 }
 
-// Title tokens ("Dr.", "Mr.", ...) are near-universal on a doctor's name in
-// this app, so they're stripped before taking initials — otherwise every
-// avatar in the list would start with the same "D".
+// Title tokens ("Dr.", "Mr.", 'ד"ר', "פרופ'", ...) are near-universal on a
+// doctor's name in this app, so they're stripped before taking initials —
+// otherwise every avatar in the list would start with the same "D" (or "ד").
+const ENGLISH_TITLE = /^[A-Za-z]{1,3}\.$/;
+const HEBREW_TITLE = /^(ד["״]?ר\.?|פרופ['׳]?|פרופסור|מר|גב['׳]?|גברת|אדון)$/;
+
 function getInitials(name: string): string {
-  const words = name.trim().split(/\s+/).filter((word) => !/^[A-Za-z]{1,3}\.$/.test(word));
+  const words = name
+    .trim()
+    .split(/\s+/)
+    .filter((word) => !ENGLISH_TITLE.test(word) && !HEBREW_TITLE.test(word));
   return words.slice(0, 2).map((word) => word[0]?.toUpperCase() ?? "").join("");
 }

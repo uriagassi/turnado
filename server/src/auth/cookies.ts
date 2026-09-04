@@ -39,3 +39,8 @@ export const AUTH_COOKIE_MAX_AGE_MS = 5_000_000; // ~83 minutes
 export function setAuthCookie(res: Response, name: string, value: string, maxAge: number = AUTH_COOKIE_MAX_AGE_MS): void {
   res.cookie(name, value, { ...AUTH_COOKIE_OPTIONS, secure: cookiesAreSecure(), maxAge });
 }
+
+// Namespaced to this app — see commit message for why (collided with
+// paperless.node's identically-named cookies on the shared hostname).
+export const SESSION_COOKIE_NAME = "turnado-x-token-user";
+export const ACCESS_TOKEN_COOKIE_NAME = "turnado-x-access-token";
