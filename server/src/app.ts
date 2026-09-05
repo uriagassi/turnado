@@ -79,6 +79,15 @@ export interface AppOptions {
   clientDistPath?: string;
   /** Household timezone (config's reminders.timezone, issue #10) — used only to tell whether a logged missedReminder is still current for an appointment's date (see withMissedReminder). Defaults to the same "Asia/Jerusalem" default the config file itself uses. */
   remindersTimezone?: string;
+  /** How POST /internal/die terminates the process. Defaults to process.exit — overridden in tests so hitting the route doesn't kill the test runner. */
+  exitProcess?: (code: number) => void;
+}
+
+const LOOPBACK_ADDRESSES = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
+
+/** Exported for direct unit testing — supertest's requests always arrive from loopback, so the rejection branch of POST /internal/die can't be exercised end-to-end. */
+export function isLoopbackAddress(address: string | undefined): boolean {
+  return address !== undefined && LOOPBACK_ADDRESSES.has(address);
 }
 
 export function createApp(options: AppOptions): Express {
@@ -93,6 +102,7 @@ export function createApp(options: AppOptions): Express {
     photosDir,
     clientDistPath,
     remindersTimezone = "Asia/Jerusalem",
+    exitProcess = (code: number) => process.exit(code),
   } = options;
   const allowList = new AllowList(allowListConfig);
 
@@ -112,6 +122,21 @@ export function createApp(options: AppOptions): Express {
   );
   app.use(express.json());
   app.use(cookieParser(cookieSecret));
+
+  // Ahead of auth on purpose: the NAS control script curls this, unauthenticated,
+  // before starting a new instance, so any already-running process (including
+  // one `forever` has lost track of — tsx re-execs its real worker as a nested
+  // child, which forever's own process-tree kill can't reach, see
+  // docs/nas-deployment-notes.md) shuts itself down and frees its port before
+  // the new one binds. A process asking itself to exit always works, unlike
+  // killing it from outside. Loopback-only so this is never reachable off-box.
+  app.post("/internal/die", (req, res) => {
+    if (!isLoopbackAddress(req.socket.remoteAddress)) {
+      res.status(403).end();
+      return;
+    }
+    res.status(200).end(() => exitProcess(0));
+  });
 
   const auth = new Auth(authHandler);
   app.use((req, res, next) => auth.auth(req, res, next));
