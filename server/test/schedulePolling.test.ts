@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { schedulePolling } from "../src/reminders/schedulePolling.js";
+import { schedulePolling } from "../src/schedulePolling.js";
 
 describe("schedulePolling", () => {
   afterEach(() => {

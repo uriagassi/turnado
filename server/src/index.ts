@@ -3,9 +3,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import config from "./config.js";
-import { createDb } from "./db.js";
+import { createDb, checkpoint } from "./db.js";
 import { expandHome } from "./paths.js";
 import { createApp } from "./app.js";
+import { schedulePolling } from "./schedulePolling.js";
 import type { IAuthHandler } from "./auth/Auth.js";
 import { AllowList, type AllowListConfig } from "./auth/AllowList.js";
 import { Appointments } from "./appointments/Appointments.js";
@@ -14,7 +15,6 @@ import { Doctors } from "./doctors/Doctors.js";
 import { ReminderLog } from "./reminders/ReminderLog.js";
 import { ReminderService } from "./reminders/ReminderService.js";
 import { NodemailerMailer, createNodemailerTransport } from "./reminders/Mailer.js";
-import { schedulePolling } from "./reminders/schedulePolling.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -74,6 +74,28 @@ const reminderService = new ReminderService({
   timezone: remindersTimezone,
 });
 schedulePolling(() => reminderService.runOnce(), 60 * 60 * 1000);
+
+// docs/adr/0001-wal-checkpoint-strategy.md: this app is the only one of the
+// two sharing the DB file in any position to checkpoint it, and low write
+// volume means SQLite's own automatic threshold could go unhit for a long
+// stretch — so an hourly PASSIVE checkpoint (non-blocking, safe on any
+// timer) closes the gap for anything reading the file directly mid-uptime.
+schedulePolling(async () => checkpoint(db, "PASSIVE"), 60 * 60 * 1000);
+
+// Same ADR: neither this signal handler nor /internal/die's own exit path
+// (app.ts) can rely on process.exit()/db.close() triggering SQLite's
+// automatic full checkpoint — that only fires when the *last* connection on
+// the file closes, which is never true while the sibling paperless.node
+// process is still running. So both paths checkpoint explicitly. This
+// handler is the defensive net for a local `Ctrl-C` dev session; on the NAS,
+// /internal/die is the path that actually fires on every restart.
+function shutdown(signal: string) {
+  console.log(`${signal}: checkpointing WAL before exit`);
+  checkpoint(db, "TRUNCATE");
+  process.exit(0);
+}
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
 
 const hostname = config.get("server.localOnly") === true ? "127.0.0.1" : "0.0.0.0";
 const port = config.get<number>("server.port");
