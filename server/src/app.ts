@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import multer from "multer";
 import type { Database } from "better-sqlite3";
+import { checkpoint } from "./db.js";
 import { Auth, IAuthHandler } from "./auth/Auth.js";
 import { allowListMiddleware, AllowList, AllowListConfig } from "./auth/AllowList.js";
 import { resolveLocale } from "./i18n/locale.js";
@@ -130,6 +131,15 @@ export function createApp(options: AppOptions): Express {
   // docs/nas-deployment-notes.md) shuts itself down and frees its port before
   // the new one binds. A process asking itself to exit always works, unlike
   // killing it from outside. Loopback-only so this is never reachable off-box.
+  //
+  // This is also the path that actually fires on every normal NAS
+  // restart/deploy (turnadocontrol.sh's start() curls it every time), so an
+  // explicit checkpoint here before exiting matters more than any SIGINT/
+  // SIGTERM handler — process.exit() emits neither signal, and even a signal
+  // handler couldn't rely on SQLite's automatic checkpoint since this
+  // connection is never the last one open on the shared file while the
+  // sibling paperless.node process is running. See
+  // docs/adr/0001-wal-checkpoint-strategy.md.
   app.post("/internal/die", (req, res) => {
     if (!isLoopbackAddress(req.socket.remoteAddress)) {
       console.warn(`Rejected /internal/die from non-loopback address: ${req.socket.remoteAddress}`);
@@ -137,6 +147,7 @@ export function createApp(options: AppOptions): Express {
       return;
     }
     console.log(`/internal/die: exiting pid ${process.pid} so a new instance can take the port`);
+    if (db) checkpoint(db, "TRUNCATE"); // db is optional only in tests — always set in production, see index.ts
     res.status(200).end(() => exitProcess(0));
   });
 

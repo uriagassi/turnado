@@ -14,6 +14,19 @@ export function createDb(dbPath: string, busyTimeoutMs: number): Database.Databa
 }
 
 /**
+ * Runs an explicit WAL checkpoint — see docs/adr/0001-wal-checkpoint-strategy.md
+ * for why this app has to do this itself (the sibling paperless.node app does
+ * no WAL/checkpoint management of its own, and this app's own connection is
+ * never the "last one closes" that would trigger SQLite's automatic full
+ * checkpoint). PASSIVE is non-blocking, safe to call on any timer; TRUNCATE
+ * fully flushes and shrinks the WAL back to zero, appropriate right before
+ * exiting since a brief block on the way out doesn't matter.
+ */
+export function checkpoint(db: Database.Database, mode: "PASSIVE" | "TRUNCATE"): void {
+  db.pragma(`wal_checkpoint(${mode})`);
+}
+
+/**
  * Idempotently adds a column to an already-existing table — guarded by
  * checking `PRAGMA table_info` first, since SQLite has no
  * `ADD COLUMN IF NOT EXISTS` and this app has no migration framework of its

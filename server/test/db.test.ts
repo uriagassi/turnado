@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
-import { createDb, ensureColumn } from "../src/db.js";
+import { createDb, ensureColumn, checkpoint } from "../src/db.js";
 
 describe("createDb", () => {
   const tmpFiles: string[] = [];
@@ -37,6 +37,54 @@ describe("createDb", () => {
   it("honors a different busy_timeout value", () => {
     const db = createDb(tmpDbPath(), 1234);
     expect(db.pragma("busy_timeout", { simple: true })).toBe(1234);
+    db.close();
+  });
+});
+
+// docs/adr/0001-wal-checkpoint-strategy.md
+describe("checkpoint", () => {
+  const tmpFiles: string[] = [];
+
+  afterEach(() => {
+    for (const f of tmpFiles.splice(0)) {
+      fs.rmSync(f, { force: true });
+      fs.rmSync(f + "-wal", { force: true });
+      fs.rmSync(f + "-shm", { force: true });
+    }
+  });
+
+  function tmpDbPath() {
+    const p = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "turnado-")), "test.sqlite");
+    tmpFiles.push(p);
+    return p;
+  }
+
+  function growWal(db: Database.Database) {
+    db.exec("CREATE TABLE Widgets (id INTEGER PRIMARY KEY, data TEXT)");
+    const insert = db.prepare("INSERT INTO Widgets (data) VALUES (?)");
+    for (let i = 0; i < 500; i++) insert.run("x".repeat(200));
+  }
+
+  it("PASSIVE flushes pending WAL content into the main file without truncating the WAL", () => {
+    const dbPath = tmpDbPath();
+    const db = createDb(dbPath, 5000);
+    growWal(db);
+
+    const [result] = db.pragma("wal_checkpoint(PASSIVE)") as { busy: number; checkpointed: number }[];
+    expect(result.checkpointed).toBeGreaterThan(0);
+
+    db.close();
+  });
+
+  it("TRUNCATE shrinks the WAL file back to zero bytes", () => {
+    const dbPath = tmpDbPath();
+    const db = createDb(dbPath, 5000);
+    growWal(db);
+    expect(fs.statSync(dbPath + "-wal").size).toBeGreaterThan(0);
+
+    checkpoint(db, "TRUNCATE");
+
+    expect(fs.statSync(dbPath + "-wal").size).toBe(0);
     db.close();
   });
 });
