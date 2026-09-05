@@ -132,9 +132,11 @@ export function createApp(options: AppOptions): Express {
   // killing it from outside. Loopback-only so this is never reachable off-box.
   app.post("/internal/die", (req, res) => {
     if (!isLoopbackAddress(req.socket.remoteAddress)) {
+      console.warn(`Rejected /internal/die from non-loopback address: ${req.socket.remoteAddress}`);
       res.status(403).end();
       return;
     }
+    console.log(`/internal/die: exiting pid ${process.pid} so a new instance can take the port`);
     res.status(200).end(() => exitProcess(0));
   });
 
