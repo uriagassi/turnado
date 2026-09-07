@@ -93,6 +93,7 @@ export class ReminderService {
 
     try {
       await mailer.send(email, content);
+      console.log(`Reminder sent for ${item.itemType} ${item.itemId} (${item.targetDate}) to ${email}`);
       reminderLog.markSent(item.itemType, item.itemId, item.targetDate);
     } catch (err) {
       // A real, unexpected delivery failure (SMTP down, auth rejected,
