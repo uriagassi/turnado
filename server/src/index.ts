@@ -2,8 +2,8 @@ import https from "node:https";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import consoleStamp from "console-stamp";
 import config from "./config.js";
-import { installTimestampedConsole } from "./logging.js";
 import { createDb, checkpoint } from "./db.js";
 import { expandHome } from "./paths.js";
 import { createApp } from "./app.js";
@@ -17,7 +17,7 @@ import { ReminderLog } from "./reminders/ReminderLog.js";
 import { ReminderService } from "./reminders/ReminderService.js";
 import { NodemailerMailer, createNodemailerTransport } from "./reminders/Mailer.js";
 
-installTimestampedConsole(); // before anything else logs
+consoleStamp(console); // same setup as paperless.node, for a consistent log format across both apps
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

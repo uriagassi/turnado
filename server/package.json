@@ -12,6 +12,7 @@
     "axios": "^1.7.4",
     "better-sqlite3": "12.6.2",
     "config": "^3.3.11",
+    "console-stamp": "^3.1.2",
     "cookie-parser": "^1.4.6",
     "express": "^4.19.2",
     "heic-convert": "^2.1.0",
