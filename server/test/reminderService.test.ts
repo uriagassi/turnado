@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -76,6 +76,19 @@ describe("ReminderService.runOnce", () => {
     expect(mailer.sent).toHaveLength(1);
     expect(mailer.sent[0].to).toBe("alice@example.com");
     expect(reminderLog.find("appointment", appt.id, "2026-08-23")?.status).toBe("sent");
+  });
+
+  it("logs a successful send", async () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const { appointments, service } = harness();
+    const appt = appointments.create({ notes: "Annual checkup", dateTime: "2026-08-23T10:00:00Z" }, "alice");
+
+    await service.runOnce();
+
+    expect(logSpy).toHaveBeenCalledWith(
+      `Reminder sent for appointment ${appt.id} (2026-08-23) to alice@example.com`,
+    );
+    logSpy.mockRestore();
   });
 
   it("sends a reminder for a due task's owner", async () => {
