@@ -34,10 +34,6 @@ export function NavBar({
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  // Lazily read rather than always "light": index.html's inline script and
-  // main.tsx's own applyTheme() call (see theme.ts) have already stamped the
-  // stored/default theme onto <html> by the time this mounts, and this just
-  // needs to agree with that so the switch's initial position is right.
   const [theme, setTheme] = useState<Theme>(() => getStoredTheme());
 
   const toggleTheme = () => {

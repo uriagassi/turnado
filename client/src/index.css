@@ -6,11 +6,6 @@
    this app's own equivalents (the prototypes are light-only), paired via
    light-dark() the same way the rest of this file already does. */
 :root {
-  /* Explicit "light" (not "light dark") so light-dark() below defaults to
-     its light values regardless of the OS's own preference — the app's
-     theme is a user choice (see components/NavBar.tsx's theme toggle +
-     theme.ts), not an automatic follow-system-preference. Switching to dark
-     is just overriding this one property for a "dark" data-theme. */
   color-scheme: light;
   font-family:
     system-ui,
@@ -1597,12 +1592,7 @@ html[dir="rtl"] .back-link-arrow {
   gap: 0.25rem;
 }
 
-/* :not(.theme-toggle) — the theme switch below is a button too (for its
-   click target and keyboard support) but a fundamentally different control
-   (a pill switch, not a full-width nav row), and this rule's own width:100%/
-   padding/background would otherwise clobber its .theme-toggle styling
-   below (same specificity, source order would win). */
-.nav-drawer button:not(.theme-toggle) {
+.nav-drawer button {
   width: 100%;
   text-align: start;
   background: none;
@@ -1614,14 +1604,10 @@ html[dir="rtl"] .back-link-arrow {
   cursor: pointer;
 }
 
-.nav-drawer button:not(.theme-toggle):hover {
+.nav-drawer button:hover {
   background: var(--color-primary-dim);
 }
 
-/* Theme toggle, pinned below the destination list in the drawer (see
-   NavBar.tsx) — a labeled row + switch, matching how a settings toggle
-   reads elsewhere rather than another button in the destinations <ul>,
-   since it changes a preference rather than navigating anywhere. */
 .nav-drawer-footer {
   display: flex;
   align-items: center;
@@ -1637,11 +1623,7 @@ html[dir="rtl"] .back-link-arrow {
   color: var(--color-text);
 }
 
-/* role="switch" pill, thumb sliding between the two ends — the thumb glyph
-   (see NavBar.tsx) shows the theme that's *currently active*, matching
-   .theme-toggle-track's own light/dark background swap, rather than the
-   more common "icon = what you'll switch to" convention. */
-.theme-toggle {
+.nav-drawer-footer .theme-toggle {
   position: relative;
   flex-shrink: 0;
   width: 3.25rem;
@@ -1670,10 +1652,10 @@ html[dir="rtl"] .back-link-arrow {
   transition: left 0.15s ease;
 }
 
-.theme-toggle[aria-checked="true"] {
+.nav-drawer-footer .theme-toggle[aria-checked="true"] {
   background: var(--color-primary-dim);
 }
 
-.theme-toggle[aria-checked="true"] .theme-toggle-thumb {
+.nav-drawer-footer .theme-toggle[aria-checked="true"] .theme-toggle-thumb {
   left: calc(100% - 1.3125rem - 0.1875rem);
 }

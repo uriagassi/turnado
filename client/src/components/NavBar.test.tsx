@@ -2,11 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NavBar } from "./NavBar";
+import { STORAGE_KEY } from "../theme";
 
 describe("NavBar", () => {
-  // Theme is read from/written to localStorage (see theme.ts) — reset both
-  // that and the <html> attribute it drives so a theme test can't leak its
-  // choice into the next one.
   beforeEach(() => {
     localStorage.clear();
     delete document.documentElement.dataset.theme;
@@ -122,7 +120,7 @@ describe("NavBar", () => {
 
     expect(screen.getByRole("switch", { name: "Toggle dark theme" })).toHaveAttribute("aria-checked", "true");
     expect(document.documentElement.dataset.theme).toBe("dark");
-    expect(localStorage.getItem("turnado-theme")).toBe("dark");
+    expect(localStorage.getItem(STORAGE_KEY)).toBe("dark");
   });
 
   it("switches back to light theme when the toggle is activated again", async () => {
@@ -136,11 +134,11 @@ describe("NavBar", () => {
 
     expect(toggle).toHaveAttribute("aria-checked", "false");
     expect(document.documentElement.dataset.theme).toBe("light");
-    expect(localStorage.getItem("turnado-theme")).toBe("light");
+    expect(localStorage.getItem(STORAGE_KEY)).toBe("light");
   });
 
   it("starts checked when a dark theme was already stored", async () => {
-    localStorage.setItem("turnado-theme", "dark");
+    localStorage.setItem(STORAGE_KEY, "dark");
     const user = userEvent.setup();
     render(<NavBar title="Home" onNavigate={vi.fn()} />);
 

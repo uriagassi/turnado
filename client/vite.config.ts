@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { injectThemeStorageKey } from "./viteThemeStoragePlugin";
 
 // Dev-time proxy to the app server (port from config/default.json's
 // server.port) so the client can be run standalone with `vite` while
@@ -8,7 +9,7 @@ import react from "@vitejs/plugin-react";
 // it here, an <img src="/photos/...">  in dev falls through to Vite's own
 // SPA-fallback index.html instead of the actual file.
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), injectThemeStorageKey()],
   server: {
     // Respect an assigned PORT (e.g. from the dev harness's autoPort) so the
     // client doesn't collide with another instance already on the default
