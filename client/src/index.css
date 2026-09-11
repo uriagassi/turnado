@@ -6,7 +6,12 @@
    this app's own equivalents (the prototypes are light-only), paired via
    light-dark() the same way the rest of this file already does. */
 :root {
-  color-scheme: light dark;
+  /* Explicit "light" (not "light dark") so light-dark() below defaults to
+     its light values regardless of the OS's own preference — the app's
+     theme is a user choice (see components/NavBar.tsx's theme toggle +
+     theme.ts), not an automatic follow-system-preference. Switching to dark
+     is just overriding this one property for a "dark" data-theme. */
+  color-scheme: light;
   font-family:
     system-ui,
     -apple-system,
@@ -61,6 +66,10 @@
      same margin or it renders flush against the browser window instead of
      under the title bar. */
   --content-max-width: 480px;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 * {
@@ -1588,7 +1597,12 @@ html[dir="rtl"] .back-link-arrow {
   gap: 0.25rem;
 }
 
-.nav-drawer button {
+/* :not(.theme-toggle) — the theme switch below is a button too (for its
+   click target and keyboard support) but a fundamentally different control
+   (a pill switch, not a full-width nav row), and this rule's own width:100%/
+   padding/background would otherwise clobber its .theme-toggle styling
+   below (same specificity, source order would win). */
+.nav-drawer button:not(.theme-toggle) {
   width: 100%;
   text-align: start;
   background: none;
@@ -1600,6 +1614,66 @@ html[dir="rtl"] .back-link-arrow {
   cursor: pointer;
 }
 
-.nav-drawer button:hover {
+.nav-drawer button:not(.theme-toggle):hover {
   background: var(--color-primary-dim);
+}
+
+/* Theme toggle, pinned below the destination list in the drawer (see
+   NavBar.tsx) — a labeled row + switch, matching how a settings toggle
+   reads elsewhere rather than another button in the destinations <ul>,
+   since it changes a preference rather than navigating anywhere. */
+.nav-drawer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-block-start: 0.5rem;
+  padding-block-start: 0.75rem;
+  border-block-start: 1px solid var(--color-border);
+}
+
+.nav-drawer-footer-label {
+  font-size: 1rem;
+  color: var(--color-text);
+}
+
+/* role="switch" pill, thumb sliding between the two ends — the thumb glyph
+   (see NavBar.tsx) shows the theme that's *currently active*, matching
+   .theme-toggle-track's own light/dark background swap, rather than the
+   more common "icon = what you'll switch to" convention. */
+.theme-toggle {
+  position: relative;
+  flex-shrink: 0;
+  width: 3.25rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-gray-bg);
+  cursor: pointer;
+}
+
+.theme-toggle-thumb {
+  position: absolute;
+  top: 50%;
+  left: 0.1875rem;
+  transform: translateY(-50%);
+  width: 1.3125rem;
+  height: 1.3125rem;
+  border-radius: 50%;
+  background: var(--color-card-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8125rem;
+  line-height: 1;
+  transition: left 0.15s ease;
+}
+
+.theme-toggle[aria-checked="true"] {
+  background: var(--color-primary-dim);
+}
+
+.theme-toggle[aria-checked="true"] .theme-toggle-thumb {
+  left: calc(100% - 1.3125rem - 0.1875rem);
 }

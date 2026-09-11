@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { applyTheme, getStoredTheme, type Theme } from "../theme";
 
 /** Every top-level destination the nav drawer can jump to — matches the AppState phases App.tsx wires this into (see App.tsx). */
 export type NavDestination = "home" | "doctors" | "documents" | "appointment-upcoming" | "appointment-history";
@@ -33,6 +34,17 @@ export function NavBar({
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  // Lazily read rather than always "light": index.html's inline script and
+  // main.tsx's own applyTheme() call (see theme.ts) have already stamped the
+  // stored/default theme onto <html> by the time this mounts, and this just
+  // needs to agree with that so the switch's initial position is right.
+  const [theme, setTheme] = useState<Theme>(() => getStoredTheme());
+
+  const toggleTheme = () => {
+    const next: Theme = theme === "dark" ? "light" : "dark";
+    applyTheme(next);
+    setTheme(next);
+  };
 
   // Escape-to-close matches ConfirmationModal's own convention elsewhere in
   // this app (see components/ConfirmationModal.tsx) — only listens while
@@ -94,6 +106,21 @@ export function NavBar({
                 </li>
               ))}
             </ul>
+            <div className="nav-drawer-footer">
+              <span className="nav-drawer-footer-label">{t("nav.theme.label")}</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={theme === "dark"}
+                aria-label={t("nav.theme.toggle")}
+                className="theme-toggle"
+                onClick={toggleTheme}
+              >
+                <span className="theme-toggle-thumb" aria-hidden="true">
+                  {theme === "dark" ? "🌙" : "☀️"}
+                </span>
+              </button>
+            </div>
           </nav>
         </>
       )}

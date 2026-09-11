@@ -2,6 +2,8 @@
   "app.title": "Turnado",
   "nav.menu": "Menu",
   "nav.back": "Back",
+  "nav.theme.label": "Theme",
+  "nav.theme.toggle": "Toggle dark theme",
   "common.today": "Today",
   "common.tomorrow": "Tomorrow",
   "home.title": "Home",

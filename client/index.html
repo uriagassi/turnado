@@ -4,6 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Turnado</title>
+    <!-- Stamps the stored theme onto <html> before index.css paints anything,
+         so a returning dark-theme user doesn't see a flash of the light theme
+         while main.tsx's module script loads. Mirrors theme.ts's own
+         getStoredTheme()/STORAGE_KEY — kept as a plain inline script (rather
+         than importing theme.ts here) since it must run synchronously,
+         before the module script tag below. -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("turnado-theme");
+          document.documentElement.dataset.theme = stored === "dark" ? "dark" : "light";
+        } catch (e) {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
