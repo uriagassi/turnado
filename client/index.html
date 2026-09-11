@@ -4,20 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Turnado</title>
-
-    <!-- Installable-PWA basics: lets iOS/Android "Add to Home Screen" launch this
-         as a standalone app (own icon, no browser chrome) instead of a bookmark.
-         No service worker — this app always needs its own API server, so there's
-         nothing useful to serve offline. -->
-    <link rel="manifest" href="/manifest.webmanifest" />
-    <!-- iOS ignores the manifest's icons for the home-screen thumbnail; it only
-         reads this tag. -->
-    <link rel="apple-touch-icon" href="/icons/icon-180.png" />
-    <link rel="icon" type="image/png" href="/icons/icon-32.png" />
-    <meta name="theme-color" content="#2563eb" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="Turnado" />
     <!-- __TURNADO_THEME_STORAGE_KEY__ is substituted with theme.ts's real
          STORAGE_KEY by viteThemeStoragePlugin.ts's injectThemeStorageKey. -->
     <script>
