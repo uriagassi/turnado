@@ -2,6 +2,8 @@
   "app.title": "תורנדו",
   "nav.menu": "תפריט",
   "nav.back": "חזרה",
+  "nav.theme.label": "מצב כהה",
+  "nav.theme.toggle": "החלפה בין מצב בהיר לכהה",
   "common.today": "היום",
   "common.tomorrow": "מחר",
   "home.title": "בית",

@@ -1,9 +1,15 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NavBar } from "./NavBar";
+import { STORAGE_KEY } from "../theme";
 
 describe("NavBar", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    delete document.documentElement.dataset.theme;
+  });
+
   it("shows the current screen's title", () => {
     render(<NavBar title="Doctors" onNavigate={vi.fn()} />);
 
@@ -94,5 +100,50 @@ describe("NavBar", () => {
     await user.click(screen.getByRole("button", { name: "Menu" }));
 
     expect(screen.getByText("Turnado")).toBeInTheDocument();
+  });
+
+  it("defaults the theme switch to light (unchecked) with nothing stored", async () => {
+    const user = userEvent.setup();
+    render(<NavBar title="Home" onNavigate={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: "Menu" }));
+
+    expect(screen.getByRole("switch", { name: "Toggle dark theme" })).toHaveAttribute("aria-checked", "false");
+  });
+
+  it("switches to dark theme when the toggle is activated, stamping <html data-theme> and persisting the choice", async () => {
+    const user = userEvent.setup();
+    render(<NavBar title="Home" onNavigate={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: "Menu" }));
+    await user.click(screen.getByRole("switch", { name: "Toggle dark theme" }));
+
+    expect(screen.getByRole("switch", { name: "Toggle dark theme" })).toHaveAttribute("aria-checked", "true");
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(localStorage.getItem(STORAGE_KEY)).toBe("dark");
+  });
+
+  it("switches back to light theme when the toggle is activated again", async () => {
+    const user = userEvent.setup();
+    render(<NavBar title="Home" onNavigate={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: "Menu" }));
+    const toggle = screen.getByRole("switch", { name: "Toggle dark theme" });
+    await user.click(toggle);
+    await user.click(toggle);
+
+    expect(toggle).toHaveAttribute("aria-checked", "false");
+    expect(document.documentElement.dataset.theme).toBe("light");
+    expect(localStorage.getItem(STORAGE_KEY)).toBe("light");
+  });
+
+  it("starts checked when a dark theme was already stored", async () => {
+    localStorage.setItem(STORAGE_KEY, "dark");
+    const user = userEvent.setup();
+    render(<NavBar title="Home" onNavigate={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: "Menu" }));
+
+    expect(screen.getByRole("switch", { name: "Toggle dark theme" })).toHaveAttribute("aria-checked", "true");
   });
 });

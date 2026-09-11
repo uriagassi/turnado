@@ -6,7 +6,7 @@
    this app's own equivalents (the prototypes are light-only), paired via
    light-dark() the same way the rest of this file already does. */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
   font-family:
     system-ui,
     -apple-system,
@@ -61,6 +61,10 @@
      same margin or it renders flush against the browser window instead of
      under the title bar. */
   --content-max-width: 480px;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 * {
@@ -1602,4 +1606,56 @@ html[dir="rtl"] .back-link-arrow {
 
 .nav-drawer button:hover {
   background: var(--color-primary-dim);
+}
+
+.nav-drawer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-block-start: 0.5rem;
+  padding-block-start: 0.75rem;
+  border-block-start: 1px solid var(--color-border);
+}
+
+.nav-drawer-footer-label {
+  font-size: 1rem;
+  color: var(--color-text);
+}
+
+.nav-drawer-footer .theme-toggle {
+  position: relative;
+  flex-shrink: 0;
+  width: 3.25rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-gray-bg);
+  cursor: pointer;
+}
+
+.theme-toggle-thumb {
+  position: absolute;
+  top: 50%;
+  left: 0.1875rem;
+  transform: translateY(-50%);
+  width: 1.3125rem;
+  height: 1.3125rem;
+  border-radius: 50%;
+  background: var(--color-card-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8125rem;
+  line-height: 1;
+  transition: left 0.15s ease;
+}
+
+.nav-drawer-footer .theme-toggle[aria-checked="true"] {
+  background: var(--color-primary-dim);
+}
+
+.nav-drawer-footer .theme-toggle[aria-checked="true"] .theme-toggle-thumb {
+  left: calc(100% - 1.3125rem - 0.1875rem);
 }
