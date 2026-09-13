@@ -20,38 +20,28 @@ export function AppointmentFormScreen({
   onCancel: () => void;
 }) {
   const { t } = useTranslation();
-  const [formData, setFormData] = useState<AppointmentInput>({
+  const [formData, setFormData] = useState<Omit<AppointmentInput, "location">>({
     doctorId: appointment?.doctorId ?? null,
     dateTime: appointment?.dateTime ?? "",
-    location: appointment?.location ?? "",
     notes: appointment?.notes ?? "",
   });
   const [errors, setErrors] = useState<RequiredFieldErrors>({});
   const [invitationFile, setInvitationFile] = useState<File | null>(null);
-  // Issue #50: picking a doctor fills the location from the doctor's address.
-  // Only while the location still holds that auto-filled value (or is blank,
-  // as for a brand-new appointment) — once the user edits it by hand, we
-  // stop touching it, and an existing appointment's saved location is never
-  // overwritten just by re-picking its doctor.
-  const [locationAutoFilled, setLocationAutoFilled] = useState(!appointment);
+  // Issue #50: doctor selection fills this from the doctor's address, until
+  // it's hand-edited (autoFilled tracks which of those states it's in).
+  const [location, setLocation] = useState({ value: appointment?.location ?? "", autoFilled: !appointment });
 
-  const setField = <K extends keyof AppointmentInput>(key: K, value: AppointmentInput[K]) =>
+  const setField = <K extends keyof typeof formData>(key: K, value: (typeof formData)[K]) =>
     setFormData((prev) => ({ ...prev, [key]: value }));
 
   const handleDoctorChange = (value: string) => {
     const doctorId = value ? Number(value) : null;
     const doctor = doctors.find((d) => d.id === doctorId);
-    setFormData((prev) => ({
-      ...prev,
-      doctorId,
-      location: locationAutoFilled ? (doctor?.address ?? "") : prev.location,
-    }));
+    setField("doctorId", doctorId);
+    setLocation((prev) => (prev.autoFilled ? { value: doctor?.address ?? "", autoFilled: true } : prev));
   };
 
-  const handleLocationChange = (value: string) => {
-    setLocationAutoFilled(false);
-    setField("location", value);
-  };
+  const handleLocationChange = (value: string) => setLocation({ value, autoFilled: false });
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -63,7 +53,7 @@ export function AppointmentFormScreen({
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    onSubmit(formData, invitationFile);
+    onSubmit({ ...formData, location: location.value }, invitationFile);
   };
 
   return (
@@ -92,7 +82,7 @@ export function AppointmentFormScreen({
         <div className="form-field">
           <label>
             {t("appointmentForm.location.label")}
-            <input type="text" value={formData.location ?? ""} onChange={(e) => handleLocationChange(e.target.value)} />
+            <input type="text" value={location.value} onChange={(e) => handleLocationChange(e.target.value)} />
           </label>
         </div>
         <div className="form-field">
