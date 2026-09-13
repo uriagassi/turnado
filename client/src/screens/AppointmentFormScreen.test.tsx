@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AppointmentFormScreen } from "./AppointmentFormScreen";
-import type { Doctor } from "../api";
+import type { Appointment, Doctor } from "../api";
 
 const doctors: Doctor[] = [
   { id: 1, name: "Dr. Jane Smith", address: "1 Main St", notes: "", photoPath: null },
@@ -86,6 +86,24 @@ describe("AppointmentFormScreen", () => {
     await user.selectOptions(screen.getByLabelText("Doctor"), "Dr. Amy Lee");
 
     expect(screen.getByLabelText("Location")).toHaveValue("Custom room 4");
+  });
+
+  it("fills the location from the doctor's address on mount when resolving a task into a new appointment (issue #50 follow-up)", () => {
+    const resolvedFromTask = { doctorId: 2, dateTime: "", location: "", notes: "See specialist" } as Appointment;
+
+    render(<AppointmentFormScreen appointment={resolvedFromTask} doctors={doctors} onSubmit={() => {}} onCancel={() => {}} />);
+
+    expect(screen.getByLabelText("Location")).toHaveValue("2 Oak Ave");
+  });
+
+  it("still updates the location if a different doctor is picked after resolving a task", async () => {
+    const user = userEvent.setup();
+    const resolvedFromTask = { doctorId: 2, dateTime: "", location: "", notes: "See specialist" } as Appointment;
+
+    render(<AppointmentFormScreen appointment={resolvedFromTask} doctors={doctors} onSubmit={() => {}} onCancel={() => {}} />);
+    await user.selectOptions(screen.getByLabelText("Doctor"), "Dr. Jane Smith");
+
+    expect(screen.getByLabelText("Location")).toHaveValue("1 Main St");
   });
 
   it("does not overwrite an existing appointment's location just from re-picking the doctor", async () => {
