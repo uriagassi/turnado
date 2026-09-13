@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AppointmentFormScreen } from "./AppointmentFormScreen";
 import type { Doctor } from "../api";
@@ -161,6 +161,24 @@ describe("AppointmentFormScreen", () => {
     expect(screen.getByLabelText("Date & time")).toHaveValue("2026-09-01T10:00");
     expect(screen.getByLabelText("Location")).toHaveValue("Clinic B");
     expect(screen.getByLabelText("Notes")).toHaveValue("Annual checkup");
+  });
+
+  it("ignores a second Save click fired while the first submit is still in flight (issue #49)", async () => {
+    const user = userEvent.setup();
+    let resolveSubmit: () => void = () => {};
+    const onSubmit = vi.fn(() => new Promise<void>((resolve) => (resolveSubmit = resolve)));
+    render(<AppointmentFormScreen doctors={doctors} onSubmit={onSubmit} onCancel={() => {}} />);
+
+    fireEvent.change(screen.getByLabelText("Date & time"), { target: { value: "2026-09-01T10:00" } });
+    await user.type(screen.getByLabelText("Notes"), "Annual checkup");
+
+    const saveButton = screen.getByRole("button", { name: "Save" });
+    await user.click(saveButton);
+    await user.click(saveButton); // fires while the first submit's promise is still pending
+
+    expect(onSubmit).toHaveBeenCalledOnce();
+    resolveSubmit();
+    await waitFor(() => expect(saveButton).not.toBeDisabled());
   });
 
   it("calls onCancel when the cancel control is activated", async () => {

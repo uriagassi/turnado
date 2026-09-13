@@ -16,7 +16,7 @@ export function AppointmentFormScreen({
   // invitation" upload below, which is optional (an appointment can be
   // created/edited without one). Not part of AppointmentInput, same
   // reasoning as DoctorFormScreen's separate photo parameter.
-  onSubmit: (input: AppointmentInput, invitationFile: File | null) => void;
+  onSubmit: (input: AppointmentInput, invitationFile: File | null) => Promise<void> | void;
   onCancel: () => void;
 }) {
   const { t } = useTranslation();
@@ -28,6 +28,7 @@ export function AppointmentFormScreen({
   const [errors, setErrors] = useState<RequiredFieldErrors>({});
   const [invitationFile, setInvitationFile] = useState<File | null>(null);
   const [location, setLocation] = useState({ value: appointment?.location ?? "", isDoctorDefault: !appointment });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const setField = <K extends keyof typeof formData>(key: K, value: (typeof formData)[K]) =>
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -41,7 +42,7 @@ export function AppointmentFormScreen({
 
   const handleLocationChange = (value: string) => setLocation({ value, isDoctorDefault: false });
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     // Mirrors the server's own required-field check (Appointments.validate)
     // so the user sees the problem immediately instead of round-tripping.
@@ -51,7 +52,12 @@ export function AppointmentFormScreen({
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    onSubmit({ ...formData, location: location.value }, invitationFile);
+    setIsSubmitting(true);
+    try {
+      await onSubmit({ ...formData, location: location.value }, invitationFile);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -101,10 +107,10 @@ export function AppointmentFormScreen({
           </label>
         </div>
         <div className="form-actions">
-          <button type="submit" className="save-appointment">
+          <button type="submit" className="save-appointment" disabled={isSubmitting}>
             {t("appointmentForm.save")}
           </button>
-          <button type="button" className="cancel-appointment" onClick={onCancel}>
+          <button type="button" className="cancel-appointment" onClick={onCancel} disabled={isSubmitting}>
             {t("appointmentForm.cancel")}
           </button>
         </div>
