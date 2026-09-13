@@ -144,21 +144,21 @@ describe("Appointments", () => {
   });
 
   describe("validation", () => {
-    it("create rejects a missing notes field", () => {
+    it("create succeeds with notes omitted (issue #51: notes is optional)", () => {
       const appointments = tmpAppointments();
 
-      const thrown = catchError(() => appointments.create({ notes: "", dateTime: "2026-09-01T10:00:00Z" }));
+      const created = appointments.create({ dateTime: "2026-09-01T10:00:00Z" });
 
-      expect(thrown).toBeInstanceOf(InvalidAppointmentInputError);
+      expect(created.notes).toBe("");
     });
 
-    it("update rejects a missing notes field the same way", () => {
+    it("update succeeds with notes omitted the same way", () => {
       const appointments = tmpAppointments();
       const created = appointments.create({ notes: "Annual checkup", dateTime: "2026-09-01T10:00:00Z" });
 
-      const thrown = catchError(() => appointments.update(created.id, { notes: "", dateTime: "2026-09-01T10:00:00Z" }));
+      const updated = appointments.update(created.id, { dateTime: "2026-09-01T10:00:00Z" });
 
-      expect(thrown).toBeInstanceOf(InvalidAppointmentInputError);
+      expect(updated.notes).toBe("");
     });
 
     it("create rejects a missing dateTime field", () => {

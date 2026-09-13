@@ -73,12 +73,13 @@ export interface AppointmentInput {
   doctorId?: number | null;
   dateTime: string;
   location?: string;
-  notes: string;
+  notes?: string;
 }
 
 export interface Appointment extends AppointmentInput {
   id: number;
   doctorId: number | null;
+  notes: string;
   status: AppointmentStatus;
   summary: string | null;
   /** Issue #10: null unless this appointment has a currently-missed reminder — see server's app.ts withMissedReminder(). */

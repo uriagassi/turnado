@@ -2,7 +2,7 @@ import { FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Appointment, AppointmentInput, Doctor } from "../api";
 
-type RequiredFieldErrors = { notes?: string; dateTime?: string };
+type RequiredFieldErrors = { dateTime?: string };
 
 export function AppointmentFormScreen({
   appointment,
@@ -37,7 +37,6 @@ export function AppointmentFormScreen({
     // Mirrors the server's own required-field check (Appointments.validate)
     // so the user sees the problem immediately instead of round-tripping.
     const nextErrors: RequiredFieldErrors = {};
-    if (!formData.notes.trim()) nextErrors.notes = t("appointmentForm.notes.required");
     if (!formData.dateTime.trim()) nextErrors.dateTime = t("appointmentForm.dateTime.required");
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
@@ -82,7 +81,6 @@ export function AppointmentFormScreen({
             {t("appointmentForm.notes.label")}
             <textarea value={formData.notes} onChange={(e) => setField("notes", e.target.value)} />
           </label>
-          {errors.notes && <p className="field-error">{errors.notes}</p>}
         </div>
         <div className="form-field">
           <label>

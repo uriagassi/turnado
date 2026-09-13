@@ -108,9 +108,18 @@ describe("/api/appointments", () => {
     it("400s for a missing required field instead of crashing", async () => {
       const agent = signedInAgent(tmpDb());
 
-      const res = await agent.post("/api/appointments").send({ notes: "", dateTime: "2026-09-01T10:00:00Z" });
+      const res = await agent.post("/api/appointments").send({ notes: "Annual checkup", dateTime: "" });
 
       expect(res.status).toBe(400);
+    });
+
+    it("creates an appointment with notes omitted (issue #51: notes is optional)", async () => {
+      const agent = signedInAgent(tmpDb());
+
+      const res = await agent.post("/api/appointments").send({ dateTime: "2026-09-01T10:00:00Z" });
+
+      expect(res.status).toBe(201);
+      expect(res.body.notes).toBe("");
     });
 
     it("owns the created appointment as the signed-in user, ignoring any client-supplied ownerUsername (issue #10)", async () => {
@@ -180,7 +189,7 @@ describe("/api/appointments", () => {
       const agent = signedInAgent(tmpDb());
       const created = await agent.post("/api/appointments").send({ notes: "Annual checkup", dateTime: "2026-09-01T10:00:00Z" });
 
-      const res = await agent.put(`/api/appointments/${created.body.id}`).send({ notes: "", dateTime: "2026-09-01T10:00:00Z" });
+      const res = await agent.put(`/api/appointments/${created.body.id}`).send({ notes: "Annual checkup", dateTime: "" });
 
       expect(res.status).toBe(400);
     });
