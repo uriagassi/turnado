@@ -28,7 +28,6 @@ describe("AppointmentFormScreen", () => {
 
     await user.selectOptions(screen.getByLabelText("Doctor"), "Dr. Amy Lee");
     fireEvent.change(screen.getByLabelText("Date & time"), { target: { value: "2026-09-01T10:00" } });
-    // Overrides the address auto-filled by picking the doctor, below.
     await user.clear(screen.getByLabelText("Location"));
     await user.type(screen.getByLabelText("Location"), "Clinic B");
     await user.type(screen.getByLabelText("Notes"), "Annual checkup");

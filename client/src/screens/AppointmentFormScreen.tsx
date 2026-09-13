@@ -27,9 +27,7 @@ export function AppointmentFormScreen({
   });
   const [errors, setErrors] = useState<RequiredFieldErrors>({});
   const [invitationFile, setInvitationFile] = useState<File | null>(null);
-  // Issue #50: doctor selection fills this from the doctor's address, until
-  // it's hand-edited (autoFilled tracks which of those states it's in).
-  const [location, setLocation] = useState({ value: appointment?.location ?? "", autoFilled: !appointment });
+  const [location, setLocation] = useState({ value: appointment?.location ?? "", isDoctorDefault: !appointment });
 
   const setField = <K extends keyof typeof formData>(key: K, value: (typeof formData)[K]) =>
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -38,10 +36,10 @@ export function AppointmentFormScreen({
     const doctorId = value ? Number(value) : null;
     const doctor = doctors.find((d) => d.id === doctorId);
     setField("doctorId", doctorId);
-    setLocation((prev) => (prev.autoFilled ? { value: doctor?.address ?? "", autoFilled: true } : prev));
+    setLocation((prev) => (prev.isDoctorDefault ? { value: doctor?.address ?? "", isDoctorDefault: true } : prev));
   };
 
-  const handleLocationChange = (value: string) => setLocation({ value, autoFilled: false });
+  const handleLocationChange = (value: string) => setLocation({ value, isDoctorDefault: false });
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
