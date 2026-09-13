@@ -281,7 +281,10 @@ export function createApp(options: AppOptions): Express {
     });
     app.post("/api/appointments", (req, res) => {
       try {
-        res.status(201).json(appointments.create(req.body, req.userName ?? null));
+        const created = appointments.create(req.body, req.userName ?? null);
+        // issue #49: lets a recurrence show whether it's two requests reaching the server.
+        console.log(`Created appointment ${created.id} (owner: ${created.ownerUsername ?? "none"}, dateTime: ${created.dateTime})`);
+        res.status(201).json(created);
       } catch (err) {
         if (err instanceof InvalidAppointmentInputError) return res.status(400).json({ error: err.message });
         throw err;

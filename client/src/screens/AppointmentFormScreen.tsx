@@ -28,9 +28,6 @@ export function AppointmentFormScreen({
   });
   const [errors, setErrors] = useState<RequiredFieldErrors>({});
   const [invitationFile, setInvitationFile] = useState<File | null>(null);
-  // Guards against a double-tap/double-click firing two submits — each one
-  // POSTs a new appointment since there's no id to distinguish a resubmit
-  // from a fresh create (issue #49).
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const setField = <K extends keyof AppointmentInput>(key: K, value: AppointmentInput[K]) =>
