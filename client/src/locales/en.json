@@ -74,7 +74,7 @@
   "appointmentForm.save": "Save",
   "appointmentForm.cancel": "Cancel",
   "appointmentForm.dateTime.required": "Date & time is required.",
-  "appointmentForm.invitation.label": "Invitation letter",
+  "appointmentForm.invitation.label": "Accompanying documents",
   "appointmentHistory.title": "Appointment history",
   "appointmentHistory.empty": "No past appointments yet.",
   "upcomingAppointments.title": "Upcoming appointments",

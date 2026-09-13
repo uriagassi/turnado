@@ -52,7 +52,7 @@ describe("AppointmentFormScreen", () => {
 
     fireEvent.change(screen.getByLabelText("Date & time"), { target: { value: "2026-09-01T10:00" } });
     await user.type(screen.getByLabelText("Notes"), "Annual checkup");
-    await user.upload(screen.getByLabelText("Invitation letter"), invitation);
+    await user.upload(screen.getByLabelText("Accompanying documents"), invitation);
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(onSubmit).toHaveBeenCalledOnce();
