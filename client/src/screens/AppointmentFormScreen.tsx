@@ -28,9 +28,30 @@ export function AppointmentFormScreen({
   });
   const [errors, setErrors] = useState<RequiredFieldErrors>({});
   const [invitationFile, setInvitationFile] = useState<File | null>(null);
+  // Issue #50: picking a doctor fills the location from the doctor's address.
+  // Only while the location still holds that auto-filled value (or is blank,
+  // as for a brand-new appointment) — once the user edits it by hand, we
+  // stop touching it, and an existing appointment's saved location is never
+  // overwritten just by re-picking its doctor.
+  const [locationAutoFilled, setLocationAutoFilled] = useState(!appointment);
 
   const setField = <K extends keyof AppointmentInput>(key: K, value: AppointmentInput[K]) =>
     setFormData((prev) => ({ ...prev, [key]: value }));
+
+  const handleDoctorChange = (value: string) => {
+    const doctorId = value ? Number(value) : null;
+    const doctor = doctors.find((d) => d.id === doctorId);
+    setFormData((prev) => ({
+      ...prev,
+      doctorId,
+      location: locationAutoFilled ? (doctor?.address ?? "") : prev.location,
+    }));
+  };
+
+  const handleLocationChange = (value: string) => {
+    setLocationAutoFilled(false);
+    setField("location", value);
+  };
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -51,10 +72,7 @@ export function AppointmentFormScreen({
         <div className="form-field">
           <label>
             {t("appointmentForm.doctor.label")}
-            <select
-              value={formData.doctorId ?? ""}
-              onChange={(e) => setField("doctorId", e.target.value ? Number(e.target.value) : null)}
-            >
+            <select value={formData.doctorId ?? ""} onChange={(e) => handleDoctorChange(e.target.value)}>
               <option value="">{t("appointmentForm.doctor.none")}</option>
               {doctors.map((doctor) => (
                 <option key={doctor.id} value={doctor.id}>
@@ -74,7 +92,7 @@ export function AppointmentFormScreen({
         <div className="form-field">
           <label>
             {t("appointmentForm.location.label")}
-            <input type="text" value={formData.location ?? ""} onChange={(e) => setField("location", e.target.value)} />
+            <input type="text" value={formData.location ?? ""} onChange={(e) => handleLocationChange(e.target.value)} />
           </label>
         </div>
         <div className="form-field">

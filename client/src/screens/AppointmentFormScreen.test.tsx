@@ -5,8 +5,8 @@ import { AppointmentFormScreen } from "./AppointmentFormScreen";
 import type { Doctor } from "../api";
 
 const doctors: Doctor[] = [
-  { id: 1, name: "Dr. Jane Smith", notes: "", photoPath: null },
-  { id: 2, name: "Dr. Amy Lee", notes: "", photoPath: null },
+  { id: 1, name: "Dr. Jane Smith", address: "1 Main St", notes: "", photoPath: null },
+  { id: 2, name: "Dr. Amy Lee", address: "2 Oak Ave", notes: "", photoPath: null },
 ];
 
 describe("AppointmentFormScreen", () => {
@@ -28,6 +28,8 @@ describe("AppointmentFormScreen", () => {
 
     await user.selectOptions(screen.getByLabelText("Doctor"), "Dr. Amy Lee");
     fireEvent.change(screen.getByLabelText("Date & time"), { target: { value: "2026-09-01T10:00" } });
+    // Overrides the address auto-filled by picking the doctor, below.
+    await user.clear(screen.getByLabelText("Location"));
     await user.type(screen.getByLabelText("Location"), "Clinic B");
     await user.type(screen.getByLabelText("Notes"), "Annual checkup");
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -56,6 +58,54 @@ describe("AppointmentFormScreen", () => {
 
     expect(onSubmit).toHaveBeenCalledOnce();
     expect(onSubmit.mock.calls[0][1]).toBe(invitation);
+  });
+
+  it("fills the location from the selected doctor's address", async () => {
+    const user = userEvent.setup();
+    render(<AppointmentFormScreen doctors={doctors} onSubmit={() => {}} onCancel={() => {}} />);
+
+    await user.selectOptions(screen.getByLabelText("Doctor"), "Dr. Amy Lee");
+
+    expect(screen.getByLabelText("Location")).toHaveValue("2 Oak Ave");
+  });
+
+  it("updates the auto-filled location when a different doctor is picked", async () => {
+    const user = userEvent.setup();
+    render(<AppointmentFormScreen doctors={doctors} onSubmit={() => {}} onCancel={() => {}} />);
+
+    await user.selectOptions(screen.getByLabelText("Doctor"), "Dr. Jane Smith");
+    await user.selectOptions(screen.getByLabelText("Doctor"), "Dr. Amy Lee");
+
+    expect(screen.getByLabelText("Location")).toHaveValue("2 Oak Ave");
+  });
+
+  it("leaves a hand-edited location alone when the doctor is changed afterwards", async () => {
+    const user = userEvent.setup();
+    render(<AppointmentFormScreen doctors={doctors} onSubmit={() => {}} onCancel={() => {}} />);
+
+    await user.type(screen.getByLabelText("Location"), "Custom room 4");
+    await user.selectOptions(screen.getByLabelText("Doctor"), "Dr. Amy Lee");
+
+    expect(screen.getByLabelText("Location")).toHaveValue("Custom room 4");
+  });
+
+  it("does not overwrite an existing appointment's location just from re-picking the doctor", async () => {
+    const user = userEvent.setup();
+    const appointment = {
+      id: 1,
+      doctorId: 1,
+      dateTime: "2026-09-01T10:00",
+      location: "Clinic B",
+      notes: "Annual checkup",
+      status: "planned" as const,
+      summary: null,
+      missedReminder: null,
+    };
+    render(<AppointmentFormScreen appointment={appointment} doctors={doctors} onSubmit={() => {}} onCancel={() => {}} />);
+
+    await user.selectOptions(screen.getByLabelText("Doctor"), "Dr. Amy Lee");
+
+    expect(screen.getByLabelText("Location")).toHaveValue("Clinic B");
   });
 
   it("submits with doctorId null when no doctor is selected, e.g. an imaging-center slot", async () => {
