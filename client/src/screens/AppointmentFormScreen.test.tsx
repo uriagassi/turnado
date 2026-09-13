@@ -7,6 +7,7 @@ import type { Appointment, Doctor } from "../api";
 const doctors: Doctor[] = [
   { id: 1, name: "Dr. Jane Smith", address: "1 Main St", notes: "", photoPath: null },
   { id: 2, name: "Dr. Amy Lee", address: "2 Oak Ave", notes: "", photoPath: null },
+  { id: 3, name: "Dr. Cole Park", clinic: "3 Birch Rd", notes: "", photoPath: null },
 ];
 
 describe("AppointmentFormScreen", () => {
@@ -66,6 +67,15 @@ describe("AppointmentFormScreen", () => {
     await user.selectOptions(screen.getByLabelText("Doctor"), "Dr. Amy Lee");
 
     expect(screen.getByLabelText("Location")).toHaveValue("2 Oak Ave");
+  });
+
+  it("falls back to the doctor's clinic when address is blank", async () => {
+    const user = userEvent.setup();
+    render(<AppointmentFormScreen doctors={doctors} onSubmit={() => {}} onCancel={() => {}} />);
+
+    await user.selectOptions(screen.getByLabelText("Doctor"), "Dr. Cole Park");
+
+    expect(screen.getByLabelText("Location")).toHaveValue("3 Birch Rd");
   });
 
   it("updates the auto-filled location when a different doctor is picked", async () => {
