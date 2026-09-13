@@ -89,9 +89,6 @@ describe("AppointmentFormScreen", () => {
   });
 
   it("fills the location from the doctor's address on mount when resolving a task into a new appointment (issue #50 follow-up)", () => {
-    // Mirrors App.tsx's navigateToResolveAppointment: a doctor-prefilled but
-    // unsaved appointment (no id), where the <select> never fires onChange
-    // because the doctor already comes pre-selected.
     const resolvedFromTask = { doctorId: 2, dateTime: "", location: "", notes: "See specialist" } as Appointment;
 
     render(<AppointmentFormScreen appointment={resolvedFromTask} doctors={doctors} onSubmit={() => {}} onCancel={() => {}} />);

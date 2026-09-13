@@ -4,6 +4,13 @@ import type { Appointment, AppointmentInput, Doctor } from "../api";
 
 type RequiredFieldErrors = { dateTime?: string };
 
+/** An unsaved appointment (no id) still auto-fills its location, even one prefilled by App.tsx's navigateToResolveAppointment. */
+function initialLocationState(appointment: Appointment | undefined, doctors: Doctor[]) {
+  const isUnsavedAppointment = !appointment?.id;
+  const prefilledDoctor = isUnsavedAppointment ? doctors.find((d) => d.id === appointment?.doctorId) : undefined;
+  return { value: appointment?.location || prefilledDoctor?.address || "", isDoctorDefault: isUnsavedAppointment };
+}
+
 export function AppointmentFormScreen({
   appointment,
   doctors,
@@ -27,17 +34,7 @@ export function AppointmentFormScreen({
   });
   const [errors, setErrors] = useState<RequiredFieldErrors>({});
   const [invitationFile, setInvitationFile] = useState<File | null>(null);
-  // Resolving a doctor_visit task into an appointment (see App.tsx's
-  // navigateToResolveAppointment) hands us a doctor-prefilled but unsaved
-  // appointment (no id) — still "new" for auto-fill purposes, and since the
-  // doctor already comes pre-selected, the <select>'s onChange
-  // (handleDoctorChange, below) never fires, so the initial value has to
-  // account for that doctor's address itself.
-  const [location, setLocation] = useState(() => {
-    const isNew = !appointment?.id;
-    const doctor = isNew ? doctors.find((d) => d.id === appointment?.doctorId) : undefined;
-    return { value: appointment?.location || doctor?.address || "", isDoctorDefault: isNew };
-  });
+  const [location, setLocation] = useState(() => initialLocationState(appointment, doctors));
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const setField = <K extends keyof typeof formData>(key: K, value: (typeof formData)[K]) =>
