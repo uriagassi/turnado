@@ -7,12 +7,13 @@ export interface AppointmentInput {
   doctorId?: number | null;
   dateTime: string;
   location?: string;
-  notes: string;
+  notes?: string;
 }
 
 export interface Appointment extends AppointmentInput {
   id: number;
   doctorId: number | null;
+  notes: string;
   status: AppointmentStatus;
   /** Free-text post-visit summary — null until one's been added via setSummary, deliberately separate from AppointmentInput since it only makes sense once the appointment's happened. */
   summary: string | null;
@@ -104,7 +105,7 @@ export class Appointments {
       doctorId: input.doctorId ?? null,
       dateTime: input.dateTime,
       location: input.location ?? null,
-      notes: input.notes,
+      notes: input.notes ?? "",
       ownerUsername,
     });
     return this.getAppointment.get(result.lastInsertRowid) as Appointment;
@@ -126,7 +127,7 @@ export class Appointments {
       doctorId: input.doctorId ?? null,
       dateTime: input.dateTime,
       location: input.location ?? null,
-      notes: input.notes,
+      notes: input.notes ?? "",
     });
     return this.getAppointment.get(id) as Appointment;
   }
@@ -150,7 +151,6 @@ export class Appointments {
   }
 
   private validate(input: AppointmentInput): void {
-    if (!input.notes?.trim()) throw new InvalidAppointmentInputError("notes is required");
     if (!input.dateTime?.trim()) throw new InvalidAppointmentInputError("dateTime is required");
   }
 }

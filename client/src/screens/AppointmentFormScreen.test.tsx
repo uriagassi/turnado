@@ -119,7 +119,7 @@ describe("AppointmentFormScreen", () => {
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ doctorId: null }), null);
   });
 
-  it("blocks submission and shows an error when notes is left blank", async () => {
+  it("submits successfully when notes is left blank (issue #51: notes is optional)", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
     render(<AppointmentFormScreen doctors={doctors} onSubmit={onSubmit} onCancel={() => {}} />);
@@ -127,8 +127,7 @@ describe("AppointmentFormScreen", () => {
     fireEvent.change(screen.getByLabelText("Date & time"), { target: { value: "2026-09-01T10:00" } });
     await user.click(screen.getByRole("button", { name: "Save" }));
 
-    expect(onSubmit).not.toHaveBeenCalled();
-    expect(screen.getByText("Notes is required.")).toBeInTheDocument();
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ notes: "" }), null);
   });
 
   it("blocks submission and shows an error when the date & time is left blank", async () => {
