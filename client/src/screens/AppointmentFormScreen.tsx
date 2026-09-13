@@ -27,7 +27,17 @@ export function AppointmentFormScreen({
   });
   const [errors, setErrors] = useState<RequiredFieldErrors>({});
   const [invitationFile, setInvitationFile] = useState<File | null>(null);
-  const [location, setLocation] = useState({ value: appointment?.location ?? "", isDoctorDefault: !appointment });
+  // Resolving a doctor_visit task into an appointment (see App.tsx's
+  // navigateToResolveAppointment) hands us a doctor-prefilled but unsaved
+  // appointment (no id) — still "new" for auto-fill purposes, and since the
+  // doctor already comes pre-selected, the <select>'s onChange
+  // (handleDoctorChange, below) never fires, so the initial value has to
+  // account for that doctor's address itself.
+  const [location, setLocation] = useState(() => {
+    const isNew = !appointment?.id;
+    const doctor = isNew ? doctors.find((d) => d.id === appointment?.doctorId) : undefined;
+    return { value: appointment?.location || doctor?.address || "", isDoctorDefault: isNew };
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const setField = <K extends keyof typeof formData>(key: K, value: (typeof formData)[K]) =>
