@@ -4,11 +4,16 @@ import type { Appointment, AppointmentInput, Doctor } from "../api";
 
 type RequiredFieldErrors = { dateTime?: string };
 
+/** Falls back to clinic when address is blank: some doctor records only ever got a clinic name/address typed into one or the other. */
+function doctorLocation(doctor: Doctor | undefined): string {
+  return doctor?.address || doctor?.clinic || "";
+}
+
 /** An unsaved appointment (no id) still auto-fills its location, even one prefilled by App.tsx's navigateToResolveAppointment. */
 function initialLocationState(appointment: Appointment | undefined, doctors: Doctor[]) {
   const isUnsavedAppointment = !appointment?.id;
   const prefilledDoctor = isUnsavedAppointment ? doctors.find((d) => d.id === appointment?.doctorId) : undefined;
-  return { value: appointment?.location || prefilledDoctor?.address || "", isDoctorDefault: isUnsavedAppointment };
+  return { value: appointment?.location || doctorLocation(prefilledDoctor), isDoctorDefault: isUnsavedAppointment };
 }
 
 export function AppointmentFormScreen({
@@ -44,7 +49,7 @@ export function AppointmentFormScreen({
     const doctorId = value ? Number(value) : null;
     const doctor = doctors.find((d) => d.id === doctorId);
     setField("doctorId", doctorId);
-    setLocation((prev) => (prev.isDoctorDefault ? { value: doctor?.address ?? "", isDoctorDefault: true } : prev));
+    setLocation((prev) => (prev.isDoctorDefault ? { value: doctorLocation(doctor), isDoctorDefault: true } : prev));
   };
 
   const handleLocationChange = (value: string) => setLocation({ value, isDoctorDefault: false });
