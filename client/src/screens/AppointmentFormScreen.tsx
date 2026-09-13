@@ -20,18 +20,27 @@ export function AppointmentFormScreen({
   onCancel: () => void;
 }) {
   const { t } = useTranslation();
-  const [formData, setFormData] = useState<AppointmentInput>({
+  const [formData, setFormData] = useState<Omit<AppointmentInput, "location">>({
     doctorId: appointment?.doctorId ?? null,
     dateTime: appointment?.dateTime ?? "",
-    location: appointment?.location ?? "",
     notes: appointment?.notes ?? "",
   });
   const [errors, setErrors] = useState<RequiredFieldErrors>({});
   const [invitationFile, setInvitationFile] = useState<File | null>(null);
+  const [location, setLocation] = useState({ value: appointment?.location ?? "", isDoctorDefault: !appointment });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const setField = <K extends keyof AppointmentInput>(key: K, value: AppointmentInput[K]) =>
+  const setField = <K extends keyof typeof formData>(key: K, value: (typeof formData)[K]) =>
     setFormData((prev) => ({ ...prev, [key]: value }));
+
+  const handleDoctorChange = (value: string) => {
+    const doctorId = value ? Number(value) : null;
+    const doctor = doctors.find((d) => d.id === doctorId);
+    setField("doctorId", doctorId);
+    setLocation((prev) => (prev.isDoctorDefault ? { value: doctor?.address ?? "", isDoctorDefault: true } : prev));
+  };
+
+  const handleLocationChange = (value: string) => setLocation({ value, isDoctorDefault: false });
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -45,7 +54,7 @@ export function AppointmentFormScreen({
 
     setIsSubmitting(true);
     try {
-      await onSubmit(formData, invitationFile);
+      await onSubmit({ ...formData, location: location.value }, invitationFile);
     } finally {
       setIsSubmitting(false);
     }
@@ -57,10 +66,7 @@ export function AppointmentFormScreen({
         <div className="form-field">
           <label>
             {t("appointmentForm.doctor.label")}
-            <select
-              value={formData.doctorId ?? ""}
-              onChange={(e) => setField("doctorId", e.target.value ? Number(e.target.value) : null)}
-            >
+            <select value={formData.doctorId ?? ""} onChange={(e) => handleDoctorChange(e.target.value)}>
               <option value="">{t("appointmentForm.doctor.none")}</option>
               {doctors.map((doctor) => (
                 <option key={doctor.id} value={doctor.id}>
@@ -80,7 +86,7 @@ export function AppointmentFormScreen({
         <div className="form-field">
           <label>
             {t("appointmentForm.location.label")}
-            <input type="text" value={formData.location ?? ""} onChange={(e) => setField("location", e.target.value)} />
+            <input type="text" value={location.value} onChange={(e) => handleLocationChange(e.target.value)} />
           </label>
         </div>
         <div className="form-field">
