@@ -363,6 +363,26 @@ export async function attachAppointmentDocument(appointmentId: number, documentI
   return res.json();
 }
 
+/** Attaches an already-uploaded document to a task — the task-side counterpart of attachAppointmentDocument. */
+export async function attachTaskDocument(taskId: number, documentId: number): Promise<MedicalDocument> {
+  const res = await fetch(`/api/tasks/${taskId}/documents/${documentId}`, {
+    method: "PUT",
+    credentials: "same-origin",
+  });
+  if (!res.ok) throw new Error(`Unexpected PUT /api/tasks/${taskId}/documents/${documentId} status ${res.status}`);
+  return res.json();
+}
+
+/** Removes a task/document link without deleting the document itself. */
+export async function detachTaskDocument(taskId: number, documentId: number): Promise<MedicalDocument> {
+  const res = await fetch(`/api/tasks/${taskId}/documents/${documentId}`, {
+    method: "DELETE",
+    credentials: "same-origin",
+  });
+  if (!res.ok) throw new Error(`Unexpected DELETE /api/tasks/${taskId}/documents/${documentId} status ${res.status}`);
+  return res.json();
+}
+
 export async function fetchDocument(id: number): Promise<MedicalDocument> {
   const res = await fetch(`/api/documents/${id}`, { credentials: "same-origin" });
   if (!res.ok) throw new Error(`Unexpected /api/documents/${id} status ${res.status}`);

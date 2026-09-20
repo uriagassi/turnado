@@ -517,6 +517,12 @@ export class Documents {
     this.syncDoctorTags(noteId);
   }
 
+  /** Removes a task/document link without touching the document itself — it may still be linked elsewhere (another task, an appointment) or worth keeping standalone. Re-syncs doctor tags since the unlinked task may have been the only source of a doctor tag. */
+  unlinkTask(noteId: number, taskId: number): void {
+    this.db.prepare(`DELETE FROM TaskDocuments WHERE noteId = ? AND taskId = ?`).run(noteId, taskId);
+    this.syncDoctorTags(noteId);
+  }
+
   /** Links an already-created document to an already-created appointment (issue #9: attaching an existing document to an appointment's checklist via the searchable picker, rather than only linking at upload time). Re-syncs doctor tags since the linked appointment may carry its own doctorId. */
   linkAppointment(noteId: number, appointmentId: number): void {
     this.db

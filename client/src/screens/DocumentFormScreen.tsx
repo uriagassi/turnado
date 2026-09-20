@@ -33,9 +33,6 @@ interface DocumentFormScreenProps {
   appointments?: Appointment[];
   openItems?: Task[];
   initialDoctorId?: number;
-  initialAppointmentId?: number;
-  initialTaskId?: number;
-  initialType?: DocumentType;
   onSubmit: (formData: FormData) => Promise<void> | void;
   onCancel: () => void;
 }
@@ -45,19 +42,10 @@ export function DocumentFormScreen({
   appointments = [],
   openItems = [],
   initialDoctorId,
-  initialAppointmentId,
-  initialTaskId,
-  initialType,
   onSubmit,
   onCancel,
 }: DocumentFormScreenProps) {
   const { t } = useTranslation();
-
-  const defaultType: DocumentType = initialType
-    ? initialType
-    : initialTaskId
-    ? getDocumentTypeForTask(openItems.find((t) => t.id === initialTaskId)?.type)
-    : "other";
 
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
@@ -91,15 +79,11 @@ export function DocumentFormScreen({
   }, [file]);
 
   const [title, setTitle] = useState("");
-  const [type, setType] = useState<DocumentType>(defaultType);
+  const [type, setType] = useState<DocumentType>("other");
   const [documentDate, setDocumentDate] = useState("");
   const [doctorId, setDoctorId] = useState<string>(initialDoctorId ? String(initialDoctorId) : "");
-  const [appointmentId, setAppointmentId] = useState<string>(
-    initialAppointmentId ? String(initialAppointmentId) : "",
-  );
-  const [taskId, setTaskId] = useState<string>(
-    initialTaskId ? String(initialTaskId) : "",
-  );
+  const [appointmentId, setAppointmentId] = useState<string>("");
+  const [taskId, setTaskId] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<{ file?: string; title?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);

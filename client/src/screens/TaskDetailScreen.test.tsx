@@ -166,7 +166,7 @@ describe("TaskDetailScreen", () => {
       />
     );
 
-    await user.click(screen.getByRole("button", { name: /Edit/i }));
+    await user.click(screen.getByRole("button", { name: "✎ Edit" }));
     expect(onEdit).toHaveBeenCalledWith(task);
   });
 
@@ -267,9 +267,9 @@ describe("TaskDetailScreen", () => {
     expect(screen.getByText(/Assuta Hospital/i)).toBeInTheDocument();
   });
 
-  it("renders attached documents and allows clicking to view and attach", async () => {
+  it("renders attached documents and allows clicking to view, and opens the edit form via the documents section's edit shortcut", async () => {
     const user = userEvent.setup();
-    const onAddDocument = vi.fn();
+    const onEdit = vi.fn();
     const onSelectDocument = vi.fn();
 
     const task: Task = {
@@ -319,9 +319,8 @@ describe("TaskDetailScreen", () => {
         task={task}
         doctors={doctors}
         documents={docs}
-        onEdit={() => {}}
+        onEdit={onEdit}
         onStatusChange={() => {}}
-        onAddDocument={onAddDocument}
         onSelectDocument={onSelectDocument}
       />
     );
@@ -330,8 +329,40 @@ describe("TaskDetailScreen", () => {
     await user.click(screen.getByText("Blood count results"));
     expect(onSelectDocument).toHaveBeenCalledWith(docs[0]);
 
-    const attachBtn = screen.getByRole("button", { name: /Attach document/i });
-    await user.click(attachBtn);
-    expect(onAddDocument).toHaveBeenCalledWith(task);
+    expect(screen.queryByRole("button", { name: /Attach document/i })).not.toBeInTheDocument();
+
+    const editDocumentsBtn = screen.getByRole("button", { name: /Edit documents/i });
+    await user.click(editDocumentsBtn);
+    expect(onEdit).toHaveBeenCalledWith(task);
+  });
+
+  it("still offers the documents edit shortcut when the task has no documents yet", () => {
+    const task: Task = {
+      id: 21,
+      type: "test",
+      title: "Blood test",
+      status: "open",
+      doctorId: 1,
+      dueDate: null,
+      sourceAppointmentId: null,
+      pendingAppointmentId: null,
+      requiresAdvanceScheduling: false,
+      recurrenceWindow: null,
+      approximateDateWindow: null,
+      institution: null,
+      department: null,
+      healthFund: null,
+      codeNumber: null,
+      codeName: null,
+      issuingBody: null,
+      purpose: null,
+      createdAt: "2026-08-01",
+      updatedAt: "2026-08-01",
+      missedReminder: null,
+    };
+
+    render(<TaskDetailScreen task={task} doctors={doctors} onEdit={() => {}} onStatusChange={() => {}} />);
+
+    expect(screen.getByRole("button", { name: /Edit documents/i })).toBeInTheDocument();
   });
 });
