@@ -1695,6 +1695,14 @@ html[dir="rtl"] .back-link-arrow {
   align-items: center;
 }
 
+/* DocumentPicker's panel is a plain block by default (fine for
+   AppointmentDetailScreen, which has no flex row around it); this makes it
+   drop to its own full-width line when it lands inside a flex-wrap row
+   instead, as it does next to TaskFormScreen's upload button. */
+.task-form-documents-actions .document-picker {
+  flex-basis: 100%;
+}
+
 .task-form-document-row {
   align-items: center;
 }

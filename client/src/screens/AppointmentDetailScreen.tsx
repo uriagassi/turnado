@@ -1,7 +1,8 @@
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { Appointment, Doctor, MedicalDocument, Task, TaskStatus } from "../api";
 import { MissedReminderBadge } from "../components/MissedReminderBadge";
+import { DocumentPicker } from "../components/DocumentPicker";
 
 /**
  * Combined readiness for the checklist (issue #9) — the client-side
@@ -107,22 +108,11 @@ export function AppointmentDetailScreen({
 }) {
   const { t } = useTranslation();
   const { ready, total } = computeReadiness(documents, openItems);
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [pickerQuery, setPickerQuery] = useState("");
 
   // Already-attached documents are dropped from the picker's own candidate
   // pool — re-offering something the checklist already has would just
   // invite a confusing duplicate "attach" of an already-ready item.
   const attachedIds = new Set(documents.map((d) => d.id));
-  const pickerResults = allDocuments
-    .filter((d) => !attachedIds.has(d.id))
-    .filter((d) => d.title.toLowerCase().includes(pickerQuery.trim().toLowerCase()));
-
-  const attach = (document: MedicalDocument) => {
-    onAttachDocument(document);
-    setPickerOpen(false);
-    setPickerQuery("");
-  };
 
   return (
     <main className="screen appointment-detail-screen">
@@ -156,29 +146,7 @@ export function AppointmentDetailScreen({
           <p className="section-empty">{t("doctorDetail.documents.empty")}</p>
         )}
 
-        <button type="button" className="btn-small btn-secondary" onClick={() => setPickerOpen((open) => !open)}>
-          {t("appointmentDetail.attachDocument.toggle")}
-        </button>
-
-        {pickerOpen && (
-          <div className="card document-picker">
-            <label>
-              {t("appointmentDetail.attachDocument.search.label")}
-              <input type="text" value={pickerQuery} onChange={(e) => setPickerQuery(e.target.value)} />
-            </label>
-            {pickerResults.length > 0 ? (
-              <ul className="item-row-list">
-                {pickerResults.map((document) => (
-                  <ClickableRow key={document.id} className="card item-row clickable picker-result" onClick={() => attach(document)}>
-                    {document.title}
-                  </ClickableRow>
-                ))}
-              </ul>
-            ) : (
-              <p className="section-empty">{t("appointmentDetail.attachDocument.empty")}</p>
-            )}
-          </div>
-        )}
+        <DocumentPicker allDocuments={allDocuments} excludedIds={attachedIds} onPick={onAttachDocument} />
       </section>
 
       <section data-testid="appointment-openitems-section">

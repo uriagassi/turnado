@@ -4,7 +4,7 @@ import type { Doctor, DocumentType, MedicalDocument, Task, TaskInput, TaskStatus
 import { isResolvableTask } from "../tasks/taskUtils";
 import { getDocumentIcon } from "./HomeScreen";
 import { getDocumentTypeForTask } from "./DocumentFormScreen";
-import { useRelativeDateTime } from "../hooks/useRelativeDateTime";
+import { DocumentPicker } from "../components/DocumentPicker";
 
 type RequiredFieldErrors = { title?: string; doctorId?: string };
 
@@ -49,7 +49,6 @@ export function TaskFormScreen({
   onResolveToAppointment?: (task: Task) => void;
 }) {
   const { t } = useTranslation();
-  const formatRelative = useRelativeDateTime();
   const [formData, setFormData] = useState<TaskInput>({
     type: task?.type ?? "test",
     title: task?.title ?? "",
@@ -84,8 +83,6 @@ export function TaskFormScreen({
   const [stagedDocs, setStagedDocs] = useState<StagedDoc[]>(
     documents.map((document) => ({ kind: "existing", document })),
   );
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [pickerQuery, setPickerQuery] = useState("");
   const uploadIdCounter = useRef(0);
   const documentsSectionRef = useRef<HTMLDivElement>(null);
 
@@ -100,9 +97,6 @@ export function TaskFormScreen({
   const stagedExistingIds = new Set(
     stagedDocs.filter((d): d is Extract<StagedDoc, { kind: "existing" }> => d.kind === "existing").map((d) => d.document.id),
   );
-  const pickerResults = allDocuments
-    .filter((d) => !stagedExistingIds.has(d.id))
-    .filter((d) => d.title.toLowerCase().includes(pickerQuery.trim().toLowerCase()));
 
   const attachExisting = (document: MedicalDocument) => {
     setStagedDocs((docs) => [...docs, { kind: "existing", document }]);
@@ -397,9 +391,7 @@ export function TaskFormScreen({
           )}
 
           <div className="task-form-documents-actions">
-            <button type="button" className="btn-small btn-secondary" onClick={() => setPickerOpen((open) => !open)}>
-              {t("appointmentDetail.attachDocument.toggle")}
-            </button>
+            <DocumentPicker allDocuments={allDocuments} excludedIds={stagedExistingIds} onPick={attachExisting} />
             <label className="btn-small btn-secondary task-form-upload-label">
               {t("taskForm.documents.upload")}
               <input
@@ -411,41 +403,6 @@ export function TaskFormScreen({
               />
             </label>
           </div>
-
-          {pickerOpen && (
-            <div className="card document-picker">
-              <label>
-                {t("appointmentDetail.attachDocument.search.label")}
-                <input type="text" value={pickerQuery} onChange={(e) => setPickerQuery(e.target.value)} />
-              </label>
-              {pickerResults.length > 0 ? (
-                <ul className="item-row-list">
-                  {pickerResults.map((document) => (
-                    <li
-                      key={document.id}
-                      className="card item-row clickable picker-result"
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => attachExisting(document)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          attachExisting(document);
-                        }
-                      }}
-                    >
-                      <div>
-                        <p className="item-row-notes">{document.title}</p>
-                        <p className="item-row-sub">{formatRelative(document.createdAt)}</p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="section-empty">{t("appointmentDetail.attachDocument.empty")}</p>
-              )}
-            </div>
-          )}
         </div>
 
         {isResolvable && onResolveToAppointment && task && (

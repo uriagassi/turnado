@@ -199,6 +199,74 @@ async function loadAppointmentDetail(
 }
 
 /**
+ * Applies a task-form save's staged document changes (attach/detach/upload)
+ * against the just-saved task, then decides where the form lands next.
+ * Pulled out of the task-form submit closure — like screenTitle/screenBack
+ * (see App.navigation.test.ts) — as a deliberate exception to App.tsx's
+ * usual "orchestration isn't tested" convention, specifically so the "stay
+ * on the same form to retry on partial failure" behavior has a direct
+ * regression test instead of only being provable by mounting the whole App.
+ */
+export async function applyTaskFormSave(
+  session: Session,
+  saved: Task,
+  documentChanges: TaskDocumentChanges,
+  returnTo: "home" | "doctor-detail" | "task-detail",
+  doctor: Doctor | undefined,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): Promise<AppState> {
+  const results = await Promise.allSettled([
+    ...documentChanges.attachDocumentIds.map((documentId) => attachTaskDocument(saved.id, documentId)),
+    ...documentChanges.detachDocumentIds.map((documentId) => detachTaskDocument(saved.id, documentId)),
+    ...documentChanges.uploads.map((upload) => {
+      const formData = new FormData();
+      formData.append("file", upload.file);
+      formData.append("title", upload.title);
+      formData.append("type", upload.type);
+      if (saved.doctorId) formData.append("doctorId", String(saved.doctorId));
+      formData.append("taskIds", JSON.stringify([saved.id]));
+      return uploadDocument(formData);
+    }),
+  ]);
+  const failureCount = results.filter((r) => r.status === "rejected").length;
+
+  const [home, taskDocs] = await Promise.all([fetchHome(), fetchDocuments({ taskId: saved.id })]);
+  const nextSession: Session = {
+    ...session,
+    home,
+    taskDocuments: { ...session.taskDocuments, [saved.id]: taskDocs },
+  };
+
+  if (failureCount > 0) {
+    // Some document changes didn't take — stay right here (now in edit mode,
+    // since the task itself did save) with the picker/list reflecting what's
+    // actually attached, so the user can just retry the failed pick(s)/
+    // upload(s) instead of hunting them down again from wherever `returnTo`
+    // would otherwise have sent them.
+    window.alert(t("taskForm.documents.saveError", { count: failureCount }));
+    const freshAllDocuments = await fetchDocuments();
+    return {
+      phase: "task-form",
+      session: nextSession,
+      task: saved,
+      returnTo,
+      doctor,
+      documents: taskDocs,
+      allDocuments: freshAllDocuments,
+      focusDocuments: true,
+    };
+  }
+
+  if (returnTo === "task-detail") {
+    return { phase: "task-detail", session: nextSession, task: saved, returnTo: doctor ? "doctor-detail" : "home", doctor };
+  }
+  if (returnTo === "doctor-detail" && doctor) {
+    return { phase: "doctor-detail", session: nextSession, doctors: session.doctors, doctor };
+  }
+  return { phase: "home", session: nextSession };
+}
+
+/**
  * Orders doctors by their soonest upcoming appointment (ascending) rather
  * than the list's base name order — a doctor you're about to see should
  * surface above one you have no appointment with. Doctors with no upcoming
@@ -824,41 +892,11 @@ export function App() {
       };
       const submit = async (input: TaskInput, documentChanges: TaskDocumentChanges) => {
         const saved = task ? await updateTask(task.id, input) : await createTask(input);
-
-        const results = await Promise.allSettled([
-          ...documentChanges.attachDocumentIds.map((documentId) => attachTaskDocument(saved.id, documentId)),
-          ...documentChanges.detachDocumentIds.map((documentId) => detachTaskDocument(saved.id, documentId)),
-          ...documentChanges.uploads.map((upload) => {
-            const formData = new FormData();
-            formData.append("file", upload.file);
-            formData.append("title", upload.title);
-            formData.append("type", upload.type);
-            if (saved.doctorId) formData.append("doctorId", String(saved.doctorId));
-            formData.append("taskIds", JSON.stringify([saved.id]));
-            return uploadDocument(formData);
-          }),
-        ]);
-        const failureCount = results.filter((r) => r.status === "rejected").length;
-        if (failureCount > 0) {
-          window.alert(t("taskForm.documents.saveError", { count: failureCount }));
-        }
-
-        const [home, taskDocs] = await Promise.all([fetchHome(), fetchDocuments({ taskId: saved.id })]);
-        const nextSession = {
-          ...session,
-          home,
-          taskDocuments: { ...session.taskDocuments, [saved.id]: taskDocs },
-        };
-        if (returnTo === "task-detail") {
-          setState({ phase: "task-detail", session: nextSession, task: saved, returnTo: doctor ? "doctor-detail" : "home", doctor });
-        } else if (returnTo === "doctor-detail" && doctor) {
-          setState({ phase: "doctor-detail", session: nextSession, doctors: session.doctors, doctor });
-        } else {
-          setState({ phase: "home", session: nextSession });
-        }
+        setState(await applyTaskFormSave(session, saved, documentChanges, returnTo, doctor, t));
       };
       return (
         <TaskFormScreen
+          key={`${task?.id ?? "new"}:${task?.updatedAt ?? ""}`}
           task={task}
           doctors={session.doctors}
           documents={documents}

@@ -30,8 +30,8 @@ function doc(overrides: Partial<MedicalDocument> = {}): MedicalDocument {
     file: { fileName: "blood.pdf", uniqueFilename: "u_blood.pdf", mime: "application/pdf", hash: "h", size: 10 },
     appointmentIds: [1],
     taskIds: [],
-    createdAt: "",
-    updatedAt: "",
+    createdAt: "2026-08-10T09:00:00.000Z",
+    updatedAt: "2026-08-10T09:00:00.000Z",
     ...overrides,
   };
 }
