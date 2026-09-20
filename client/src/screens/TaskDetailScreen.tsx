@@ -14,7 +14,6 @@ export function TaskDetailScreen({
   onEdit,
   onStatusChange,
   onResolveToAppointment,
-  onAddDocument,
   onSelectDocument,
 }: {
   task: Task;
@@ -24,7 +23,6 @@ export function TaskDetailScreen({
   onEdit: (task: Task) => void;
   onStatusChange: (task: Task, status: TaskStatus) => void;
   onResolveToAppointment?: (task: Task) => void;
-  onAddDocument?: (task: Task) => void;
   onSelectDocument?: (doc: MedicalDocument) => void;
 }) {
   const { t } = useTranslation();
@@ -151,9 +149,19 @@ export function TaskDetailScreen({
           </div>
         )}
 
-        {documents.length > 0 && (
-          <div className="card task-detail-section">
+        <div className="card task-detail-section">
+          <div className="section-header">
             <h2 className="section-title">{t("doctorDetail.documents.title")}</h2>
+            <button
+              type="button"
+              className="btn-icon-edit"
+              aria-label={t("taskDetail.editDocuments")}
+              onClick={() => onEdit(task)}
+            >
+              {documents.length > 0 ? "✎" : "+"}
+            </button>
+          </div>
+          {documents.length > 0 ? (
             <div className="task-documents-list">
               {documents.map((doc) => (
                 <div
@@ -184,8 +192,10 @@ export function TaskDetailScreen({
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <p className="section-empty">{t("doctorDetail.documents.empty")}</p>
+          )}
+        </div>
       </div>
 
       <div className="task-detail-actions">
@@ -214,16 +224,6 @@ export function TaskDetailScreen({
             onClick={() => onResolveToAppointment(task)}
           >
             📅 {t("taskForm.resolveToAppointment")}
-          </button>
-        )}
-
-        {onAddDocument && (
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => onAddDocument(task)}
-          >
-            📎 {t("taskDetail.addDocument")}
           </button>
         )}
 

@@ -137,7 +137,7 @@ describe("DocumentFormScreen", () => {
     expect(typeSelect.value).toBe("other");
   });
 
-  it("sets document type based on initialTaskId and updates on task dropdown selection", async () => {
+  it("switches document type to match the task's kind when a task is picked from the dropdown", async () => {
     const user = userEvent.setup();
     const tasksWithForm17: Task[] = [
       ...mockTasks,
@@ -166,18 +166,20 @@ describe("DocumentFormScreen", () => {
       },
     ];
 
-    const { rerender } = render(
+    render(
       <DocumentFormScreen
         doctors={mockDoctors}
         appointments={mockAppointments}
         openItems={tasksWithForm17}
-        initialTaskId={200}
         onSubmit={vi.fn()}
         onCancel={vi.fn()}
       />
     );
 
-    let typeSelect = screen.getByLabelText(/type/i) as HTMLSelectElement;
+    const typeSelect = screen.getByLabelText(/type/i) as HTMLSelectElement;
+    expect(typeSelect.value).toBe("other");
+
+    await user.selectOptions(screen.getByLabelText(/open item/i), "200");
     expect(typeSelect.value).toBe("Form 17");
 
     // Switching task in dropdown switches document type to test result

@@ -253,6 +253,89 @@ describe("/api/tasks routes", () => {
     });
   });
 
+  describe("PUT /api/tasks/:id/documents/:documentId", () => {
+    it("attaches an already-uploaded document to the task", async () => {
+      const agent = signedInAgent(tmpDb());
+      const task = await agent.post("/api/tasks").send({ type: "test", title: "Blood test" });
+      const doc = await agent
+        .post("/api/documents")
+        .field("title", "Old referral")
+        .field("type", "referral")
+        .attach("file", Buffer.from("content"), "referral.pdf");
+
+      const res = await agent.put(`/api/tasks/${task.body.id}/documents/${doc.body.id}`).send();
+
+      expect(res.status).toBe(200);
+      expect(res.body.taskIds).toContain(task.body.id);
+    });
+
+    it("404s for a task id that doesn't exist, instead of crashing", async () => {
+      const agent = signedInAgent(tmpDb());
+      const doc = await agent
+        .post("/api/documents")
+        .field("title", "Old referral")
+        .field("type", "referral")
+        .attach("file", Buffer.from("content"), "referral.pdf");
+
+      const res = await agent.put(`/api/tasks/999/documents/${doc.body.id}`).send();
+
+      expect(res.status).toBe(404);
+    });
+
+    it("404s for a document id that doesn't exist, instead of crashing", async () => {
+      const agent = signedInAgent(tmpDb());
+      const task = await agent.post("/api/tasks").send({ type: "test", title: "Blood test" });
+
+      const res = await agent.put(`/api/tasks/${task.body.id}/documents/999`).send();
+
+      expect(res.status).toBe(404);
+    });
+  });
+
+  describe("DELETE /api/tasks/:id/documents/:documentId", () => {
+    it("detaches a document from the task without deleting the document", async () => {
+      const agent = signedInAgent(tmpDb());
+      const task = await agent.post("/api/tasks").send({ type: "test", title: "Blood test" });
+      const doc = await agent
+        .post("/api/documents")
+        .field("title", "Old referral")
+        .field("type", "referral")
+        .field("taskIds", JSON.stringify([task.body.id]))
+        .attach("file", Buffer.from("content"), "referral.pdf");
+      expect(doc.body.taskIds).toContain(task.body.id);
+
+      const res = await agent.delete(`/api/tasks/${task.body.id}/documents/${doc.body.id}`).send();
+
+      expect(res.status).toBe(200);
+      expect(res.body.taskIds).not.toContain(task.body.id);
+
+      const stillThere = await agent.get(`/api/documents/${doc.body.id}`);
+      expect(stillThere.status).toBe(200);
+    });
+
+    it("404s for a task id that doesn't exist, instead of crashing", async () => {
+      const agent = signedInAgent(tmpDb());
+      const doc = await agent
+        .post("/api/documents")
+        .field("title", "Old referral")
+        .field("type", "referral")
+        .attach("file", Buffer.from("content"), "referral.pdf");
+
+      const res = await agent.delete(`/api/tasks/999/documents/${doc.body.id}`).send();
+
+      expect(res.status).toBe(404);
+    });
+
+    it("404s for a document id that doesn't exist, instead of crashing", async () => {
+      const agent = signedInAgent(tmpDb());
+      const task = await agent.post("/api/tasks").send({ type: "test", title: "Blood test" });
+
+      const res = await agent.delete(`/api/tasks/${task.body.id}/documents/999`).send();
+
+      expect(res.status).toBe(404);
+    });
+  });
+
   describe("GET /api/home integration", () => {
     it("returns openItems array with non-done tasks sorted with no-due-date first then chronological", async () => {
       const agent = signedInAgent(tmpDb());

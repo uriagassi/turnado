@@ -1,20 +1,50 @@
-import { FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { Doctor, Task, TaskInput, TaskStatus, TaskType } from "../api";
+import type { Doctor, DocumentType, MedicalDocument, Task, TaskInput, TaskStatus, TaskType } from "../api";
 import { isResolvableTask } from "../tasks/taskUtils";
+import { getDocumentIcon } from "./HomeScreen";
+import { getDocumentTypeForTask } from "./DocumentFormScreen";
+import { DocumentPicker } from "../components/DocumentPicker";
 
 type RequiredFieldErrors = { title?: string; doctorId?: string };
+
+/** One new file the user selected inline, not yet uploaded — title/type are auto-filled (see getDocumentTypeForTask) and not editable here; fix them from the document's own detail screen afterwards if needed. */
+export interface TaskDocumentUpload {
+  file: File;
+  title: string;
+  type: DocumentType;
+}
+
+/** The diff between what was attached when the form opened and what's staged now — computed on submit and applied by the caller (create/update the task first, then apply these) since a brand-new task has no id yet while the form is open. */
+export interface TaskDocumentChanges {
+  attachDocumentIds: number[];
+  detachDocumentIds: number[];
+  uploads: TaskDocumentUpload[];
+}
+
+type StagedDoc =
+  | { kind: "existing"; document: MedicalDocument }
+  | ({ kind: "upload"; uploadId: number } & TaskDocumentUpload);
 
 export function TaskFormScreen({
   task,
   doctors,
+  documents = [],
+  allDocuments = [],
+  focusDocuments = false,
   onSubmit,
   onCancel,
   onResolveToAppointment,
 }: {
   task?: Task;
   doctors: Doctor[];
-  onSubmit: (input: TaskInput) => void;
+  /** Documents already attached to `task` when the form opened (empty for a brand-new task). */
+  documents?: MedicalDocument[];
+  /** Every document in the system, for the "attach existing" picker to search across. */
+  allDocuments?: MedicalDocument[];
+  /** Scrolls the documents section into view on mount — used when arriving here via the detail screen's document-edit shortcut. */
+  focusDocuments?: boolean;
+  onSubmit: (input: TaskInput, documentChanges: TaskDocumentChanges) => void;
   onCancel: () => void;
   onResolveToAppointment?: (task: Task) => void;
 }) {
@@ -47,6 +77,52 @@ export function TaskFormScreen({
     }
   };
 
+  // Document attach/detach/upload is staged here and only applied by the
+  // caller once the task itself has been saved (see TaskDocumentChanges) —
+  // Cancel simply drops this state, same as it drops any other field edit.
+  const [stagedDocs, setStagedDocs] = useState<StagedDoc[]>(
+    documents.map((document) => ({ kind: "existing", document })),
+  );
+  const uploadIdCounter = useRef(0);
+  const documentsSectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (focusDocuments) {
+      documentsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    // Only ever on mount — this is a one-time "arrived here for the documents section" nudge.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const stagedExistingIds = new Set(
+    stagedDocs.filter((d): d is Extract<StagedDoc, { kind: "existing" }> => d.kind === "existing").map((d) => d.document.id),
+  );
+
+  const attachExisting = (document: MedicalDocument) => {
+    setStagedDocs((docs) => [...docs, { kind: "existing", document }]);
+  };
+
+  const removeExisting = (documentId: number) => {
+    setStagedDocs((docs) => docs.filter((d) => !(d.kind === "existing" && d.document.id === documentId)));
+  };
+
+  const removeUpload = (uploadId: number) => {
+    setStagedDocs((docs) => docs.filter((d) => !(d.kind === "upload" && d.uploadId === uploadId)));
+  };
+
+  const onFilesSelected = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    const uploads: StagedDoc[] = files.map((file) => ({
+      kind: "upload",
+      uploadId: ++uploadIdCounter.current,
+      file,
+      title: file.name.replace(/\.[^/.]+$/, ""),
+      type: getDocumentTypeForTask(formData.type),
+    }));
+    setStagedDocs((docs) => [...docs, ...uploads]);
+    event.target.value = "";
+  };
+
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     const nextErrors: RequiredFieldErrors = {};
@@ -57,20 +133,30 @@ export function TaskFormScreen({
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    onSubmit({
-      ...formData,
-      title: formData.title.trim(),
-      dueDate: formData.dueDate ? formData.dueDate : null,
-      recurrenceWindow: formData.recurrenceWindow ? formData.recurrenceWindow : null,
-      approximateDateWindow: formData.approximateDateWindow ? formData.approximateDateWindow : null,
-      institution: formData.institution ? formData.institution : null,
-      department: formData.department ? formData.department : null,
-      healthFund: formData.healthFund ? formData.healthFund : null,
-      codeNumber: formData.codeNumber ? formData.codeNumber : null,
-      codeName: formData.codeName ? formData.codeName : null,
-      issuingBody: formData.issuingBody ? formData.issuingBody : null,
-      purpose: formData.purpose ? formData.purpose : null,
-    });
+    const originalAttachedIds = new Set(documents.map((d) => d.id));
+    const attachDocumentIds = [...stagedExistingIds].filter((id) => !originalAttachedIds.has(id));
+    const detachDocumentIds = documents.map((d) => d.id).filter((id) => !stagedExistingIds.has(id));
+    const uploads: TaskDocumentUpload[] = stagedDocs
+      .filter((d): d is Extract<StagedDoc, { kind: "upload" }> => d.kind === "upload")
+      .map(({ file, title, type }) => ({ file, title, type }));
+
+    onSubmit(
+      {
+        ...formData,
+        title: formData.title.trim(),
+        dueDate: formData.dueDate ? formData.dueDate : null,
+        recurrenceWindow: formData.recurrenceWindow ? formData.recurrenceWindow : null,
+        approximateDateWindow: formData.approximateDateWindow ? formData.approximateDateWindow : null,
+        institution: formData.institution ? formData.institution : null,
+        department: formData.department ? formData.department : null,
+        healthFund: formData.healthFund ? formData.healthFund : null,
+        codeNumber: formData.codeNumber ? formData.codeNumber : null,
+        codeName: formData.codeName ? formData.codeName : null,
+        issuingBody: formData.issuingBody ? formData.issuingBody : null,
+        purpose: formData.purpose ? formData.purpose : null,
+      },
+      { attachDocumentIds, detachDocumentIds, uploads },
+    );
   };
 
   const isResolvable = Boolean(task) && isResolvableTask(formData);
@@ -264,6 +350,60 @@ export function TaskFormScreen({
             </div>
           </>
         )}
+
+        <div className="card task-form-section task-form-documents" ref={documentsSectionRef}>
+          <h2 className="section-title">{t("doctorDetail.documents.title")}</h2>
+
+          {stagedDocs.length > 0 && (
+            <ul className="item-row-list">
+              {stagedDocs.map((doc) => {
+                const key = doc.kind === "existing" ? `existing-${doc.document.id}` : `upload-${doc.uploadId}`;
+                const title = doc.kind === "existing" ? doc.document.title : doc.title;
+                const type = doc.kind === "existing" ? doc.document.type : doc.type;
+                return (
+                  <li key={key} className="card feed-row task-form-document-row">
+                    <div className="feed-icon" aria-hidden="true">
+                      {getDocumentIcon(type)}
+                    </div>
+                    <div className="feed-body">
+                      <span className="feed-name">{title}</span>
+                      <div className="feed-meta">
+                        <span className="badge type-tag">{t(`document.type.${type}`)}</span>
+                        {doc.kind === "upload" && (
+                          <span className="badge">{t("taskForm.documents.pendingUpload")}</span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-icon-remove"
+                      aria-label={t("taskForm.documents.remove", { title })}
+                      onClick={() =>
+                        doc.kind === "existing" ? removeExisting(doc.document.id) : removeUpload(doc.uploadId)
+                      }
+                    >
+                      ×
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          <div className="task-form-documents-actions">
+            <DocumentPicker allDocuments={allDocuments} excludedIds={stagedExistingIds} onPick={attachExisting} />
+            <label className="btn-small btn-secondary task-form-upload-label">
+              {t("taskForm.documents.upload")}
+              <input
+                type="file"
+                multiple
+                accept="image/*,application/pdf"
+                className="visually-hidden"
+                onChange={onFilesSelected}
+              />
+            </label>
+          </div>
+        </div>
 
         {isResolvable && onResolveToAppointment && task && (
           <div className="form-resolve-action">

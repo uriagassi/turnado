@@ -528,6 +528,28 @@ export function createApp(options: AppOptions): Express {
       res.json(documents.get(documentId));
     });
 
+    // Task-side counterparts of the pair above: attach an already-uploaded
+    // document to a task, or detach one — detaching only ever removes the
+    // TaskDocuments link, never the document itself, since it may still be
+    // linked elsewhere.
+    app.put("/api/tasks/:id/documents/:documentId", (req, res) => {
+      const taskId = Number(req.params.id);
+      const documentId = Number(req.params.documentId);
+      if (!tasks.get(taskId)) return res.status(404).json({ error: "Not found" });
+      if (!documents.get(documentId)) return res.status(404).json({ error: "Not found" });
+      documents.linkTask(documentId, taskId);
+      res.json(documents.get(documentId));
+    });
+
+    app.delete("/api/tasks/:id/documents/:documentId", (req, res) => {
+      const taskId = Number(req.params.id);
+      const documentId = Number(req.params.documentId);
+      if (!tasks.get(taskId)) return res.status(404).json({ error: "Not found" });
+      if (!documents.get(documentId)) return res.status(404).json({ error: "Not found" });
+      documents.unlinkTask(documentId, taskId);
+      res.json(documents.get(documentId));
+    });
+
     app.get("/api/home", (_req, res) => {
       const openItems = withMissedReminder(
         tasks.list().filter((t) => t.status !== "done"),

@@ -276,6 +276,29 @@ describe("Documents", () => {
 
       expect(documents.get(doc.id)!.appointmentIds).toEqual([appt.id]);
     });
+
+    it("unlinks a document from a task without deleting the document itself", () => {
+      const db = tmpDb();
+      const documents = tmpDocuments(db);
+      const tasks = new Tasks(db);
+
+      const task = tasks.create({ type: "test", title: "Blood test" });
+      const file: UploadedFile = {
+        fileName: "referral.pdf",
+        uniqueFilename: "unique_ref.pdf",
+        mime: "application/pdf",
+        hash: "hash_ref",
+        size: 512,
+      };
+      const doc = documents.create({ title: "Referral Letter", type: "referral", taskIds: [task.id] }, file);
+      expect(documents.get(doc.id)!.taskIds).toEqual([task.id]);
+
+      documents.unlinkTask(doc.id, task.id);
+
+      const afterUnlink = documents.get(doc.id)!;
+      expect(afterUnlink).toBeDefined();
+      expect(afterUnlink.taskIds).toEqual([]);
+    });
   });
 
   describe("adopt (issue #14: existing document adoption tool)", () => {

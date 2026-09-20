@@ -1659,3 +1659,70 @@ html[dir="rtl"] .back-link-arrow {
 .nav-drawer-footer .theme-toggle[aria-checked="true"] .theme-toggle-thumb {
   left: calc(100% - 1.3125rem - 0.1875rem);
 }
+
+/* Visually hides an element (e.g. a file input triggered by its own label)
+   without removing it from the accessibility tree or tab order. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Task form's own documents section (staged attach/upload/detach, see
+   TaskFormScreen) — same .card/.section-title shell as a task-detail-screen
+   section, just not scoped under it since this lives in the form instead. */
+.task-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  margin-block-end: 1.25rem;
+}
+
+.task-form-documents-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.task-form-upload-label {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* DocumentPicker's panel is a plain block by default (fine for
+   AppointmentDetailScreen, which has no flex row around it); this makes it
+   drop to its own full-width line when it lands inside a flex-wrap row
+   instead, as it does next to TaskFormScreen's upload button. */
+.task-form-documents-actions .document-picker {
+  flex-basis: 100%;
+}
+
+.task-form-document-row {
+  align-items: center;
+}
+
+.btn-icon-remove,
+.btn-icon-edit {
+  flex: 0 0 auto;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-dim);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.btn-icon-remove:hover,
+.btn-icon-edit:hover {
+  background: var(--color-gray-bg);
+  color: var(--color-text);
+}

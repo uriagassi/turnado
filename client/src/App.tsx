@@ -24,6 +24,8 @@ import {
   fetchDocument,
   uploadDocument,
   attachAppointmentDocument,
+  attachTaskDocument,
+  detachTaskDocument,
   AuthClientData,
   Appointment,
   AppointmentInput,
@@ -31,7 +33,6 @@ import {
   Doctor,
   DoctorInput,
   DocumentQueryFilter,
-  DocumentType,
   HomeData,
   MedicalDocument,
   Task,
@@ -48,9 +49,9 @@ import { DoctorFormScreen } from "./screens/DoctorFormScreen";
 import { AppointmentFormScreen } from "./screens/AppointmentFormScreen";
 import { AppointmentHistoryScreen } from "./screens/AppointmentHistoryScreen";
 import { UpcomingAppointmentsScreen } from "./screens/UpcomingAppointmentsScreen";
-import { TaskFormScreen } from "./screens/TaskFormScreen";
+import { TaskFormScreen, type TaskDocumentChanges } from "./screens/TaskFormScreen";
 import { TaskDetailScreen } from "./screens/TaskDetailScreen";
-import { DocumentFormScreen, getDocumentTypeForTask } from "./screens/DocumentFormScreen";
+import { DocumentFormScreen } from "./screens/DocumentFormScreen";
 import { DocumentDetailScreen } from "./screens/DocumentDetailScreen";
 import { DocumentsScreen, type DocumentFilters } from "./screens/DocumentsScreen";
 import { AppointmentDetailScreen } from "./screens/AppointmentDetailScreen";
@@ -198,6 +199,74 @@ async function loadAppointmentDetail(
 }
 
 /**
+ * Applies a task-form save's staged document changes (attach/detach/upload)
+ * against the just-saved task, then decides where the form lands next.
+ * Pulled out of the task-form submit closure — like screenTitle/screenBack
+ * (see App.navigation.test.ts) — as a deliberate exception to App.tsx's
+ * usual "orchestration isn't tested" convention, specifically so the "stay
+ * on the same form to retry on partial failure" behavior has a direct
+ * regression test instead of only being provable by mounting the whole App.
+ */
+export async function applyTaskFormSave(
+  session: Session,
+  saved: Task,
+  documentChanges: TaskDocumentChanges,
+  returnTo: "home" | "doctor-detail" | "task-detail",
+  doctor: Doctor | undefined,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): Promise<AppState> {
+  const results = await Promise.allSettled([
+    ...documentChanges.attachDocumentIds.map((documentId) => attachTaskDocument(saved.id, documentId)),
+    ...documentChanges.detachDocumentIds.map((documentId) => detachTaskDocument(saved.id, documentId)),
+    ...documentChanges.uploads.map((upload) => {
+      const formData = new FormData();
+      formData.append("file", upload.file);
+      formData.append("title", upload.title);
+      formData.append("type", upload.type);
+      if (saved.doctorId) formData.append("doctorId", String(saved.doctorId));
+      formData.append("taskIds", JSON.stringify([saved.id]));
+      return uploadDocument(formData);
+    }),
+  ]);
+  const failureCount = results.filter((r) => r.status === "rejected").length;
+
+  const [home, taskDocs] = await Promise.all([fetchHome(), fetchDocuments({ taskId: saved.id })]);
+  const nextSession: Session = {
+    ...session,
+    home,
+    taskDocuments: { ...session.taskDocuments, [saved.id]: taskDocs },
+  };
+
+  if (failureCount > 0) {
+    // Some document changes didn't take — stay right here (now in edit mode,
+    // since the task itself did save) with the picker/list reflecting what's
+    // actually attached, so the user can just retry the failed pick(s)/
+    // upload(s) instead of hunting them down again from wherever `returnTo`
+    // would otherwise have sent them.
+    window.alert(t("taskForm.documents.saveError", { count: failureCount }));
+    const freshAllDocuments = await fetchDocuments();
+    return {
+      phase: "task-form",
+      session: nextSession,
+      task: saved,
+      returnTo,
+      doctor,
+      documents: taskDocs,
+      allDocuments: freshAllDocuments,
+      focusDocuments: true,
+    };
+  }
+
+  if (returnTo === "task-detail") {
+    return { phase: "task-detail", session: nextSession, task: saved, returnTo: doctor ? "doctor-detail" : "home", doctor };
+  }
+  if (returnTo === "doctor-detail" && doctor) {
+    return { phase: "doctor-detail", session: nextSession, doctors: session.doctors, doctor };
+  }
+  return { phase: "home", session: nextSession };
+}
+
+/**
  * Orders doctors by their soonest upcoming appointment (ascending) rather
  * than the list's base name order — a doctor you're about to see should
  * surface above one you have no appointment with. Doctors with no upcoming
@@ -250,6 +319,12 @@ export type AppState =
       task?: Task;
       returnTo: "home" | "doctor-detail" | "task-detail";
       doctor?: Doctor;
+      /** Documents already attached to `task` (empty/omitted when creating). */
+      documents?: MedicalDocument[];
+      /** Every document, for the "attach existing" picker to search across. */
+      allDocuments?: MedicalDocument[];
+      /** Scrolls the form's documents section into view on mount — set when arriving via task-detail's document-edit shortcut. */
+      focusDocuments?: boolean;
     }
   | {
       phase: "document-form";
@@ -257,9 +332,6 @@ export type AppState =
       returnTo: "home" | "doctor-detail";
       doctor?: Doctor;
       initialDoctorId?: number;
-      initialAppointmentId?: number;
-      initialTaskId?: number;
-      initialType?: DocumentType;
     }
   | {
       phase: "document-detail";
@@ -567,7 +639,10 @@ export function App() {
       const { session } = state;
       const selectDoctor = (doctor: Doctor) => goTo({ phase: "doctor-detail", session, doctors: session.doctors, doctor });
       const addAppointment = () => setState({ phase: "appointment-form", session, returnTo: "home" });
-      const addTask = () => setState({ phase: "task-form", session, returnTo: "home" });
+      const addTask = async () => {
+        const allDocuments = await fetchDocuments();
+        setState({ phase: "task-form", session, returnTo: "home", allDocuments });
+      };
       const selectTask = async (task: Task) => {
         const docs = await fetchDocuments({ taskId: task.id });
         const taskDocuments = { ...session.taskDocuments, [task.id]: docs };
@@ -644,7 +719,7 @@ export function App() {
       );
     }
     case "document-form": {
-      const { session, returnTo, doctor, initialDoctorId, initialAppointmentId, initialTaskId, initialType } = state;
+      const { session, returnTo, doctor, initialDoctorId } = state;
       const cancel = () => {
         if (returnTo === "doctor-detail" && doctor) {
           setState({ phase: "doctor-detail", session, doctors: session.doctors, doctor });
@@ -654,9 +729,9 @@ export function App() {
       };
       const submit = async (formData: FormData) => {
         const saved = await uploadDocument(formData);
-        const targetTaskId =
-          initialTaskId ||
-          (formData.get("taskIds") ? JSON.parse(formData.get("taskIds") as string)[0] : undefined);
+        const targetTaskId = formData.get("taskIds")
+          ? JSON.parse(formData.get("taskIds") as string)[0]
+          : undefined;
         const home = await fetchHome();
         const nextSession = { ...session, home };
         setState({ phase: "document-detail", session: nextSession, document: saved, returnTo, doctor });
@@ -670,9 +745,6 @@ export function App() {
           appointments={session.appointments}
           openItems={session.home.openItems}
           initialDoctorId={initialDoctorId ?? doctor?.id}
-          initialAppointmentId={initialAppointmentId}
-          initialTaskId={initialTaskId}
-          initialType={initialType}
           onSubmit={submit}
           onCancel={cancel}
         />
@@ -763,8 +835,22 @@ export function App() {
     }
     case "task-detail": {
       const { session, task, returnTo, doctor } = state;
-      const edit = (t: Task) =>
-        setState({ phase: "task-form", session, task: t, returnTo: "task-detail", doctor });
+      const edit = async (t: Task) => {
+        const [allDocuments, documents] = await Promise.all([
+          fetchDocuments(),
+          fetchDocuments({ taskId: t.id }),
+        ]);
+        setState({
+          phase: "task-form",
+          session,
+          task: t,
+          returnTo: "task-detail",
+          doctor,
+          documents,
+          allDocuments,
+          focusDocuments: true,
+        });
+      };
       const changeStatus = async (t: Task, status: TaskStatus) => {
         const updated = await setTaskStatus(t.id, status);
         const home = await fetchHome();
@@ -779,24 +865,6 @@ export function App() {
           returnTo: returnTo === "doctor-detail" ? "doctor-detail" : "home",
           doctor,
         });
-      const addDocument = (t: Task) => {
-        const defaultApptId = t.pendingAppointmentId ?? t.sourceAppointmentId ?? undefined;
-        const defaultDoctorId =
-          t.doctorId ??
-          (defaultApptId ? session.appointments.find((a) => a.id === defaultApptId)?.doctorId : undefined) ??
-          undefined;
-        const defaultType = getDocumentTypeForTask(t.type);
-        setState({
-          phase: "document-form",
-          session,
-          returnTo: returnTo === "doctor-detail" ? "doctor-detail" : "home",
-          initialTaskId: t.id,
-          initialAppointmentId: defaultApptId,
-          initialDoctorId: defaultDoctorId,
-          initialType: defaultType,
-          doctor,
-        });
-      };
       const taskDocs = session.taskDocuments?.[task.id] ?? [];
       return (
         <TaskDetailScreen
@@ -807,13 +875,12 @@ export function App() {
           onEdit={edit}
           onStatusChange={changeStatus}
           onResolveToAppointment={(t) => navigateToResolveAppointment(session, t)}
-          onAddDocument={addDocument}
           onSelectDocument={selectDocument}
         />
       );
     }
     case "task-form": {
-      const { session, task, returnTo, doctor } = state;
+      const { session, task, returnTo, doctor, documents, allDocuments, focusDocuments } = state;
       const cancel = () => {
         if (returnTo === "task-detail" && task) {
           setState({ phase: "task-detail", session, task, returnTo: doctor ? "doctor-detail" : "home", doctor });
@@ -823,22 +890,18 @@ export function App() {
           setState({ phase: "home", session });
         }
       };
-      const submit = async (input: TaskInput) => {
+      const submit = async (input: TaskInput, documentChanges: TaskDocumentChanges) => {
         const saved = task ? await updateTask(task.id, input) : await createTask(input);
-        const home = await fetchHome();
-        const nextSession = { ...session, home };
-        if (returnTo === "task-detail") {
-          setState({ phase: "task-detail", session: nextSession, task: saved, returnTo: doctor ? "doctor-detail" : "home", doctor });
-        } else if (returnTo === "doctor-detail" && doctor) {
-          setState({ phase: "doctor-detail", session: nextSession, doctors: session.doctors, doctor });
-        } else {
-          setState({ phase: "home", session: nextSession });
-        }
+        setState(await applyTaskFormSave(session, saved, documentChanges, returnTo, doctor, t));
       };
       return (
         <TaskFormScreen
+          key={`${task?.id ?? "new"}:${task?.updatedAt ?? ""}`}
           task={task}
           doctors={session.doctors}
+          documents={documents}
+          allDocuments={allDocuments}
+          focusDocuments={focusDocuments}
           onSubmit={submit}
           onCancel={cancel}
           onResolveToAppointment={(t) => navigateToResolveAppointment(session, t)}
