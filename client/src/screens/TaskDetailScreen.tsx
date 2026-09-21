@@ -5,25 +5,32 @@ import { getTaskIcon, isResolvableTask } from "../tasks/taskUtils";
 import { getDocumentIcon } from "./HomeScreen";
 import { TaskStatusBadge } from "../components/TaskStatusBadge";
 import { MissedReminderBadge } from "../components/MissedReminderBadge";
+import { SimilarTaskBadge } from "../components/SimilarTaskBadge";
 
 export function TaskDetailScreen({
   task,
   doctors,
   appointments = [],
   documents = [],
+  similarTasks = [],
   onEdit,
   onStatusChange,
   onResolveToAppointment,
   onSelectDocument,
+  onSelectTask,
 }: {
   task: Task;
   doctors: Doctor[];
   appointments?: Appointment[];
   documents?: MedicalDocument[];
+  /** Every current candidate this task looks like a possible duplicate of (issue #12) — resolved by the caller from `task.similarTaskIds` against its own already-loaded open items. */
+  similarTasks?: Task[];
   onEdit: (task: Task) => void;
   onStatusChange: (task: Task, status: TaskStatus) => void;
   onResolveToAppointment?: (task: Task) => void;
   onSelectDocument?: (doc: MedicalDocument) => void;
+  /** Navigates to one of `similarTasks`' own detail screen. */
+  onSelectTask?: (task: Task) => void;
 }) {
   const { t } = useTranslation();
   const formatRelative = useRelativeDateTime();
@@ -52,6 +59,7 @@ export function TaskDetailScreen({
             <span className="badge type-tag">{t("taskDetail.advanceSchedulingNotice")}</span>
           )}
           {task.missedReminder && <MissedReminderBadge reason={task.missedReminder} />}
+          {task.similarTaskIds.length > 0 && <SimilarTaskBadge />}
         </div>
       </div>
 
@@ -146,6 +154,39 @@ export function TaskDetailScreen({
                 <span className="label-dim">{t("taskDetail.purpose")}:</span> {task.purpose}
               </p>
             )}
+          </div>
+        )}
+
+        {similarTasks.length > 0 && (
+          <div className="card task-detail-section">
+            <h2 className="section-title">{t("taskDetail.similarTasks.title")}</h2>
+            <div className="item-row-list">
+              {similarTasks.map((similar) => (
+                <div
+                  key={similar.id}
+                  className="card feed-row clickable"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => onSelectTask?.(similar)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onSelectTask?.(similar);
+                    }
+                  }}
+                >
+                  <div className="feed-icon" aria-hidden="true">
+                    {getTaskIcon(similar.type)}
+                  </div>
+                  <div className="feed-body">
+                    <span className="feed-name">{similar.title}</span>
+                    <div className="feed-meta">
+                      <TaskStatusBadge status={similar.status} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

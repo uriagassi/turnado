@@ -9,6 +9,34 @@ const doctors: Doctor[] = [
   { id: 2, name: "Dr. John Doe", specialty: "Neurology", photoPath: null },
 ];
 
+function makeTask(overrides: Partial<Task> = {}): Task {
+  return {
+    id: 1,
+    type: "test",
+    title: "A task",
+    status: "open",
+    doctorId: null,
+    dueDate: null,
+    sourceAppointmentId: null,
+    pendingAppointmentId: null,
+    requiresAdvanceScheduling: false,
+    recurrenceWindow: null,
+    approximateDateWindow: null,
+    institution: null,
+    department: null,
+    healthFund: null,
+    codeNumber: null,
+    codeName: null,
+    issuingBody: null,
+    purpose: null,
+    createdAt: "2026-08-01",
+    updatedAt: "2026-08-01",
+    missedReminder: null,
+    similarTaskIds: [],
+    ...overrides,
+  };
+}
+
 describe("TaskDetailScreen", () => {
   it("renders task information, status badge, and kind-specific fields", () => {
     const task: Task = {
@@ -33,6 +61,7 @@ describe("TaskDetailScreen", () => {
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
       missedReminder: null,
+      similarTaskIds: [],
     };
 
     render(
@@ -75,6 +104,7 @@ describe("TaskDetailScreen", () => {
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
       missedReminder: "window closed before delivery",
+      similarTaskIds: [],
     };
 
     render(<TaskDetailScreen task={task} doctors={doctors} onEdit={() => {}} onStatusChange={() => {}} />);
@@ -112,6 +142,7 @@ describe("TaskDetailScreen", () => {
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
       missedReminder: null,
+      similarTaskIds: [],
     };
 
     render(
@@ -155,6 +186,7 @@ describe("TaskDetailScreen", () => {
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
       missedReminder: null,
+      similarTaskIds: [],
     };
 
     render(
@@ -196,6 +228,7 @@ describe("TaskDetailScreen", () => {
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
       missedReminder: null,
+      similarTaskIds: [],
     };
 
     render(
@@ -237,6 +270,7 @@ describe("TaskDetailScreen", () => {
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
       missedReminder: null,
+      similarTaskIds: [],
     };
 
     const appointments = [
@@ -294,6 +328,7 @@ describe("TaskDetailScreen", () => {
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
       missedReminder: null,
+      similarTaskIds: [],
     };
 
     const docs = [
@@ -359,10 +394,57 @@ describe("TaskDetailScreen", () => {
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
       missedReminder: null,
+      similarTaskIds: [],
     };
 
     render(<TaskDetailScreen task={task} doctors={doctors} onEdit={() => {}} onStatusChange={() => {}} />);
 
     expect(screen.getByRole("button", { name: /Edit documents/i })).toBeInTheDocument();
+  });
+
+  describe("possibly-a-duplicate badge and candidate list (issue #12)", () => {
+    it("shows the badge and lists every current candidate when the task has similarTaskIds", () => {
+      const other = makeTask({ id: 2, title: "Other blood test", status: "in-progress" });
+      const task = makeTask({ id: 1, title: "Blood test", similarTaskIds: [2] });
+
+      render(
+        <TaskDetailScreen task={task} doctors={doctors} similarTasks={[other]} onEdit={() => {}} onStatusChange={() => {}} />
+      );
+
+      expect(screen.getByText("Possibly a duplicate")).toBeInTheDocument();
+      expect(screen.getByText("Possibly a duplicate of")).toBeInTheDocument();
+      expect(screen.getByText("Other blood test")).toBeInTheDocument();
+    });
+
+    it("omits the badge and the candidate section when there are none", () => {
+      const task = makeTask({ similarTaskIds: [] });
+
+      render(<TaskDetailScreen task={task} doctors={doctors} onEdit={() => {}} onStatusChange={() => {}} />);
+
+      expect(screen.queryByText("Possibly a duplicate")).not.toBeInTheDocument();
+      expect(screen.queryByText("Possibly a duplicate of")).not.toBeInTheDocument();
+    });
+
+    it("navigates to a candidate's own detail screen when its row is clicked", async () => {
+      const user = userEvent.setup();
+      const onSelectTask = vi.fn();
+      const other = makeTask({ id: 2, title: "Other blood test" });
+      const task = makeTask({ id: 1, title: "Blood test", similarTaskIds: [2] });
+
+      render(
+        <TaskDetailScreen
+          task={task}
+          doctors={doctors}
+          similarTasks={[other]}
+          onEdit={() => {}}
+          onStatusChange={() => {}}
+          onSelectTask={onSelectTask}
+        />
+      );
+
+      await user.click(screen.getByText("Other blood test"));
+
+      expect(onSelectTask).toHaveBeenCalledWith(other);
+    });
   });
 });

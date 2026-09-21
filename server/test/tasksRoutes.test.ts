@@ -100,6 +100,84 @@ describe("/api/tasks routes", () => {
 
       expect(res.body[0].missedReminder).toBeNull();
     });
+
+    it("flags each other's id in similarTaskIds for two open tasks with the same type/doctor and a due date within 30 days (issue #12)", async () => {
+      const agent = signedInAgent(tmpDb());
+      const doc = await agent.post("/api/doctors").send({ name: "Dr. Who" });
+      const a = await agent
+        .post("/api/tasks")
+        .send({ type: "test", title: "Blood test A", doctorId: doc.body.id, dueDate: "2026-09-01" });
+      const b = await agent
+        .post("/api/tasks")
+        .send({ type: "test", title: "Blood test B", doctorId: doc.body.id, dueDate: "2026-09-20" });
+      const unrelated = await agent
+        .post("/api/tasks")
+        .send({ type: "form_17", title: "Unrelated", doctorId: doc.body.id, dueDate: "2026-09-01" });
+
+      const res = await agent.get("/api/tasks");
+
+      const bodyA = res.body.find((t: { id: number }) => t.id === a.body.id);
+      const bodyB = res.body.find((t: { id: number }) => t.id === b.body.id);
+      const bodyUnrelated = res.body.find((t: { id: number }) => t.id === unrelated.body.id);
+      expect(bodyA.similarTaskIds).toEqual([b.body.id]);
+      expect(bodyB.similarTaskIds).toEqual([a.body.id]);
+      expect(bodyUnrelated.similarTaskIds).toEqual([]);
+    });
+
+    it("never flags a task with no doctor linked, even against an otherwise-identical task (NULL-doctor exclusion, issue #12)", async () => {
+      const agent = signedInAgent(tmpDb());
+      await agent.post("/api/tasks").send({ type: "test", title: "No doctor A", dueDate: "2026-09-01" });
+      const b = await agent.post("/api/tasks").send({ type: "test", title: "No doctor B", dueDate: "2026-09-01" });
+
+      const res = await agent.get("/api/tasks");
+
+      const bodyB = res.body.find((t: { id: number }) => t.id === b.body.id);
+      expect(bodyB.similarTaskIds).toEqual([]);
+    });
+
+    it("excludes a done task from the candidate pool, and never flags a done task itself (open/in-progress-only pool, issue #12)", async () => {
+      const agent = signedInAgent(tmpDb());
+      const doc = await agent.post("/api/doctors").send({ name: "Dr. Who" });
+      const open = await agent
+        .post("/api/tasks")
+        .send({ type: "test", title: "Open", doctorId: doc.body.id, dueDate: "2026-09-01", status: "open" });
+      const done = await agent
+        .post("/api/tasks")
+        .send({ type: "test", title: "Done", doctorId: doc.body.id, dueDate: "2026-09-01", status: "done" });
+
+      const res = await agent.get("/api/tasks");
+
+      const bodyOpen = res.body.find((t: { id: number }) => t.id === open.body.id);
+      const bodyDone = res.body.find((t: { id: number }) => t.id === done.body.id);
+      expect(bodyOpen.similarTaskIds).toEqual([]);
+      expect(bodyDone.similarTaskIds).toEqual([]);
+    });
+
+    it("carries similarTaskIds through POST, GET :id, PUT and GET /api/home (issue #12)", async () => {
+      const agent = signedInAgent(tmpDb());
+      const doc = await agent.post("/api/doctors").send({ name: "Dr. Who" });
+      const a = await agent
+        .post("/api/tasks")
+        .send({ type: "test", title: "A", doctorId: doc.body.id, dueDate: "2026-09-01" });
+      expect(a.body.similarTaskIds).toEqual([]);
+
+      const b = await agent
+        .post("/api/tasks")
+        .send({ type: "test", title: "B", doctorId: doc.body.id, dueDate: "2026-09-05" });
+      expect(b.body.similarTaskIds).toEqual([a.body.id]);
+
+      const getRes = await agent.get(`/api/tasks/${a.body.id}`);
+      expect(getRes.body.similarTaskIds).toEqual([b.body.id]);
+
+      const putRes = await agent
+        .put(`/api/tasks/${a.body.id}`)
+        .send({ type: "test", title: "A renamed", doctorId: doc.body.id, dueDate: "2026-09-01" });
+      expect(putRes.body.similarTaskIds).toEqual([b.body.id]);
+
+      const homeRes = await agent.get("/api/home");
+      const homeA = homeRes.body.openItems.find((t: { id: number }) => t.id === a.body.id);
+      expect(homeA.similarTaskIds).toEqual([b.body.id]);
+    });
   });
 
   describe("POST /api/tasks", () => {

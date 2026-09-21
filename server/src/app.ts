@@ -13,6 +13,7 @@ import { Doctors, DoctorNotFoundError, InvalidDoctorInputError } from "./doctors
 import { Appointments, AppointmentNotFoundError, InvalidAppointmentInputError } from "./appointments/Appointments.js";
 import { selectHeroAppointment } from "./appointments/heroAppointment.js";
 import { Tasks, TaskNotFoundError, InvalidTaskInputError, TaskStatus } from "./tasks/Tasks.js";
+import { withSimilarTaskIds, type SimilarityCandidate } from "./tasks/duplicateTasks.js";
 import { ReminderLog, MissedReason } from "./reminders/ReminderLog.js";
 import { dateOnly, type ReminderItemType } from "./reminders/dueReminders.js";
 import {
@@ -324,14 +325,19 @@ export function createApp(options: AppOptions): Express {
     });
 
     const tasks = new Tasks(db);
+    // similarTaskIds (issue #12) is relational — it needs the full task
+    // list as its candidate pool regardless of how the response itself is
+    // filtered — so every route re-fetches the unfiltered list for `pool`
+    // rather than reusing whatever subset it's about to respond with.
+    const withDuplicateFlag = <T extends SimilarityCandidate>(items: T[]) => withSimilarTaskIds(items, tasks.list());
     app.get("/api/tasks", (req, res) => {
       const doctorId = req.query.doctorId !== undefined ? Number(req.query.doctorId) : undefined;
       const status = req.query.status as TaskStatus | undefined;
-      res.json(withMissedReminder(tasks.list({ doctorId, status }), "task", reminderLog, taskTargetDate));
+      res.json(withDuplicateFlag(withMissedReminder(tasks.list({ doctorId, status }), "task", reminderLog, taskTargetDate)));
     });
     app.post("/api/tasks", (req, res) => {
       try {
-        res.status(201).json(tasks.create(req.body, req.userName ?? null));
+        res.status(201).json(withDuplicateFlag([tasks.create(req.body, req.userName ?? null)])[0]);
       } catch (err) {
         if (err instanceof InvalidTaskInputError) return res.status(400).json({ error: err.message });
         throw err;
@@ -340,13 +346,13 @@ export function createApp(options: AppOptions): Express {
     app.get("/api/tasks/:id", (req, res) => {
       const task = tasks.get(Number(req.params.id));
       if (!task) return res.status(404).json({ error: "Not found" });
-      res.json(withMissedReminder([task], "task", reminderLog, taskTargetDate)[0]);
+      res.json(withDuplicateFlag(withMissedReminder([task], "task", reminderLog, taskTargetDate))[0]);
     });
     app.put("/api/tasks/:id", (req, res) => {
       try {
         const updated = tasks.update(Number(req.params.id), req.body);
         documents.syncDoctorTagsForTask(Number(req.params.id));
-        res.json(updated);
+        res.json(withDuplicateFlag([updated])[0]);
       } catch (err) {
         if (err instanceof TaskNotFoundError) return res.status(404).json({ error: "Not found" });
         if (err instanceof InvalidTaskInputError) return res.status(400).json({ error: err.message });
@@ -355,7 +361,7 @@ export function createApp(options: AppOptions): Express {
     });
     app.put("/api/tasks/:id/status", (req, res) => {
       try {
-        res.json(tasks.setStatus(Number(req.params.id), req.body.status));
+        res.json(withDuplicateFlag([tasks.setStatus(Number(req.params.id), req.body.status)])[0]);
       } catch (err) {
         if (err instanceof TaskNotFoundError) return res.status(404).json({ error: "Not found" });
         if (err instanceof InvalidTaskInputError) return res.status(400).json({ error: err.message });
@@ -371,7 +377,7 @@ export function createApp(options: AppOptions): Express {
             : null;
 
         const appt = pendingAppointmentId ? appointments.get(pendingAppointmentId) ?? null : null;
-        res.json(tasks.resolveWithAppointment(taskId, appt));
+        res.json(withDuplicateFlag([tasks.resolveWithAppointment(taskId, appt)])[0]);
       } catch (err) {
         if (err instanceof TaskNotFoundError) return res.status(404).json({ error: "Not found" });
         throw err;
@@ -551,11 +557,13 @@ export function createApp(options: AppOptions): Express {
     });
 
     app.get("/api/home", (_req, res) => {
-      const openItems = withMissedReminder(
-        tasks.list().filter((t) => t.status !== "done"),
-        "task",
-        reminderLog,
-        taskTargetDate,
+      const openItems = withDuplicateFlag(
+        withMissedReminder(
+          tasks.list().filter((t) => t.status !== "done"),
+          "task",
+          reminderLog,
+          taskTargetDate,
+        ),
       );
       const appointmentsWithMarker = withMissedReminder(appointments.list(), "appointment", reminderLog, appointmentTargetDate);
       res.json({
