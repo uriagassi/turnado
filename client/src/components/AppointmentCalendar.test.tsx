@@ -36,6 +36,28 @@ describe("AppointmentCalendar", () => {
     expect(screen.getByTestId("calendar-day-2026-09-21")).toBeInTheDocument();
   });
 
+  it("marks today's cell and no other", () => {
+    render(
+      <AppointmentCalendar appointments={[]} doctors={doctors} onEdit={noop} onStatusChange={noop} onSaveSummary={noop} now={NOW} />,
+    );
+
+    expect(screen.getByTestId("calendar-day-2026-09-21")).toHaveClass("today");
+    expect(screen.getByTestId("calendar-day-2026-09-20")).not.toHaveClass("today");
+    expect(screen.getByTestId("calendar-day-2026-09-22")).not.toHaveClass("today");
+  });
+
+  it("keeps marking today's cell after navigating away and back to its month", async () => {
+    const user = userEvent.setup();
+    render(
+      <AppointmentCalendar appointments={[]} doctors={doctors} onEdit={noop} onStatusChange={noop} onSaveSummary={noop} now={NOW} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Next month" }));
+    await user.click(screen.getByRole("button", { name: "Previous month" }));
+
+    expect(screen.getByTestId("calendar-day-2026-09-21")).toHaveClass("today");
+  });
+
   it("shows a marker on a day with an appointment and not on one without", () => {
     const appointment = appt({ dateTime: "2026-09-15T10:00:00Z" });
     render(

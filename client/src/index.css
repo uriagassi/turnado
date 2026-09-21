@@ -890,6 +890,16 @@ html[dir="rtl"] .calendar-nav-arrow {
   border-color: transparent;
 }
 
+/* Today's cell — a colored ring rather than a fill, so it stays visually
+   distinct from .selected's filled background even when a day is both
+   today and selected at once. Comes after .outside-month so today's ring
+   still shows on a padding day from an adjacent month. */
+.calendar-day.today {
+  border-color: var(--color-primary);
+  border-width: 2px;
+  font-weight: 600;
+}
+
 .calendar-day.selected {
   border-color: var(--color-primary);
   background: var(--color-primary-dim);

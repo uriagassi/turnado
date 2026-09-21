@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { Appointment, AppointmentStatus, Doctor } from "../api";
 import { AppointmentCard } from "./AppointmentCard";
 import { buildMonthGrid } from "../utils/monthGrid";
+import { calendarDay } from "../formatDateTime";
 
 // A known Sunday, used only to derive localized weekday header labels — its
 // own date is irrelevant, only its day-of-week offsets from Sunday matter.
@@ -38,6 +39,10 @@ export function AppointmentCalendar({
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   const grid = useMemo(() => buildMonthGrid(year, month, appointments), [year, month, appointments]);
+  // Same day-key format buildMonthGrid's cells use (see monthGrid.ts), so a
+  // plain string match finds today's cell regardless of which month/year
+  // is currently in view.
+  const todayKey = calendarDay(now);
 
   const weekdayLabels = useMemo(() => {
     const formatter = new Intl.DateTimeFormat(i18n.language, { weekday: "short" });
@@ -104,26 +109,31 @@ export function AppointmentCalendar({
       </div>
 
       <div className="calendar-grid" role="grid">
-        {grid.map((cell) => (
-          <button
-            type="button"
-            key={cell.dateKey}
-            data-testid={`calendar-day-${cell.dateKey}`}
-            className={
-              "calendar-day" +
-              (cell.inMonth ? "" : " outside-month") +
-              (selectedDay === cell.dateKey ? " selected" : "")
-            }
-            aria-pressed={selectedDay === cell.dateKey}
-            aria-label={new Intl.DateTimeFormat(i18n.language, { dateStyle: "full" }).format(
-              new Date(cell.year, cell.month, cell.day),
-            )}
-            onClick={() => setSelectedDay(cell.dateKey)}
-          >
-            <span className="calendar-day-number">{cell.day}</span>
-            {cell.appointments.length > 0 && <span className="calendar-day-marker" aria-hidden="true" />}
-          </button>
-        ))}
+        {grid.map((cell) => {
+          const isToday = cell.dateKey === todayKey;
+          const fullDate = new Intl.DateTimeFormat(i18n.language, { dateStyle: "full" }).format(
+            new Date(cell.year, cell.month, cell.day),
+          );
+          return (
+            <button
+              type="button"
+              key={cell.dateKey}
+              data-testid={`calendar-day-${cell.dateKey}`}
+              className={
+                "calendar-day" +
+                (cell.inMonth ? "" : " outside-month") +
+                (isToday ? " today" : "") +
+                (selectedDay === cell.dateKey ? " selected" : "")
+              }
+              aria-pressed={selectedDay === cell.dateKey}
+              aria-label={isToday ? `${fullDate} (${t("common.today")})` : fullDate}
+              onClick={() => setSelectedDay(cell.dateKey)}
+            >
+              <span className="calendar-day-number">{cell.day}</span>
+              {cell.appointments.length > 0 && <span className="calendar-day-marker" aria-hidden="true" />}
+            </button>
+          );
+        })}
       </div>
 
       {selectedDay && (
