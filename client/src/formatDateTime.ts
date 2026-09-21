@@ -11,7 +11,9 @@ export function formatDateTime(dateTime: string, locale: string, timeZone?: stri
 
 // en-CA gives a plain YYYY-MM-DD, locale-independently — used only to diff
 // calendar days, never shown to a user, so its own locale doesn't matter.
-function calendarDay(date: Date, timeZone?: string): string {
+// Exported for monthGrid.ts's own day-bucketing, which needs the same
+// real-timestamp-to-calendar-day conversion.
+export function calendarDay(date: Date, timeZone?: string): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
 }
 

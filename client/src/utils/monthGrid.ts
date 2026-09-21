@@ -1,4 +1,5 @@
 import type { Appointment } from "../api";
+import { calendarDay } from "../formatDateTime";
 
 export interface MonthGridCell {
   year: number;
@@ -18,14 +19,6 @@ function dateKey(year: number, month: number, day: number): string {
   return `${year}-${pad(month + 1)}-${pad(day)}`;
 }
 
-// en-CA gives a plain YYYY-MM-DD, locale-independently — mirrors
-// formatDateTime.ts's own calendarDay helper, which this duplicates rather
-// than imports since that one is unexported and the two call sites diverge
-// only in default parameters.
-function calendarDayKey(date: Date, timeZone?: string): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
-}
-
 /**
  * A Sunday-first, full-week grid for `month` (0-indexed) of `year`, padded
  * with the trailing/leading days of neighboring months so every row has 7
@@ -41,7 +34,7 @@ export function buildMonthGrid(year: number, month: number, appointments: Appoin
   const byDay = new Map<string, Appointment[]>();
   const sorted = [...appointments].sort((a, b) => Date.parse(a.dateTime) - Date.parse(b.dateTime));
   for (const appointment of sorted) {
-    const key = calendarDayKey(new Date(appointment.dateTime), timeZone);
+    const key = calendarDay(new Date(appointment.dateTime), timeZone);
     const bucket = byDay.get(key);
     if (bucket) bucket.push(appointment);
     else byDay.set(key, [appointment]);

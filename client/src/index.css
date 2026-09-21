@@ -847,6 +847,15 @@ html[dir="rtl"] .back-link-arrow {
   line-height: 1;
 }
 
+/* Same treatment as .back-link-arrow above: the glyph isn't translatable
+   text, so it's written pointing for LTR and mirrored per the `dir`
+   i18n.ts sets on <html>, rather than shipping two glyphs through the
+   locale files. */
+html[dir="rtl"] .calendar-nav-arrow {
+  display: inline-block;
+  transform: scaleX(-1);
+}
+
 .calendar-weekdays,
 .calendar-grid {
   display: grid;
