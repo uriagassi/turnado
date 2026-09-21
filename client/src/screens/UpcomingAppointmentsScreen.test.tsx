@@ -148,4 +148,42 @@ describe("UpcomingAppointmentsScreen", () => {
 
     expect(onSelect).toHaveBeenCalledWith(appointment);
   });
+
+  it("defaults to list view, with a toggle to switch to calendar view", () => {
+    render(
+      <UpcomingAppointmentsScreen appointments={[]} doctors={doctors} onEdit={noop} onStatusChange={noop} onSaveSummary={noop} />,
+    );
+
+    expect(screen.getByRole("button", { name: "List" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Calendar" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("shows the same underlying appointment when switching from list to calendar view and back", async () => {
+    const user = userEvent.setup();
+    const now = new Date(2026, 8, 21);
+    const appointment = appt({ dateTime: "2026-09-15T10:00:00Z", notes: "Blood test" });
+
+    render(
+      <UpcomingAppointmentsScreen
+        appointments={[appointment]}
+        doctors={doctors}
+        onEdit={noop}
+        onStatusChange={noop}
+        onSaveSummary={noop}
+        now={now}
+      />,
+    );
+
+    expect(screen.getByText("Blood test")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Calendar" }));
+    // Not shown until its day is selected — the calendar surfaces it per-day, not as a flat list.
+    expect(screen.queryByText("Blood test")).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId("calendar-day-2026-09-15"));
+    expect(screen.getByText("Blood test")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "List" }));
+    expect(screen.getByText("Blood test")).toBeInTheDocument();
+  });
 });
