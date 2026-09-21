@@ -2,6 +2,7 @@ import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Doctor, DocumentType, MedicalDocument, Task, TaskInput, TaskStatus, TaskType } from "../api";
 import { isResolvableTask } from "../tasks/taskUtils";
+import { findSimilarTasks } from "../tasks/duplicateTasks";
 import { getDocumentIcon } from "./HomeScreen";
 import { getDocumentTypeForTask } from "./DocumentFormScreen";
 import { DocumentPicker } from "../components/DocumentPicker";
@@ -31,6 +32,7 @@ export function TaskFormScreen({
   doctors,
   documents = [],
   allDocuments = [],
+  existingTasks = [],
   focusDocuments = false,
   onSubmit,
   onCancel,
@@ -42,6 +44,8 @@ export function TaskFormScreen({
   documents?: MedicalDocument[];
   /** Every document in the system, for the "attach existing" picker to search across. */
   allDocuments?: MedicalDocument[];
+  /** Every currently open/in-progress task — the candidate pool for the live "possible duplicate" check (issue #12), typically the caller's already-loaded home feed. */
+  existingTasks?: Task[];
   /** Scrolls the documents section into view on mount — used when arriving here via the detail screen's document-edit shortcut. */
   focusDocuments?: boolean;
   onSubmit: (input: TaskInput, documentChanges: TaskDocumentChanges) => void;
@@ -161,6 +165,19 @@ export function TaskFormScreen({
 
   const isResolvable = Boolean(task) && isResolvableTask(formData);
 
+  // Live "possibly a duplicate" check (issue #12) — recomputed on every
+  // type/doctor/dueDate change, never blocking submission. `dismissed`
+  // hides it until the match set actually changes, so closing it doesn't
+  // get immediately undone by an unrelated keystroke (e.g. editing the title).
+  const similarTasks = findSimilarTasks(
+    { type: formData.type, doctorId: formData.doctorId ?? null, dueDate: formData.dueDate ?? null },
+    existingTasks,
+    task?.id,
+  );
+  const similarTaskIdsKey = similarTasks.map((t) => t.id).join(",");
+  const [dismissedKey, setDismissedKey] = useState<string | null>(null);
+  const showDuplicateWarning = similarTasks.length > 0 && dismissedKey !== similarTaskIdsKey;
+
   return (
     <main className="screen task-form-screen">
       <h1>{task ? t("taskForm.title.edit") : t("taskForm.title.new")}</h1>
@@ -234,6 +251,22 @@ export function TaskFormScreen({
             />
           </label>
         </div>
+
+        {showDuplicateWarning && (
+          <div className="card duplicate-warning" role="status">
+            <p className="duplicate-warning-message">
+              {t("taskForm.duplicateWarning.message", { titles: similarTasks.map((t) => t.title).join(", ") })}
+            </p>
+            <button
+              type="button"
+              className="btn-icon-remove duplicate-warning-dismiss"
+              aria-label={t("taskForm.duplicateWarning.dismiss")}
+              onClick={() => setDismissedKey(similarTaskIdsKey)}
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         {/* Kind-specific fields */}
         {formData.type === "test" && (

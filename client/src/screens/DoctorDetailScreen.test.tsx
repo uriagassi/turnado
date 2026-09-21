@@ -137,6 +137,7 @@ describe("DoctorDetailScreen", () => {
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
       missedReminder: null,
+      similarTaskIds: [],
     };
 
     render(
@@ -149,6 +150,37 @@ describe("DoctorDetailScreen", () => {
 
     expect(screen.getByText("Get Form 17 for Cardiology")).toBeInTheDocument();
     expect(screen.queryByText("No open items.")).not.toBeInTheDocument();
+  });
+
+  it("shows a possibly-a-duplicate badge on an open item with similarTaskIds (issue #12)", () => {
+    const task = {
+      id: 10,
+      type: "form_17" as const,
+      title: "Get Form 17 for Cardiology",
+      status: "open" as const,
+      dueDate: "2026-09-01",
+      doctorId: 1,
+      sourceAppointmentId: null,
+      pendingAppointmentId: null,
+      requiresAdvanceScheduling: false,
+      recurrenceWindow: null,
+      approximateDateWindow: null,
+      institution: "Riverside",
+      department: "Cardiology",
+      healthFund: "Maccabi",
+      codeNumber: null,
+      codeName: null,
+      issuingBody: null,
+      purpose: null,
+      createdAt: "2026-08-01",
+      updatedAt: "2026-08-01",
+      missedReminder: null,
+      similarTaskIds: [11],
+    };
+
+    render(<DoctorDetailScreen doctor={doctor()} openItems={[task]} onEdit={() => {}} />);
+
+    expect(screen.getByText("Possibly a duplicate")).toBeInTheDocument();
   });
 
   it("shows related documents for the doctor and calls onSelectDocument when clicked", async () => {

@@ -157,6 +157,8 @@
   "taskForm.documents.saveError_other": "The task was saved, but {{count}} document changes could not be applied. You can retry them from this screen.",
   "taskForm.save": "Save",
   "taskForm.cancel": "Cancel",
+  "taskForm.duplicateWarning.message": "This looks similar to an existing open item: {{titles}}.",
+  "taskForm.duplicateWarning.dismiss": "Dismiss",
   "documentsScreen.title": "Documents",
   "documentsScreen.filters.toggle": "Filters",
   "documentsScreen.filters.query.label": "Search by title",
@@ -180,5 +182,8 @@
   "reminder.field.description": "Description",
   "reminder.missed.badge": "Reminder missed",
   "reminder.missed.sendFailed": "The reminder email failed to send.",
-  "reminder.missed.windowClosed": "The reminder window closed before it could be sent."
+  "reminder.missed.windowClosed": "The reminder window closed before it could be sent.",
+  "task.duplicate.badge": "Possibly a duplicate",
+  "task.duplicate.detail": "There's already a similar open item — see below.",
+  "taskDetail.similarTasks.title": "Possibly a duplicate of"
 }

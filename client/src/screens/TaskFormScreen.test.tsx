@@ -11,6 +11,34 @@ const doctors: Doctor[] = [
 
 const NO_DOCUMENT_CHANGES = { attachDocumentIds: [], detachDocumentIds: [], uploads: [] };
 
+function existingTask(overrides: Partial<Task> = {}): Task {
+  return {
+    id: 1,
+    type: "test",
+    title: "Existing task",
+    status: "open",
+    doctorId: 1,
+    dueDate: "2026-09-01",
+    sourceAppointmentId: null,
+    pendingAppointmentId: null,
+    requiresAdvanceScheduling: false,
+    recurrenceWindow: null,
+    approximateDateWindow: null,
+    institution: null,
+    department: null,
+    healthFund: null,
+    codeNumber: null,
+    codeName: null,
+    issuingBody: null,
+    purpose: null,
+    createdAt: "2026-08-01",
+    updatedAt: "2026-08-01",
+    missedReminder: null,
+    similarTaskIds: [],
+    ...overrides,
+  };
+}
+
 function doc(overrides: Partial<MedicalDocument> = {}): MedicalDocument {
   return {
     id: 1,
@@ -183,6 +211,7 @@ describe("TaskFormScreen", () => {
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
       missedReminder: null,
+      similarTaskIds: [],
     };
 
     render(
@@ -225,6 +254,7 @@ describe("TaskFormScreen", () => {
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
       missedReminder: null,
+      similarTaskIds: [],
     };
 
     render(
@@ -352,6 +382,7 @@ describe("TaskFormScreen", () => {
         createdAt: "2026-08-01",
         updatedAt: "2026-08-01",
         missedReminder: null,
+        similarTaskIds: [],
       };
       const attached = doc({ id: 9, title: "Old lab result", taskIds: [30] });
 
@@ -391,6 +422,87 @@ describe("TaskFormScreen", () => {
 
       expect(screen.queryByText("Old lab result", { selector: ".picker-result" })).not.toBeInTheDocument();
       expect(screen.getByText("New lab result")).toBeInTheDocument();
+    });
+  });
+
+  describe("duplicate warning (issue #12)", () => {
+    it("shows a dismissible, non-blocking warning once type and doctor match an existing open task", async () => {
+      const user = userEvent.setup();
+      const onSubmit = vi.fn();
+      const similar = existingTask({ id: 50, title: "Blood test (CBC)", type: "test", doctorId: 1 });
+
+      render(
+        <TaskFormScreen doctors={doctors} existingTasks={[similar]} onSubmit={onSubmit} onCancel={() => {}} />
+      );
+
+      expect(screen.queryByText(/looks similar to an existing open item/i)).not.toBeInTheDocument();
+
+      await user.selectOptions(screen.getByLabelText("Doctor"), "1");
+
+      expect(screen.getByText(/looks similar to an existing open item: Blood test \(CBC\)/i)).toBeInTheDocument();
+
+      // Never blocks submission.
+      await user.type(screen.getByLabelText(/Title \/ Description/), "New blood test");
+      await user.click(screen.getByRole("button", { name: "Save" }));
+      expect(onSubmit).toHaveBeenCalled();
+    });
+
+    it("dismisses the warning without requiring any confirmation step", async () => {
+      const user = userEvent.setup();
+      const similar = existingTask({ id: 50, title: "Blood test (CBC)", type: "test", doctorId: 1 });
+
+      render(
+        <TaskFormScreen doctors={doctors} existingTasks={[similar]} onSubmit={() => {}} onCancel={() => {}} />
+      );
+
+      await user.selectOptions(screen.getByLabelText("Doctor"), "1");
+      expect(screen.getByText(/looks similar to an existing open item/i)).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Dismiss" }));
+
+      expect(screen.queryByText(/looks similar to an existing open item/i)).not.toBeInTheDocument();
+    });
+
+    it("never warns when no doctor is linked, even if type otherwise matches (NULL-doctor exclusion)", async () => {
+      const user = userEvent.setup();
+      const similar = existingTask({ id: 50, title: "Blood test (CBC)", type: "test", doctorId: null });
+
+      render(
+        <TaskFormScreen doctors={doctors} existingTasks={[similar]} onSubmit={() => {}} onCancel={() => {}} />
+      );
+
+      await user.type(screen.getByLabelText(/Title \/ Description/), "New blood test");
+
+      expect(screen.queryByText(/looks similar to an existing open item/i)).not.toBeInTheDocument();
+    });
+
+    it("never warns against a done task (open/in-progress-only candidate pool)", async () => {
+      const user = userEvent.setup();
+      const done = existingTask({ id: 50, title: "Blood test (CBC)", type: "test", doctorId: 1, status: "done" });
+
+      render(
+        <TaskFormScreen doctors={doctors} existingTasks={[done]} onSubmit={() => {}} onCancel={() => {}} />
+      );
+
+      await user.selectOptions(screen.getByLabelText("Doctor"), "1");
+
+      expect(screen.queryByText(/looks similar to an existing open item/i)).not.toBeInTheDocument();
+    });
+
+    it("never warns against the task being edited itself", async () => {
+      const editing = existingTask({ id: 50, type: "test", doctorId: 1 });
+
+      render(
+        <TaskFormScreen
+          task={editing}
+          doctors={doctors}
+          existingTasks={[editing]}
+          onSubmit={() => {}}
+          onCancel={() => {}}
+        />
+      );
+
+      expect(screen.queryByText(/looks similar to an existing open item/i)).not.toBeInTheDocument();
     });
   });
 });

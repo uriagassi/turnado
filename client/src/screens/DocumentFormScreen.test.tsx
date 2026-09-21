@@ -36,6 +36,7 @@ const mockTasks: Task[] = [
     createdAt: "",
     updatedAt: "",
     missedReminder: null,
+    similarTaskIds: [],
   },
 ];
 
@@ -163,6 +164,7 @@ describe("DocumentFormScreen", () => {
         createdAt: "",
         updatedAt: "",
         missedReminder: null,
+        similarTaskIds: [],
       },
     ];
 

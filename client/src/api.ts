@@ -130,6 +130,8 @@ export interface Task extends TaskInput {
   updatedAt: string;
   /** Issue #10: null unless this task has a currently-missed reminder — see server's app.ts withMissedReminder(). */
   missedReminder: MissedReason | null;
+  /** Issue #12: ids of every other currently-open/in-progress task this one looks like a possible duplicate of — computed live server-side (see withSimilarTaskIds), never persisted, empty once this task itself is done. */
+  similarTaskIds: number[];
 }
 
 export type DocumentType =

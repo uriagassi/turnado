@@ -222,6 +222,7 @@ describe("HomeScreen", () => {
           createdAt: "2026-08-01",
           updatedAt: "2026-08-01",
           missedReminder: null,
+          similarTaskIds: [],
         },
       ],
       recentDocuments: [],
@@ -234,6 +235,43 @@ describe("HomeScreen", () => {
 
     await user.click(screen.getByText("Get Form 17 for Neurology"));
     expect(onSelectTask).toHaveBeenCalledWith(home.openItems[0]);
+  });
+
+  it("shows a possibly-a-duplicate badge on an open item with similarTaskIds (issue #12)", () => {
+    const home: HomeData = {
+      nextAppointment: null,
+      openItems: [
+        {
+          id: 101,
+          type: "test",
+          title: "Blood test",
+          status: "open",
+          dueDate: "2026-09-01",
+          doctorId: null,
+          sourceAppointmentId: null,
+          pendingAppointmentId: null,
+          requiresAdvanceScheduling: false,
+          recurrenceWindow: null,
+          approximateDateWindow: null,
+          institution: null,
+          department: null,
+          healthFund: null,
+          codeNumber: null,
+          codeName: null,
+          issuingBody: null,
+          purpose: null,
+          createdAt: "2026-08-01",
+          updatedAt: "2026-08-01",
+          missedReminder: null,
+          similarTaskIds: [202],
+        },
+      ],
+      recentDocuments: [],
+    };
+
+    render(<HomeScreen home={home} {...noopProps} />);
+
+    expect(screen.getByText("Possibly a duplicate")).toBeInTheDocument();
   });
 
   it("shows a missed-reminder marker on an open item, without triggering onSelectTask when the marker itself is tapped (issue #10)", async () => {
@@ -264,6 +302,7 @@ describe("HomeScreen", () => {
           createdAt: "2026-08-01",
           updatedAt: "2026-08-01",
           missedReminder: "send failed",
+          similarTaskIds: [],
         },
       ],
       recentDocuments: [],
@@ -305,6 +344,7 @@ describe("HomeScreen", () => {
           createdAt: "2026-08-01",
           updatedAt: "2026-08-01",
           missedReminder: null,
+          similarTaskIds: [],
         },
       ],
       recentDocuments: [],

@@ -4,6 +4,7 @@ import { useRelativeDateTime } from "../hooks/useRelativeDateTime";
 import { getTaskIcon } from "../tasks/taskUtils";
 import { TaskStatusBadge } from "../components/TaskStatusBadge";
 import { MissedReminderBadge } from "../components/MissedReminderBadge";
+import { SimilarTaskBadge } from "../components/SimilarTaskBadge";
 
 function sortOpenItems(tasks: Task[], appointments: Appointment[] = []): Task[] {
   return [...tasks].sort((a, b) => {
@@ -183,6 +184,7 @@ export function HomeScreen({
                       <TaskStatusBadge status={task.status} />
                       {pendingLabel && <span className="badge type-tag">{pendingLabel}</span>}
                       {task.missedReminder && <MissedReminderBadge reason={task.missedReminder} />}
+                      {task.similarTaskIds.length > 0 && <SimilarTaskBadge />}
                     </div>
                   </div>
                 </div>

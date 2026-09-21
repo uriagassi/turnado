@@ -158,6 +158,8 @@
   "taskForm.documents.saveError_other": "המשימה נשמרה, אך {{count}} שינויים במסמכים לא בוצעו. ניתן לנסות שוב ממסך זה.",
   "taskForm.save": "שמירה",
   "taskForm.cancel": "ביטול",
+  "taskForm.duplicateWarning.message": "זה דומה לפריט פתוח קיים: {{titles}}.",
+  "taskForm.duplicateWarning.dismiss": "התעלמות",
   "documentsScreen.title": "מסמכים",
   "documentsScreen.filters.toggle": "סינון",
   "documentsScreen.filters.query.label": "חיפוש לפי כותרת",
@@ -181,5 +183,8 @@
   "reminder.field.description": "תיאור",
   "reminder.missed.badge": "תזכורת לא נשלחה",
   "reminder.missed.sendFailed": "שליחת אימייל התזכורת נכשלה.",
-  "reminder.missed.windowClosed": "חלון הזמן לשליחת התזכורת נסגר לפני שהיא נשלחה."
+  "reminder.missed.windowClosed": "חלון הזמן לשליחת התזכורת נסגר לפני שהיא נשלחה.",
+  "task.duplicate.badge": "אולי כפילות",
+  "task.duplicate.detail": "כבר קיים פריט פתוח דומה — ראו למטה.",
+  "taskDetail.similarTasks.title": "אולי כפילות של"
 }

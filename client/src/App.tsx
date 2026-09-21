@@ -865,17 +865,21 @@ export function App() {
           returnTo: returnTo === "doctor-detail" ? "doctor-detail" : "home",
           doctor,
         });
+      const selectSimilarTask = (t: Task) => goTo({ phase: "task-detail", session, task: t, returnTo, doctor });
       const taskDocs = session.taskDocuments?.[task.id] ?? [];
+      const similarTasks = session.home.openItems.filter((t) => task.similarTaskIds.includes(t.id));
       return (
         <TaskDetailScreen
           task={task}
           doctors={session.doctors}
           appointments={session.appointments}
           documents={taskDocs}
+          similarTasks={similarTasks}
           onEdit={edit}
           onStatusChange={changeStatus}
           onResolveToAppointment={(t) => navigateToResolveAppointment(session, t)}
           onSelectDocument={selectDocument}
+          onSelectTask={selectSimilarTask}
         />
       );
     }
@@ -901,6 +905,7 @@ export function App() {
           doctors={session.doctors}
           documents={documents}
           allDocuments={allDocuments}
+          existingTasks={session.home.openItems}
           focusDocuments={focusDocuments}
           onSubmit={submit}
           onCancel={cancel}

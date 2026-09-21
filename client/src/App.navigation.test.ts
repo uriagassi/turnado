@@ -56,6 +56,7 @@ function task(overrides: Partial<Task> = {}): Task {
     createdAt: "2026-08-01",
     updatedAt: "2026-08-01",
     missedReminder: null,
+    similarTaskIds: [],
     ...overrides,
   };
 }

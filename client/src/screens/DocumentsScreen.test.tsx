@@ -231,6 +231,7 @@ describe("DocumentsScreen", () => {
       createdAt: "2026-08-01",
       updatedAt: "2026-08-01",
       missedReminder: null,
+      similarTaskIds: [],
     };
     renderScreen([doc({ id: 1, title: "Multi Linked", appointmentIds: [10], taskIds: [20] })], {
       appointments: [appt],

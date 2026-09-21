@@ -302,6 +302,17 @@ h1 {
   color: var(--color-text-dim);
 }
 
+/* Stacks an .item-row's status badge above a second badge (e.g.
+   SimilarTaskBadge, issue #12) instead of the two fighting for the same
+   line — .item-row's own single-badge case is unaffected since a lone
+   child needs no alignment help. */
+.item-row-badges {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.375rem;
+}
+
 /* Open items on the appointment checklist (issue #9 follow-up): a real
    checkbox beside the title rather than the plain .item-row's
    space-between layout, so checking one off reads as ticking a list, not
@@ -490,6 +501,27 @@ html[dir="rtl"] .back-link-arrow {
   margin: 0;
   color: var(--color-red);
   font-size: 0.875rem;
+}
+
+/* Issue #12: the live "possibly a duplicate" heads-up in TaskFormScreen —
+   amber, not red, since it's a soft, dismissible nudge rather than a
+   blocking validation error. */
+.duplicate-warning {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: var(--color-amber-bg);
+  color: var(--color-amber);
+}
+
+.duplicate-warning-message {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.duplicate-warning-dismiss {
+  color: inherit;
 }
 
 .form-actions {
@@ -1583,6 +1615,16 @@ html[dir="rtl"] .calendar-nav-arrow {
   display: block;
   font-size: 0.8125rem;
   color: var(--color-red);
+  margin-top: 0.25rem;
+}
+
+/* Issue #12: the persistent "possibly a duplicate" marker (see
+   SimilarTaskBadge) — reuses .linked-badge's neutral gray as-is, deliberately
+   calmer than .missed-reminder-badge's red. */
+.similar-task-detail {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--color-text-dim);
   margin-top: 0.25rem;
 }
 

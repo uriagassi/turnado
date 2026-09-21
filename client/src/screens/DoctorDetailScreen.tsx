@@ -3,6 +3,7 @@ import type { Appointment, Doctor, MedicalDocument, Task } from "../api";
 import { DoctorAvatar } from "../components/DoctorAvatar";
 import { useRelativeDateTime } from "../hooks/useRelativeDateTime";
 import { TaskStatusBadge } from "../components/TaskStatusBadge";
+import { SimilarTaskBadge } from "../components/SimilarTaskBadge";
 
 export function DoctorDetailScreen({
   doctor,
@@ -101,7 +102,10 @@ export function DoctorDetailScreen({
                     {task.dueDate ? formatRelative(task.dueDate) : (task.approximateDateWindow ?? t("task.due.noDate"))}
                   </p>
                 </div>
-                <TaskStatusBadge status={task.status} />
+                <div className="item-row-badges">
+                  <TaskStatusBadge status={task.status} />
+                  {task.similarTaskIds.length > 0 && <SimilarTaskBadge />}
+                </div>
               </div>
             ))}
           </div>
