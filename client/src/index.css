@@ -847,14 +847,14 @@ html[dir="rtl"] .back-link-arrow {
   line-height: 1;
 }
 
-/* Same treatment as .back-link-arrow above: the glyph isn't translatable
-   text, so it's written pointing for LTR and mirrored per the `dir`
-   i18n.ts sets on <html>, rather than shipping two glyphs through the
-   locale files. */
-html[dir="rtl"] .calendar-nav-arrow {
-  display: inline-block;
-  transform: scaleX(-1);
-}
+/* Unlike .back-link-arrow, this glyph is deliberately NOT mirrored for
+   RTL: the surrounding .calendar-nav is a plain flex row, so `dir="rtl"`
+   already swaps which physical side Previous/Next render on. Mirroring
+   the glyph on top of that swap double-flips the semantics — e.g. the
+   Previous button (now on the physical right) would show a
+   forward-pointing chevron, backwards from what it does. Leaving the
+   glyph as-authored keeps "‹ points where Previous goes" true regardless
+   of which side that ends up being. */
 
 .calendar-weekdays,
 .calendar-grid {

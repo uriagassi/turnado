@@ -89,7 +89,7 @@ export function AppointmentCalendar({
           aria-label={t("appointmentCalendar.previousMonth")}
           onClick={goToPreviousMonth}
         >
-          <span className="calendar-nav-arrow">‹</span>
+          ‹
         </button>
         <span className="calendar-month-label">{monthLabel}</span>
         <button
@@ -98,7 +98,7 @@ export function AppointmentCalendar({
           aria-label={t("appointmentCalendar.nextMonth")}
           onClick={goToNextMonth}
         >
-          <span className="calendar-nav-arrow">›</span>
+          ›
         </button>
       </div>
 
