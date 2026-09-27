@@ -56,6 +56,7 @@ import { DocumentDetailScreen } from "./screens/DocumentDetailScreen";
 import { DocumentsScreen, type DocumentFilters } from "./screens/DocumentsScreen";
 import { AppointmentDetailScreen } from "./screens/AppointmentDetailScreen";
 import { ConfirmationModal } from "./components/ConfirmationModal";
+import { celebrateAfter } from "./celebration/celebrate";
 import { NavBar, type NavDestination } from "./components/NavBar";
 
 export type Session = {
@@ -501,6 +502,19 @@ export function refreshBackStackSessions(backStack: AppState[], home: HomeData):
   );
 }
 
+/**
+ * Resolves as soon as `save` does and runs `refresh` in the background.
+ * Status handlers return this so a completion celebration (issue #13) —
+ * which waits on the handler — lands once the item is actually saved, not
+ * a server round trip later after the follow-up re-fetch, and isn't
+ * cancelled when only that re-fetch fails (the item is done either way).
+ */
+function saveThenRefresh<T>(save: Promise<T>, refresh: (saved: T) => Promise<void>): Promise<void> {
+  return save.then((saved) => {
+    refresh(saved).catch((err: unknown) => console.error("Refresh after save failed", err));
+  });
+}
+
 /** How often the home screen's data refreshes itself in the background, absent a manual refresh or a window-focus event (see useAutoRefresh). */
 const HOME_REFRESH_INTERVAL_MS = 45_000;
 
@@ -525,6 +539,22 @@ export function App() {
    * returning from an edit still resumes wherever the stack already had.
    */
   const [backStack, setBackStack] = useState<AppState[]>([]);
+
+  /**
+   * Folds freshly-fetched home data into whatever screen is current *now*
+   * (and into every backStack entry — "Back" prefers the stack over a fresh
+   * static fallback, see screenBack's doc comment, so it would otherwise
+   * restore a snapshot from before the change). For saves that can finish
+   * after the user has already moved on, unlike setState({ phase: ... }).
+   */
+  const applyFreshHome = (home: HomeData) => {
+    setState((prev) =>
+      prev.phase !== "loading" && prev.phase !== "not-authorized" && prev.phase !== "sign-in"
+        ? { ...prev, session: { ...prev.session, home } }
+        : prev,
+    );
+    setBackStack((stack) => refreshBackStackSessions(stack, home));
+  };
 
   /** Drills into a detail view, remembering the screen being left so the title bar's back arrow can retrace it (see backStack above). */
   const goTo = (next: AppState) => {
@@ -651,6 +681,12 @@ export function App() {
       const addDocument = () => setState({ phase: "document-form", session, returnTo: "home" });
       const selectDocument = (doc: MedicalDocument) =>
         goTo({ phase: "document-detail", session, document: doc, returnTo: "home" });
+      // A done task drops out of home.openItems, which only the server-side
+      // selection knows — so re-fetch home, but apply it to whatever screen
+      // is current by then (see applyFreshHome), never forcing a jump back
+      // here if the user navigated away while the save was in flight.
+      const markTaskDone = (task: Task) =>
+        saveThenRefresh(setTaskStatus(task.id, "done"), async () => applyFreshHome(await fetchHome()));
       return (
         <HomeScreen
           home={session.home}
@@ -659,6 +695,7 @@ export function App() {
           onSelectDoctor={selectDoctor}
           onAddAppointment={addAppointment}
           onSelectTask={selectTask}
+          onMarkTaskDone={markTaskDone}
           onAddTask={addTask}
           onAddDocument={addDocument}
           onSelectDocument={selectDocument}
@@ -851,12 +888,12 @@ export function App() {
           focusDocuments: true,
         });
       };
-      const changeStatus = async (t: Task, status: TaskStatus) => {
-        const updated = await setTaskStatus(t.id, status);
-        const home = await fetchHome();
-        const nextSession = { ...session, home };
-        setState({ phase: "task-detail", session: nextSession, task: updated, returnTo, doctor });
-      };
+      const changeStatus = (t: Task, status: TaskStatus) =>
+        saveThenRefresh(setTaskStatus(t.id, status), async (updated) => {
+          const home = await fetchHome();
+          const nextSession = { ...session, home };
+          setState({ phase: "task-detail", session: nextSession, task: updated, returnTo, doctor });
+        });
       const selectDocument = (doc: MedicalDocument) =>
         goTo({
           phase: "document-detail",
@@ -917,11 +954,11 @@ export function App() {
       const { session } = state;
       const editAppointment = (appointment: Appointment) =>
         setState({ phase: "appointment-form", session, appointment, returnTo: "appointment-upcoming" });
-      const changeStatus = async (appointment: Appointment, status: AppointmentStatus) => {
-        const saved = await setAppointmentStatus(appointment.id, status);
-        const home = await fetchHome();
-        setState({ phase: "appointment-upcoming", session: withSavedAppointment(session, saved, true, home) });
-      };
+      const changeStatus = (appointment: Appointment, status: AppointmentStatus) =>
+        saveThenRefresh(setAppointmentStatus(appointment.id, status), async (saved) => {
+          const home = await fetchHome();
+          setState({ phase: "appointment-upcoming", session: withSavedAppointment(session, saved, true, home) });
+        });
       const saveSummary = async (appointment: Appointment, summary: string) => {
         const saved = await setAppointmentSummary(appointment.id, summary);
         setState({ phase: "appointment-upcoming", session: withSavedAppointment(session, saved, true) });
@@ -943,11 +980,11 @@ export function App() {
       const { session } = state;
       const editAppointment = (appointment: Appointment) =>
         setState({ phase: "appointment-form", session, appointment, returnTo: "appointment-history" });
-      const changeStatus = async (appointment: Appointment, status: AppointmentStatus) => {
-        const saved = await setAppointmentStatus(appointment.id, status);
-        const home = await fetchHome();
-        setState({ phase: "appointment-history", session: withSavedAppointment(session, saved, true, home) });
-      };
+      const changeStatus = (appointment: Appointment, status: AppointmentStatus) =>
+        saveThenRefresh(setAppointmentStatus(appointment.id, status), async (saved) => {
+          const home = await fetchHome();
+          setState({ phase: "appointment-history", session: withSavedAppointment(session, saved, true, home) });
+        });
       const saveSummary = async (appointment: Appointment, summary: string) => {
         const saved = await setAppointmentSummary(appointment.id, summary);
         setState({ phase: "appointment-history", session: withSavedAppointment(session, saved, true) });
@@ -984,11 +1021,11 @@ export function App() {
       // OpenItemRow) — also refreshes home, same as task-detail's own
       // changeStatus, since a task's status change here can add/remove it
       // from the home screen's open-items feed too.
-      const changeTaskStatus = async (t: Task, status: TaskStatus) => {
-        await setTaskStatus(t.id, status);
-        const home = await fetchHome();
-        setState(await loadAppointmentDetail({ ...session, home }, appointment, returnTo));
-      };
+      const changeTaskStatus = (t: Task, status: TaskStatus) =>
+        saveThenRefresh(setTaskStatus(t.id, status), async () => {
+          const home = await fetchHome();
+          setState(await loadAppointmentDetail({ ...session, home }, appointment, returnTo));
+        });
       return (
         <AppointmentDetailScreen
           appointment={appointment}
@@ -1026,21 +1063,14 @@ export function App() {
           message={t("documentForm.closeTaskModal.message")}
           confirmLabel={t("documentForm.closeTaskModal.confirm")}
           cancelLabel={t("documentForm.closeTaskModal.cancel")}
-          onConfirm={async () => {
+          onConfirm={async (e) => {
             const id = pendingTaskPrompt.taskId;
             setPendingTaskPrompt(null);
-            await setTaskStatus(id, "done");
-            const home = await fetchHome();
-            setState((prev) =>
-              prev.phase !== "loading" && prev.phase !== "not-authorized" && prev.phase !== "sign-in"
-                ? { ...prev, session: { ...prev.session, home } }
-                : prev,
-            );
-            // Also refreshes any backStack entries' own session — "Back"
-            // prefers the stack over a fresh static fallback (see
-            // screenBack's doc comment), so without this it would restore
-            // whatever snapshot was pushed *before* this task closed.
-            setBackStack((stack) => refreshBackStackSessions(stack, home));
+            // Celebrates once the task is saved as done, not after the home
+            // refresh below — the modal unmounts right away, but
+            // celebrateAfter captures the button's position first.
+            await celebrateAfter(e.currentTarget, e, () => setTaskStatus(id, "done"));
+            applyFreshHome(await fetchHome());
           }}
           onCancel={() => setPendingTaskPrompt(null)}
         />

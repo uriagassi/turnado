@@ -1885,3 +1885,110 @@ html[dir="rtl"] .back-link-arrow {
   background: var(--color-gray-bg);
   color: var(--color-text);
 }
+
+/* Completion celebration (issue #13) — see celebration/celebrate.ts. A
+   fixed, click-through layer so the stamp and confetti can sit over any
+   screen (and survive the screen re-rendering after the save) without
+   ever blocking a tap. Positions are physical viewport pixels, so nothing
+   here flips for RTL. */
+.celebration-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1000;
+}
+
+.celebration-stamp {
+  position: absolute;
+  transform: translate(-50%, -50%) rotate(-9deg);
+  padding: 0.125rem 0.75rem;
+  border: 3px solid currentColor;
+  border-radius: 8px;
+  color: light-dark(#c2410c, #fb923c);
+  font: 800 1.375rem/1.2 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0.92;
+  /* Uneven ink: a soft patch where the stamp didn't press evenly. */
+  mask-image: radial-gradient(circle at 30% 40%, #000 60%, rgb(0 0 0 / 0.75) 61%, #000 75%);
+  animation:
+    celebration-stamp-in 0.32s cubic-bezier(0.2, 1.4, 0.5, 1) both,
+    celebration-fade-out 0.5s ease-in 1.1s forwards;
+}
+
+.celebration-confetti {
+  position: absolute;
+  width: 7px;
+  height: 4px;
+  margin: -2px 0 0 -3.5px;
+  border-radius: 1px;
+  animation: celebration-confetti 0.9s cubic-bezier(0.25, 0.6, 0.45, 1) forwards;
+}
+
+@keyframes celebration-stamp-in {
+  0% {
+    transform: translate(-50%, -50%) rotate(-18deg) scale(2.4);
+    opacity: 0;
+  }
+  60% {
+    opacity: 0.92;
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(-9deg) scale(1);
+  }
+}
+
+@keyframes celebration-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes celebration-confetti {
+  0% {
+    transform: translate(0, 0) rotate(0);
+    opacity: 1;
+  }
+  40% {
+    transform: translate(calc(var(--dx) * 0.7), var(--peak)) rotate(calc(var(--spin) * 0.4));
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx), var(--fall)) rotate(var(--spin));
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* No slam — the stamp just appears and fades. celebrate.ts also skips the confetti. */
+  .celebration-stamp {
+    animation: celebration-fade-out 0.5s ease-in 1.1s forwards;
+  }
+}
+
+/* Home-screen open-item row's own "mark done" control — a sibling action
+   inside the row's clickable area, so it stops propagation (see HomeScreen). */
+.feed-done {
+  flex: 0 0 auto;
+  align-self: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--color-green);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-green);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.feed-done:hover {
+  background: var(--color-green-bg);
+}
+
+.feed-done[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: progress;
+}

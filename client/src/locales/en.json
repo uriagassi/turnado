@@ -99,6 +99,8 @@
   "auth.signIn": "Sign in",
   "home.openItems.title": "Open items",
   "home.openItems.empty": "No open items.",
+  "home.openItems.markDone": "Mark “{{title}}” as completed",
+  "celebration.stamp": "Done",
   "home.addTask": "Add task",
   "task.status.open": "Open",
   "task.status.inprogress": "In progress",

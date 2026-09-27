@@ -13,7 +13,7 @@ export function AppointmentHistoryScreen({
   appointments: Appointment[];
   doctors: Doctor[];
   onEdit: (appointment: Appointment) => void;
-  onStatusChange: (appointment: Appointment, status: AppointmentStatus) => void;
+  onStatusChange: (appointment: Appointment, status: AppointmentStatus) => void | Promise<void>;
   onSaveSummary: (appointment: Appointment, summary: string) => void;
   /** Opens the appointment's own detail/checklist screen (issue #9). */
   onSelect?: (appointment: Appointment) => void;

@@ -100,6 +100,8 @@
   "auth.signIn": "התחברות",
   "home.openItems.title": "מה פתוח",
   "home.openItems.empty": "אין משימות פתוחות.",
+  "home.openItems.markDone": "סגירת המשימה „{{title}}” (הושלם)",
+  "celebration.stamp": "בוצע",
   "home.addTask": "הוספת משימה",
   "task.status.open": "פתוח",
   "task.status.inprogress": "בתהליך",

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { Appointment, AppointmentStatus, Doctor } from "../api";
 import { formatDateTime } from "../formatDateTime";
 import { MissedReminderBadge } from "./MissedReminderBadge";
+import { celebrateAfter } from "../celebration/celebrate";
 
 /**
  * One appointment row: shared by UpcomingAppointmentsScreen and
@@ -28,7 +29,7 @@ export function AppointmentCard({
   appointment: Appointment;
   doctor?: Doctor;
   onEdit: (appointment: Appointment) => void;
-  onStatusChange: (appointment: Appointment, status: AppointmentStatus) => void;
+  onStatusChange: (appointment: Appointment, status: AppointmentStatus) => void | Promise<void>;
   onSaveSummary: (appointment: Appointment, summary: string) => void;
   /** Opens the appointment's own detail/checklist screen (issue #9). */
   onSelect?: (appointment: Appointment) => void;
@@ -60,7 +61,16 @@ export function AppointmentCard({
           {t("appointmentCard.status.label")}
           <select
             value={appointment.status}
-            onChange={(e) => onStatusChange(appointment, e.target.value as AppointmentStatus)}
+            onChange={(e) => {
+              const status = e.target.value as AppointmentStatus;
+              // A <select> change has no pointer position — celebrate
+              // (issue #13) at the control's centre instead.
+              if (status === "done" && appointment.status !== "done") {
+                void celebrateAfter(e.currentTarget, undefined, () => onStatusChange(appointment, status));
+              } else {
+                onStatusChange(appointment, status);
+              }
+            }}
           >
             <option value="planned">{t("appointmentCard.status.planned")}</option>
             <option value="done">{t("appointmentCard.status.done")}</option>

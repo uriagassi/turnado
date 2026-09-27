@@ -6,6 +6,7 @@ import { getDocumentIcon } from "./HomeScreen";
 import { TaskStatusBadge } from "../components/TaskStatusBadge";
 import { MissedReminderBadge } from "../components/MissedReminderBadge";
 import { SimilarTaskBadge } from "../components/SimilarTaskBadge";
+import { celebrateAfter } from "../celebration/celebrate";
 
 export function TaskDetailScreen({
   task,
@@ -26,7 +27,7 @@ export function TaskDetailScreen({
   /** Every current candidate this task looks like a possible duplicate of (issue #12) — resolved by the caller from `task.similarTaskIds` against its own already-loaded open items. */
   similarTasks?: Task[];
   onEdit: (task: Task) => void;
-  onStatusChange: (task: Task, status: TaskStatus) => void;
+  onStatusChange: (task: Task, status: TaskStatus) => void | Promise<void>;
   onResolveToAppointment?: (task: Task) => void;
   onSelectDocument?: (doc: MedicalDocument) => void;
   /** Navigates to one of `similarTasks`' own detail screen. */
@@ -244,7 +245,7 @@ export function TaskDetailScreen({
           <button
             type="button"
             className="btn-primary"
-            onClick={() => onStatusChange(task, "done")}
+            onClick={(e) => void celebrateAfter(e.currentTarget, e, () => onStatusChange(task, "done"))}
           >
             ✓ {t("taskDetail.markDone")}
           </button>
