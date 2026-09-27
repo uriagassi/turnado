@@ -1,3 +1,4 @@
+import { useState, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { Appointment, Doctor, DocumentType, HomeData, MedicalDocument, Task } from "../api";
 import { useRelativeDateTime } from "../hooks/useRelativeDateTime";
@@ -72,6 +73,26 @@ export function HomeScreen({
   const { t } = useTranslation();
   const formatRelative = useRelativeDateTime();
   const sortedOpenItems = sortOpenItems(home.openItems, appointments);
+  // Tasks whose ✓ was tapped, keyed to the `home` snapshot they were
+  // tapped on. The row stays on screen until home re-fetches (after the
+  // save resolves), so without this a double-tap would save — and
+  // celebrate — twice. A fresh `home` retires every entry on its own: a
+  // done task has dropped out of it, and a reopened one is tappable again.
+  const [markedOn, setMarkedOn] = useState<ReadonlyMap<number, HomeData>>(new Map());
+  const isMarking = (task: Task) => markedOn.get(task.id) === home;
+
+  function markDone(task: Task, button: HTMLButtonElement, event: MouseEvent) {
+    if (!onMarkTaskDone || isMarking(task)) return;
+    setMarkedOn((marked) => new Map(marked).set(task.id, home));
+    void celebrateAfter(button, event, () => onMarkTaskDone(task)).catch((err: unknown) => {
+      setMarkedOn((marked) => {
+        const next = new Map(marked);
+        next.delete(task.id);
+        return next;
+      });
+      throw err;
+    });
+  }
   const heroDoctor = home.nextAppointment?.doctorId
     ? doctors.find((d) => d.id === home.nextAppointment?.doctorId)
     : undefined;
@@ -198,9 +219,12 @@ export function HomeScreen({
                       aria-label={t("home.openItems.markDone", { title: task.title })}
                       // A control nested inside the row's own role="button":
                       // stop both click and Enter/Space from also opening the task.
+                      // aria-disabled rather than disabled: a tap on a disabled
+                      // button can fall through to the row and open the task.
+                      aria-disabled={isMarking(task)}
                       onClick={(e) => {
                         e.stopPropagation();
-                        void celebrateAfter(e.currentTarget, e, () => onMarkTaskDone(task));
+                        markDone(task, e.currentTarget, e);
                       }}
                       onKeyDown={(e) => e.stopPropagation()}
                     >

@@ -1987,3 +1987,8 @@ html[dir="rtl"] .back-link-arrow {
 .feed-done:hover {
   background: var(--color-green-bg);
 }
+
+.feed-done[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: progress;
+}
