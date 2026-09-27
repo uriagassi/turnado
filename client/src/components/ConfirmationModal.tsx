@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type MouseEvent } from "react";
 
 export function ConfirmationModal({
   title,
@@ -12,7 +12,7 @@ export function ConfirmationModal({
   message: string;
   confirmLabel: string;
   cancelLabel: string;
-  onConfirm: () => void;
+  onConfirm: (event: MouseEvent<HTMLButtonElement>) => void;
   onCancel: () => void;
 }) {
   const confirmButtonRef = useRef<HTMLButtonElement>(null);

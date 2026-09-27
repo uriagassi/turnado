@@ -5,6 +5,7 @@ import { getTaskIcon } from "../tasks/taskUtils";
 import { TaskStatusBadge } from "../components/TaskStatusBadge";
 import { MissedReminderBadge } from "../components/MissedReminderBadge";
 import { SimilarTaskBadge } from "../components/SimilarTaskBadge";
+import { celebrateAfter } from "../celebration/celebrate";
 
 function sortOpenItems(tasks: Task[], appointments: Appointment[] = []): Task[] {
   return [...tasks].sort((a, b) => {
@@ -48,6 +49,7 @@ export function HomeScreen({
   onSelectDoctor,
   onAddAppointment,
   onSelectTask,
+  onMarkTaskDone,
   onAddTask,
   onSelectDocument,
   onAddDocument,
@@ -60,6 +62,8 @@ export function HomeScreen({
   onSelectDoctor: (doctor: Doctor) => void;
   onAddAppointment: () => void;
   onSelectTask?: (task: Task) => void;
+  /** The row's own "mark done" action — celebrates (issue #13) once the returned save resolves. */
+  onMarkTaskDone?: (task: Task) => void | Promise<void>;
   onAddTask?: () => void;
   onSelectDocument?: (doc: MedicalDocument) => void;
   onAddDocument?: () => void;
@@ -187,6 +191,22 @@ export function HomeScreen({
                       {task.similarTaskIds.length > 0 && <SimilarTaskBadge />}
                     </div>
                   </div>
+                  {onMarkTaskDone && (
+                    <button
+                      type="button"
+                      className="feed-done"
+                      aria-label={t("home.openItems.markDone", { title: task.title })}
+                      // A control nested inside the row's own role="button":
+                      // stop both click and Enter/Space from also opening the task.
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void celebrateAfter(e.currentTarget, e, () => onMarkTaskDone(task));
+                      }}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
+                      ✓
+                    </button>
+                  )}
                 </div>
               );
             })}

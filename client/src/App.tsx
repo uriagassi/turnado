@@ -56,6 +56,7 @@ import { DocumentDetailScreen } from "./screens/DocumentDetailScreen";
 import { DocumentsScreen, type DocumentFilters } from "./screens/DocumentsScreen";
 import { AppointmentDetailScreen } from "./screens/AppointmentDetailScreen";
 import { ConfirmationModal } from "./components/ConfirmationModal";
+import { celebrateAfter } from "./celebration/celebrate";
 import { NavBar, type NavDestination } from "./components/NavBar";
 
 export type Session = {
@@ -651,6 +652,13 @@ export function App() {
       const addDocument = () => setState({ phase: "document-form", session, returnTo: "home" });
       const selectDocument = (doc: MedicalDocument) =>
         goTo({ phase: "document-detail", session, document: doc, returnTo: "home" });
+      // Same refresh as task-detail's changeStatus: a done task drops out of
+      // home.openItems, which only the server-side selection knows.
+      const markTaskDone = async (task: Task) => {
+        await setTaskStatus(task.id, "done");
+        const home = await fetchHome();
+        setState({ phase: "home", session: { ...session, home } });
+      };
       return (
         <HomeScreen
           home={session.home}
@@ -659,6 +667,7 @@ export function App() {
           onSelectDoctor={selectDoctor}
           onAddAppointment={addAppointment}
           onSelectTask={selectTask}
+          onMarkTaskDone={markTaskDone}
           onAddTask={addTask}
           onAddDocument={addDocument}
           onSelectDocument={selectDocument}
@@ -1026,10 +1035,13 @@ export function App() {
           message={t("documentForm.closeTaskModal.message")}
           confirmLabel={t("documentForm.closeTaskModal.confirm")}
           cancelLabel={t("documentForm.closeTaskModal.cancel")}
-          onConfirm={async () => {
+          onConfirm={async (e) => {
             const id = pendingTaskPrompt.taskId;
             setPendingTaskPrompt(null);
-            await setTaskStatus(id, "done");
+            // Celebrates once the task is saved as done, not after the home
+            // refresh below — the modal unmounts right away, but
+            // celebrateAfter captures the button's position first.
+            await celebrateAfter(e.currentTarget, e, () => setTaskStatus(id, "done"));
             const home = await fetchHome();
             setState((prev) =>
               prev.phase !== "loading" && prev.phase !== "not-authorized" && prev.phase !== "sign-in"

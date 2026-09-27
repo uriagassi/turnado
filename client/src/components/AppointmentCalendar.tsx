@@ -28,7 +28,7 @@ export function AppointmentCalendar({
   appointments: Appointment[];
   doctors: Doctor[];
   onEdit: (appointment: Appointment) => void;
-  onStatusChange: (appointment: Appointment, status: AppointmentStatus) => void;
+  onStatusChange: (appointment: Appointment, status: AppointmentStatus) => void | Promise<void>;
   onSaveSummary: (appointment: Appointment, summary: string) => void;
   onSelect?: (appointment: Appointment) => void;
   now?: Date;

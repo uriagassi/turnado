@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { Appointment, Doctor, MedicalDocument, Task, TaskStatus } from "../api";
 import { MissedReminderBadge } from "../components/MissedReminderBadge";
 import { DocumentPicker } from "../components/DocumentPicker";
+import { celebrateAfter } from "../celebration/celebrate";
 
 /**
  * Combined readiness for the checklist (issue #9) — the client-side
@@ -52,7 +53,7 @@ function OpenItemRow({
   onSelect,
 }: {
   item: Task;
-  onToggle: (item: Task, status: TaskStatus) => void;
+  onToggle: (item: Task, status: TaskStatus) => void | Promise<void>;
   onSelect?: (item: Task) => void;
 }) {
   const done = item.status === "done";
@@ -64,7 +65,9 @@ function OpenItemRow({
         className="checklist-checkbox"
         checked={done}
         aria-label={item.title}
-        onChange={() => onToggle(item, done ? "open" : "done")}
+        onChange={(e) =>
+          done ? onToggle(item, "open") : void celebrateAfter(e.currentTarget, undefined, () => onToggle(item, "done"))
+        }
       />
       <button
         type="button"
@@ -100,7 +103,7 @@ export function AppointmentDetailScreen({
   onSelectDocument?: (document: MedicalDocument) => void;
   onSelectTask?: (task: Task) => void;
   /** Checks/unchecks an open item straight from the checklist (see OpenItemRow) without leaving this screen. */
-  onTaskStatusChange?: (task: Task, status: TaskStatus) => void;
+  onTaskStatusChange?: (task: Task, status: TaskStatus) => void | Promise<void>;
   /** Follows the doctor's name into their own detail view — now the only
       place that link lives (appointment list cards deliberately dropped it,
       see AppointmentCard). */
