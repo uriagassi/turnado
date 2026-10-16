@@ -23,6 +23,7 @@ import { localConfigPath } from "./setup/repoPaths.js";
 import { detectPaperlessNodeInstall, setupStorage } from "./setup/setupStorage.js";
 import { setupHttps } from "./setup/setupHttps.js";
 import { setupMail } from "./setup/setupMail.js";
+import { setupGChat } from "./setup/setupGChat.js";
 import { setupSecurity } from "./setup/setupSecurity.js";
 
 const rl = readline.createInterface({ input: stdin, output: stdout });
@@ -41,6 +42,7 @@ console.log(
 mergeLocalConfig(localConfigPath, await setupStorage(rl, defaults));
 mergeLocalConfig(localConfigPath, await setupHttps(rl, defaults));
 mergeLocalConfig(localConfigPath, await setupMail(rl));
+mergeLocalConfig(localConfigPath, await setupGChat(rl));
 mergeLocalConfig(localConfigPath, await setupSecurity(rl));
 
 rl.close();

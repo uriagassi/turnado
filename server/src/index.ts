@@ -16,6 +16,7 @@ import { Doctors } from "./doctors/Doctors.js";
 import { ReminderLog } from "./reminders/ReminderLog.js";
 import { ReminderService } from "./reminders/ReminderService.js";
 import { NodemailerMailer, createNodemailerTransport } from "./reminders/Mailer.js";
+import { GChatMailer, FallbackMailer } from "./reminders/GChatMailer.js";
 
 consoleStamp(console); // same setup as paperless.node, for a consistent log format across both apps
 
@@ -59,21 +60,34 @@ const app = createApp({
 // issue #10: derive a fresh ReminderService against the same shared `db` the
 // app above uses (each of these classes owns its table but not the
 // connection — see db.ts), then poll it hourly + once on startup.
+const emailMailer = new NodemailerMailer(
+  createNodemailerTransport({
+    host: config.get<string>("mail.host"),
+    port: config.get<number>("mail.port"),
+    user: config.get<string>("mail.user"),
+    pass: config.get<string>("mail.pass"),
+  }),
+  config.get<string>("mail.from"),
+);
+const gchatRefreshToken = config.has("gchat.refreshToken") ? config.get<string>("gchat.refreshToken") : "";
+const mailer = gchatRefreshToken
+  ? new FallbackMailer(
+      new GChatMailer({
+        clientId: config.get<string>("gchat.clientId"),
+        clientSecret: config.get<string>("gchat.clientSecret"),
+        refreshToken: gchatRefreshToken,
+      }),
+      emailMailer,
+    )
+  : emailMailer;
+
 const reminderService = new ReminderService({
   appointments: new Appointments(db),
   tasks: new Tasks(db),
   doctors: new Doctors(db, doctorsParentTagName),
   reminderLog: new ReminderLog(db),
   allowList: new AllowList(allowListConfig),
-  mailer: new NodemailerMailer(
-    createNodemailerTransport({
-      host: config.get<string>("mail.host"),
-      port: config.get<number>("mail.port"),
-      user: config.get<string>("mail.user"),
-      pass: config.get<string>("mail.pass"),
-    }),
-    config.get<string>("mail.from"),
-  ),
+  mailer,
   timezone: remindersTimezone,
 });
 schedulePolling(() => reminderService.runOnce(), 60 * 60 * 1000);
