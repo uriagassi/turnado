@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
-import { GChatMailer, FallbackMailer } from "../src/reminders/GChatMailer.js";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { GChatMailer, FallbackMailer, requireGChatCredentials } from "../src/reminders/GChatMailer.js";
 
 const config = { clientId: "id", clientSecret: "secret", refreshToken: "refresh" };
 const content = { subject: "Reminder: MRI tomorrow", body: "Doctor: Dr. Cohen" };
@@ -64,7 +64,58 @@ describe("GChatMailer", () => {
   });
 });
 
+describe("GChatMailer error handling", () => {
+  const token = { "oauth2.googleapis.com": () => json({ access_token: "tok", expires_in: 3600 }) };
+  const urls = (stub: ReturnType<typeof stubFetch>) => stub.mock.calls.map(([u]) => String(u));
+
+  it("does not create a space when findDirectMessage fails for a non-404 reason", async () => {
+    const fetchStub = stubFetch({ ...token, findDirectMessage: () => json({}, 403) });
+    await expect(
+      new GChatMailer(config, fetchStub as unknown as typeof fetch).send("a@example.com", content),
+    ).rejects.toThrow("403");
+    expect(urls(fetchStub).some((u) => u.includes("spaces:setup"))).toBe(false);
+  });
+
+  it("forgets a cached space when posting to it returns 404", async () => {
+    let posts = 0;
+    const fetchStub = stubFetch({
+      ...token,
+      findDirectMessage: () => json({ name: "spaces/CCC" }),
+      "spaces/CCC/messages": () => (posts++ === 0 ? json({}, 404) : json({ name: "m" })),
+    });
+    const mailer = new GChatMailer(config, fetchStub as unknown as typeof fetch);
+
+    await expect(mailer.send("a@example.com", content)).rejects.toThrow("404");
+    await mailer.send("a@example.com", content);
+
+    expect(urls(fetchStub).filter((u) => u.includes("findDirectMessage"))).toHaveLength(2);
+  });
+
+  it("shares one token refresh between concurrent sends", async () => {
+    const fetchStub = stubFetch({
+      ...token,
+      findDirectMessage: () => json({ name: "spaces/DDD" }),
+      "spaces/DDD/messages": () => json({ name: "m" }),
+    });
+    const mailer = new GChatMailer(config, fetchStub as unknown as typeof fetch);
+
+    await Promise.all([mailer.send("a@example.com", content), mailer.send("a@example.com", content)]);
+
+    expect(urls(fetchStub).filter((u) => u.includes("oauth2"))).toHaveLength(1);
+  });
+});
+
+describe("requireGChatCredentials", () => {
+  it("rejects a refresh token without client credentials", () => {
+    expect(() => requireGChatCredentials({ clientId: "", clientSecret: "", refreshToken: "r" })).toThrow(
+      "gchat.clientId",
+    );
+  });
+});
+
 describe("FallbackMailer", () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it("does not touch the fallback when the primary succeeds", async () => {
     const primary = { send: vi.fn().mockResolvedValue(undefined) };
     const fallback = { send: vi.fn() };

@@ -16,7 +16,7 @@ import { Doctors } from "./doctors/Doctors.js";
 import { ReminderLog } from "./reminders/ReminderLog.js";
 import { ReminderService } from "./reminders/ReminderService.js";
 import { NodemailerMailer, createNodemailerTransport } from "./reminders/Mailer.js";
-import { GChatMailer, FallbackMailer } from "./reminders/GChatMailer.js";
+import { GChatMailer, FallbackMailer, requireGChatCredentials, type GChatConfig } from "./reminders/GChatMailer.js";
 
 consoleStamp(console); // same setup as paperless.node, for a consistent log format across both apps
 
@@ -69,16 +69,9 @@ const emailMailer = new NodemailerMailer(
   }),
   config.get<string>("mail.from"),
 );
-const gchatRefreshToken = config.has("gchat.refreshToken") ? config.get<string>("gchat.refreshToken") : "";
-const mailer = gchatRefreshToken
-  ? new FallbackMailer(
-      new GChatMailer({
-        clientId: config.get<string>("gchat.clientId"),
-        clientSecret: config.get<string>("gchat.clientSecret"),
-        refreshToken: gchatRefreshToken,
-      }),
-      emailMailer,
-    )
+const gchatConfig = config.get<GChatConfig>("gchat");
+const mailer = gchatConfig.refreshToken
+  ? new FallbackMailer(new GChatMailer(requireGChatCredentials(gchatConfig)), emailMailer)
   : emailMailer;
 
 const reminderService = new ReminderService({
