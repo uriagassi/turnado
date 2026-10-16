@@ -16,13 +16,23 @@ const SCOPES = [
   "https://www.googleapis.com/auth/chat.messages.create",
 ];
 
-function waitForCode(state: string): Promise<string> {
-  return new Promise((resolve, reject) => {
+interface CodeWait {
+  code: Promise<string>;
+  cancel: () => void;
+}
+
+function waitForCode(state: string): CodeWait {
+  let cancel = () => {};
+  const code = new Promise<string>((resolve, reject) => {
     const finish = (err?: Error, code?: string) => {
       clearTimeout(timer);
       server.close();
       if (code) resolve(code);
       else reject(err);
+    };
+    cancel = () => {
+      clearTimeout(timer);
+      server.close();
     };
     const timer = setTimeout(() => finish(new Error("Timed out waiting for authorization")), CODE_TIMEOUT_MS);
     const server = http.createServer((req, res) => {
@@ -45,6 +55,33 @@ function waitForCode(state: string): Promise<string> {
     server.on("error", (err) => finish(err));
     server.listen(PORT, "127.0.0.1");
   });
+  return { code, cancel: () => cancel() };
+}
+
+/** Extracts the auth code from a pasted redirect URL (for when the browser can't reach the loopback listener, e.g. over SSH). */
+function codeFromRedirect(pasted: string, state: string): string {
+  const url = new URL(pasted.trim());
+  if (url.searchParams.get("state") !== state) throw new Error("Pasted URL has the wrong state");
+  const code = url.searchParams.get("code");
+  if (!code) throw new Error(`Pasted URL has no code (${url.searchParams.get("error") ?? "no error given"})`);
+  return code;
+}
+
+async function obtainCode(rl: Interface, state: string): Promise<string> {
+  const listener = waitForCode(state);
+  const abort = new AbortController();
+  const pasted = rl
+    .question("If the browser can't reach this machine, paste the redirect URL it ended up on, or wait: ", {
+      signal: abort.signal,
+    })
+    .then((answer) => codeFromRedirect(answer, state));
+  try {
+    return await Promise.race([listener.code.catch(() => pasted), pasted]); // a listener failure (port busy, timeout) leaves pasting as the way forward
+  } finally {
+    abort.abort();
+    listener.cancel();
+    pasted.catch(() => {}); // the aborted question rejects; nothing to report
+  }
 }
 
 export async function setupGChat(rl: Interface): Promise<ConfigTree> {
@@ -68,7 +105,7 @@ export async function setupGChat(rl: Interface): Promise<ConfigTree> {
     });
   console.log(`\nSign in as the sender account and approve:\n\n${authUrl}\n`);
 
-  const code = await waitForCode(state);
+  const code = await obtainCode(rl, state);
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
