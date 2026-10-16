@@ -34,6 +34,11 @@
     "pass": "REPLACE_ME",
     "from": "REPLACE_ME"
   },
+  "gchat": {
+    "clientId": "",
+    "clientSecret": "",
+    "refreshToken": ""
+  },
   "reminders": {
     "timezone": "Asia/Jerusalem"
   },
