@@ -65,7 +65,7 @@ describe("TaskDetailScreen", () => {
     };
 
     render(
-      <TaskDetailScreen
+      <TaskDetailScreen onAttachDocument={() => {}} onUploadDocuments={() => {}}
         task={task}
         doctors={doctors}
         onEdit={() => {}}
@@ -107,7 +107,7 @@ describe("TaskDetailScreen", () => {
       similarTaskIds: [],
     };
 
-    render(<TaskDetailScreen task={task} doctors={doctors} onEdit={() => {}} onStatusChange={() => {}} />);
+    render(<TaskDetailScreen onAttachDocument={() => {}} onUploadDocuments={() => {}} task={task} doctors={doctors} onEdit={() => {}} onStatusChange={() => {}} />);
 
     expect(screen.queryByText("The reminder window closed before it could be sent.")).not.toBeInTheDocument();
 
@@ -146,7 +146,7 @@ describe("TaskDetailScreen", () => {
     };
 
     render(
-      <TaskDetailScreen
+      <TaskDetailScreen onAttachDocument={() => {}} onUploadDocuments={() => {}}
         task={task}
         doctors={doctors}
         onEdit={() => {}}
@@ -190,7 +190,7 @@ describe("TaskDetailScreen", () => {
     };
 
     render(
-      <TaskDetailScreen
+      <TaskDetailScreen onAttachDocument={() => {}} onUploadDocuments={() => {}}
         task={task}
         doctors={doctors}
         onEdit={onEdit}
@@ -232,7 +232,7 @@ describe("TaskDetailScreen", () => {
     };
 
     render(
-      <TaskDetailScreen
+      <TaskDetailScreen onAttachDocument={() => {}} onUploadDocuments={() => {}}
         task={task}
         doctors={doctors}
         onEdit={() => {}}
@@ -287,7 +287,7 @@ describe("TaskDetailScreen", () => {
     ];
 
     render(
-      <TaskDetailScreen
+      <TaskDetailScreen onAttachDocument={() => {}} onUploadDocuments={() => {}}
         task={task}
         doctors={doctors}
         appointments={appointments}
@@ -350,7 +350,7 @@ describe("TaskDetailScreen", () => {
     ];
 
     render(
-      <TaskDetailScreen
+      <TaskDetailScreen onAttachDocument={() => {}} onUploadDocuments={() => {}}
         task={task}
         doctors={doctors}
         documents={docs}
@@ -397,7 +397,7 @@ describe("TaskDetailScreen", () => {
       similarTaskIds: [],
     };
 
-    render(<TaskDetailScreen task={task} doctors={doctors} onEdit={() => {}} onStatusChange={() => {}} />);
+    render(<TaskDetailScreen onAttachDocument={() => {}} onUploadDocuments={() => {}} task={task} doctors={doctors} onEdit={() => {}} onStatusChange={() => {}} />);
 
     expect(screen.getByRole("button", { name: /Edit documents/i })).toBeInTheDocument();
   });
@@ -448,7 +448,7 @@ describe("TaskDetailScreen", () => {
       const task = makeTask({ id: 1, title: "Blood test", similarTaskIds: [2] });
 
       render(
-        <TaskDetailScreen task={task} doctors={doctors} similarTasks={[other]} onEdit={() => {}} onStatusChange={() => {}} />
+        <TaskDetailScreen onAttachDocument={() => {}} onUploadDocuments={() => {}} task={task} doctors={doctors} similarTasks={[other]} onEdit={() => {}} onStatusChange={() => {}} />
       );
 
       expect(screen.getByText("Possibly a duplicate")).toBeInTheDocument();
@@ -459,7 +459,7 @@ describe("TaskDetailScreen", () => {
     it("omits the badge and the candidate section when there are none", () => {
       const task = makeTask({ similarTaskIds: [] });
 
-      render(<TaskDetailScreen task={task} doctors={doctors} onEdit={() => {}} onStatusChange={() => {}} />);
+      render(<TaskDetailScreen onAttachDocument={() => {}} onUploadDocuments={() => {}} task={task} doctors={doctors} onEdit={() => {}} onStatusChange={() => {}} />);
 
       expect(screen.queryByText("Possibly a duplicate")).not.toBeInTheDocument();
       expect(screen.queryByText("Possibly a duplicate of")).not.toBeInTheDocument();
@@ -472,7 +472,7 @@ describe("TaskDetailScreen", () => {
       const task = makeTask({ id: 1, title: "Blood test", similarTaskIds: [2] });
 
       render(
-        <TaskDetailScreen
+        <TaskDetailScreen onAttachDocument={() => {}} onUploadDocuments={() => {}}
           task={task}
           doctors={doctors}
           similarTasks={[other]}

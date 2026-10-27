@@ -175,6 +175,8 @@
   "documentsScreen.linkedBadge_one": "מקושר לפריט אחד",
   "documentsScreen.linkedBadge_other": "מקושר ל-{{count}} פריטים",
   "appointmentDetail.readiness": "{{ready}} מתוך {{total}} מוכנים",
+  "documentUpload.error_one": "לא ניתן היה להעלות מסמך אחד.",
+  "documentUpload.error_other": "לא ניתן היה להעלות {{count}} מסמכים.",
   "documentPicker.toggle": "צירוף מסמך קיים",
   "documentPicker.search.label": "חיפוש מסמכים",
   "documentPicker.empty": "לא נמצאו מסמכים תואמים.",

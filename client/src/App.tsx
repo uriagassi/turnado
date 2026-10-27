@@ -84,31 +84,14 @@ async function saveDoctor(doctor: Doctor | undefined, input: DoctorInput, photo:
   return photo ? uploadDoctorPhoto(saved.id, photo) : saved;
 }
 
-/**
- * Uploads the optional invitation letter attached in AppointmentFormScreen
- * as an "appointment invitation" document linked to the just-saved
- * appointment. The server derives the auto Form-17 task from that link
- * (see #8 / app.ts's linkInvitationToFormSeventeen) — this is only
- * responsible for getting the file there with the right link.
- */
-async function uploadInvitation(appointment: Appointment, file: File): Promise<void> {
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("title", file.name.replace(/\.[^/.]+$/, ""));
-  formData.append("type", "appointment invitation");
-  if (appointment.doctorId) formData.append("doctorId", String(appointment.doctorId));
-  formData.append("appointmentIds", JSON.stringify([appointment.id]));
-  await uploadDocument(formData);
-}
-
-/** Uploads files as new documents linked to an appointment or task — the detail screens' "Upload new" action. */
+/** Uploads files as new documents linked to an appointment or task; returns how many uploads failed. */
 async function uploadLinkedDocuments(
   files: File[],
   link: { appointmentIds: number[] } | { taskIds: number[] },
   type: DocumentType,
   doctorId: number | null | undefined,
-): Promise<void> {
-  await Promise.all(
+): Promise<number> {
+  const results = await Promise.allSettled(
     files.map((file) => {
       const formData = new FormData();
       formData.append("file", file);
@@ -119,6 +102,7 @@ async function uploadLinkedDocuments(
       return uploadDocument(formData);
     }),
   );
+  return results.filter((r) => r.status === "rejected").length;
 }
 
 /** Folds a just-saved Doctor into the in-memory list: replaces it in place on edit, or inserts it in name order on create (list order matches the server's own `ORDER BY name`, see Doctors.ts). */
@@ -885,7 +869,8 @@ export function App() {
       const submit = async (input: AppointmentInput, invitationFile: File | null) => {
         const saved = appointment?.id ? await updateAppointment(appointment.id, input) : await createAppointment(input);
         if (invitationFile) {
-          await uploadInvitation(saved, invitationFile);
+          const failed = await uploadLinkedDocuments([invitationFile], { appointmentIds: [saved.id] }, "appointment invitation", saved.doctorId);
+          if (failed > 0) throw new Error("Invitation upload failed");
         }
         if (resolvingTaskId) {
           await setTaskPendingAppointment(resolvingTaskId, saved.id);
@@ -951,7 +936,8 @@ export function App() {
         await refreshTaskDocuments();
       };
       const uploadDocuments = async (files: File[]) => {
-        await uploadLinkedDocuments(files, { taskIds: [task.id] }, getDocumentTypeForTask(task.type), task.doctorId);
+        const failed = await uploadLinkedDocuments(files, { taskIds: [task.id] }, getDocumentTypeForTask(task.type), task.doctorId);
+        if (failed > 0) window.alert(t("documentUpload.error", { count: failed }));
         await refreshTaskDocuments();
       };
       const similarTasks = session.home.openItems.filter((t) => task.similarTaskIds.includes(t.id));
@@ -1071,7 +1057,8 @@ export function App() {
         setState(await loadAppointmentDetail(session, appointment, returnTo));
       };
       const uploadDocuments = async (files: File[]) => {
-        await uploadLinkedDocuments(files, { appointmentIds: [appointment.id] }, "other", appointment.doctorId);
+        const failed = await uploadLinkedDocuments(files, { appointmentIds: [appointment.id] }, "other", appointment.doctorId);
+        if (failed > 0) window.alert(t("documentUpload.error", { count: failed }));
         setState(await loadAppointmentDetail(session, appointment, returnTo));
       };
       // Checking/unchecking an open item straight from the checklist (see

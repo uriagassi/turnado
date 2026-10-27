@@ -38,8 +38,8 @@ export function TaskDetailScreen({
   onSelectDocument?: (doc: MedicalDocument) => void;
   /** Navigates to one of `similarTasks`' own detail screen. */
   onSelectTask?: (task: Task) => void;
-  onAttachDocument?: (document: MedicalDocument) => void;
-  onUploadDocuments?: (files: File[]) => void;
+  onAttachDocument: (document: MedicalDocument) => void;
+  onUploadDocuments: (files: File[]) => void;
 }) {
   const { t } = useTranslation();
   const formatRelative = useRelativeDateTime();
@@ -248,8 +248,8 @@ export function TaskDetailScreen({
           <AddDocument
             allDocuments={allDocuments}
             excludedIds={new Set(documents.map((d) => d.id))}
-            onPick={(doc) => onAttachDocument?.(doc)}
-            onUpload={(files) => onUploadDocuments?.(files)}
+            onPick={onAttachDocument}
+            onUpload={onUploadDocuments}
           />
         </div>
       </div>
