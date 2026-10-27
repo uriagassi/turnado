@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatDateTime, formatRelativeDateTime, relativeDayLabel } from "./formatDateTime";
+import { formatDateTime, formatRelativeDate, formatRelativeDateTime, relativeDayLabel } from "./formatDateTime";
 
 describe("formatDateTime", () => {
   it("formats an ISO datetime as a locale-friendly date and time, in English", () => {
@@ -47,5 +47,18 @@ describe("formatRelativeDateTime", () => {
     expect(formatRelativeDateTime("2026-10-01T10:00:00Z", "en", "Today", "Tomorrow", now, "UTC")).toBe(
       formatDateTime("2026-10-01T10:00:00Z", "en", "UTC"),
     );
+  });
+});
+
+describe("formatRelativeDate", () => {
+  const now = new Date("2026-09-01T08:00:00Z");
+
+  it("labels near dates without a time of day", () => {
+    expect(formatRelativeDate("2026-09-02", "en", "Today", "Tomorrow", now, "UTC")).toBe("Tomorrow");
+    expect(formatRelativeDate("2026-09-01", "en", "Today", "Tomorrow", now, "UTC")).toBe("Today");
+  });
+
+  it("prints a far date as a plain calendar day, whatever the viewer's offset", () => {
+    expect(formatRelativeDate("2026-10-25", "en", "Today", "Tomorrow", now, "Asia/Jerusalem")).toBe("Oct 25, 2026");
   });
 });

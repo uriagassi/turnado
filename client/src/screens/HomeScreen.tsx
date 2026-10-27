@@ -1,6 +1,7 @@
 import { useState, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { Appointment, Doctor, DocumentType, HomeData, MedicalDocument, Task } from "../api";
+import { useRelativeDate } from "../hooks/useRelativeDate";
 import { useRelativeDateTime } from "../hooks/useRelativeDateTime";
 import { getTaskIcon } from "../tasks/taskUtils";
 import { TaskStatusBadge } from "../components/TaskStatusBadge";
@@ -75,6 +76,7 @@ export function HomeScreen({
 }) {
   const { t } = useTranslation();
   const formatRelative = useRelativeDateTime();
+  const formatRelativeDay = useRelativeDate();
   const sortedOpenItems = sortOpenItems(home.openItems, appointments);
   // Tasks whose ✓ was tapped, keyed to the `home` snapshot they were
   // tapped on. The row stays on screen until home re-fetches (after the
@@ -116,7 +118,7 @@ export function HomeScreen({
   function formatTaskDue(task: Task): string {
     const appt = task.pendingAppointmentId ? appointments.find((a) => a.id === task.pendingAppointmentId) : undefined;
     const effectiveDate = task.dueDate || appt?.dateTime.slice(0, 10);
-    if (effectiveDate) return t("task.due.target", { date: formatRelative(effectiveDate) });
+    if (effectiveDate) return t("task.due.target", { date: formatRelativeDay(effectiveDate) });
     if (task.approximateDateWindow) return task.approximateDateWindow;
     return t("task.due.noDate");
   }
@@ -179,7 +181,7 @@ export function HomeScreen({
         ) : (
           <p className="section-empty">{t("home.hero.empty")}</p>
         )}
-        <button type="button" className="btn-small btn-secondary" onClick={onSeeAllUpcoming}>
+        <button type="button" className="btn-small btn-secondary hero-see-all" onClick={onSeeAllUpcoming}>
           {t("home.hero.seeAll")}
         </button>
       </section>
@@ -285,7 +287,7 @@ export function HomeScreen({
                 </div>
                 <div className="doc-title">{doc.title}</div>
                 <div className="doc-date">
-                  {doc.documentDate ? formatRelative(doc.documentDate) : (doc.createdAt ? formatRelative(doc.createdAt) : "")}
+                  {doc.documentDate ? formatRelativeDay(doc.documentDate) : (doc.createdAt ? formatRelative(doc.createdAt) : "")}
                 </div>
               </div>
             ))}
