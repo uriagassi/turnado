@@ -709,6 +709,7 @@ export function App() {
           appointments={session.appointments}
           onSelectAppointment={selectAppointment}
           onAddAppointment={addAppointment}
+          onSeeAllUpcoming={() => goTo({ phase: "appointment-upcoming", session })}
           onSelectTask={selectTask}
           onMarkTaskDone={markTaskDone}
           onAddTask={addTask}

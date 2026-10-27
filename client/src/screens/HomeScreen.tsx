@@ -49,6 +49,7 @@ export function HomeScreen({
   appointments = [],
   onSelectAppointment,
   onAddAppointment,
+  onSeeAllUpcoming,
   onSelectTask,
   onMarkTaskDone,
   onAddTask,
@@ -62,6 +63,8 @@ export function HomeScreen({
   /** Opens the appointment detail from the hero card (issue #68). */
   onSelectAppointment: (appointment: Appointment) => void;
   onAddAppointment: () => void;
+  /** Opens the upcoming-appointments screen from the hero (issue #71). */
+  onSeeAllUpcoming: () => void;
   onSelectTask?: (task: Task) => void;
   /** The row's own "mark done" action — celebrates (issue #13) once the returned save resolves. */
   onMarkTaskDone?: (task: Task) => void | Promise<void>;
@@ -176,6 +179,9 @@ export function HomeScreen({
         ) : (
           <p className="section-empty">{t("home.hero.empty")}</p>
         )}
+        <button type="button" className="btn-small btn-secondary" onClick={onSeeAllUpcoming}>
+          {t("home.hero.seeAll")}
+        </button>
       </section>
 
       <section className="open-items-section">
