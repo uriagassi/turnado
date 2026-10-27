@@ -42,6 +42,6 @@ describe("DocumentDetailScreen", () => {
     expect(screen.getByText("2026-08-01")).toBeInTheDocument();
     expect(screen.getByText("Dr. Jane Smith")).toBeInTheDocument();
     expect(screen.getByText("No acute abnormalities")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Download file" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download file" })).toBeInTheDocument();
   });
 });

@@ -1,6 +1,24 @@
 import { useTranslation } from "react-i18next";
 import type { UploadedFile } from "../api";
 
+async function saveBlob(blob: Blob, fileName: string, mime: string) {
+  const shareFile = new File([blob], fileName, { type: blob.type || mime });
+  if (navigator.canShare?.({ files: [shareFile] })) {
+    try {
+      await navigator.share({ files: [shareFile], title: fileName });
+    } catch (err) {
+      if ((err as Error).name !== "AbortError") throw err;
+    }
+    return;
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export function DocumentPreview({ file }: { file: UploadedFile }) {
   const { t } = useTranslation();
   const attachmentUrl = `/api/body/attachments/${encodeURIComponent(file.uniqueFilename)}`;
@@ -15,6 +33,16 @@ export function DocumentPreview({ file }: { file: UploadedFile }) {
     (file.fileName || "").toLowerCase().endsWith(".pdf") ||
     (file.uniqueFilename || "").toLowerCase().endsWith(".pdf");
 
+  const download = async () => {
+    try {
+      const res = await fetch(attachmentUrl);
+      if (!res.ok) throw new Error(String(res.status));
+      await saveBlob(await res.blob(), file.fileName, file.mime ?? "");
+    } catch (err) {
+      console.error("Download failed", err);
+    }
+  };
+
   return (
     <div className="document-preview">
       {isImage && (
@@ -28,15 +56,9 @@ export function DocumentPreview({ file }: { file: UploadedFile }) {
         />
       )}
       <div className="document-preview-actions">
-        <a
-          href={attachmentUrl}
-          download={file.fileName}
-          className="btn-download"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
+        <button type="button" className="btn-download" onClick={download}>
           {t("documentPreview.download")}
-        </a>
+        </button>
       </div>
     </div>
   );
