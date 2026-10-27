@@ -61,4 +61,10 @@ describe("formatRelativeDate", () => {
   it("prints a far date as a plain calendar day, whatever the viewer's offset", () => {
     expect(formatRelativeDate("2026-10-25", "en", "Today", "Tomorrow", now, "Asia/Jerusalem")).toBe("Oct 25, 2026");
   });
+
+  it("takes 'today' from the viewer's zone, not UTC, near midnight", () => {
+    const lateUtc = new Date("2026-09-01T23:30:00Z");
+    expect(formatRelativeDate("2026-09-02", "en", "Today", "Tomorrow", lateUtc, "Asia/Jerusalem")).toBe("Today");
+    expect(formatRelativeDate("2026-09-02", "en", "Today", "Tomorrow", lateUtc, "UTC")).toBe("Tomorrow");
+  });
 });

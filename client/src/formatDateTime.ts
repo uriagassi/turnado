@@ -60,11 +60,7 @@ function dayLabel(
   return null;
 }
 
-/**
- * formatRelativeDateTime's counterpart for a date-only "YYYY-MM-DD" value
- * (task due dates, document dates): no time of day, and the calendar day is
- * never shifted by the viewer's offset from UTC.
- */
+/** formatRelativeDateTime for a date-only "YYYY-MM-DD" value: no time, no UTC-offset day shift. */
 export function formatRelativeDate(
   date: string,
   locale: string,

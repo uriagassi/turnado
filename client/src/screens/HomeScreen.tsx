@@ -1,6 +1,7 @@
 import { useState, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { Appointment, Doctor, DocumentType, HomeData, MedicalDocument, Task } from "../api";
+import { calendarDay } from "../formatDateTime";
 import { useRelativeDate } from "../hooks/useRelativeDate";
 import { useRelativeDateTime } from "../hooks/useRelativeDateTime";
 import { getTaskIcon } from "../tasks/taskUtils";
@@ -117,7 +118,7 @@ export function HomeScreen({
 
   function formatTaskDue(task: Task): string {
     const appt = task.pendingAppointmentId ? appointments.find((a) => a.id === task.pendingAppointmentId) : undefined;
-    const effectiveDate = task.dueDate || appt?.dateTime.slice(0, 10);
+    const effectiveDate = task.dueDate || (appt && calendarDay(new Date(appt.dateTime)));
     if (effectiveDate) return t("task.due.target", { date: formatRelativeDay(effectiveDate) });
     if (task.approximateDateWindow) return task.approximateDateWindow;
     return t("task.due.noDate");
