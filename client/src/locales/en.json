@@ -9,6 +9,7 @@
   "home.title": "Home",
   "home.hero.title": "Next appointment",
   "home.hero.empty": "No upcoming appointment.",
+  "home.hero.seeAll": "See all upcoming",
   "home.refresh": "Refresh",
   "home.addAppointment": "Add appointment",
   "doctors.title": "Doctors",

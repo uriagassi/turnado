@@ -55,6 +55,7 @@ describe("completion celebration entry points", () => {
         doctors={[]}
         onSelectAppointment={() => {}}
         onAddAppointment={() => {}}
+        onSeeAllUpcoming={() => {}}
         onRefresh={() => {}}
         onSelectTask={onSelectTask}
         onMarkTaskDone={onMarkTaskDone}
@@ -81,6 +82,7 @@ describe("completion celebration entry points", () => {
         doctors={[]}
         onSelectAppointment={() => {}}
         onAddAppointment={() => {}}
+        onSeeAllUpcoming={() => {}}
         onRefresh={() => {}}
         onSelectTask={onSelectTask}
         onMarkTaskDone={onMarkTaskDone}

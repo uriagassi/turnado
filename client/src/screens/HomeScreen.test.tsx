@@ -10,6 +10,7 @@ const noopProps = {
   doctors: [] as Doctor[],
   onSelectAppointment: () => {},
   onAddAppointment: () => {},
+  onSeeAllUpcoming: () => {},
 };
 
 describe("HomeScreen", () => {
@@ -193,6 +194,16 @@ describe("HomeScreen", () => {
     await user.click(screen.getByRole("button", { name: "Reminder missed" }));
 
     expect(onSelectAppointment).not.toHaveBeenCalled();
+  });
+
+  it("opens the upcoming appointments screen from the hero's see-all link", async () => {
+    const user = userEvent.setup();
+    const onSeeAllUpcoming = vi.fn();
+    render(<HomeScreen home={heroHome(7)} {...noopProps} onSeeAllUpcoming={onSeeAllUpcoming} />);
+
+    await user.click(screen.getByRole("button", { name: "See all upcoming" }));
+
+    expect(onSeeAllUpcoming).toHaveBeenCalledTimes(1);
   });
 
   it("calls onAddAppointment when the add-appointment control is activated", async () => {
