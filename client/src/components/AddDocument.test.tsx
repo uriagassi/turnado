@@ -23,11 +23,45 @@ function doc(overrides: Partial<MedicalDocument> = {}): MedicalDocument {
 }
 
 describe("AddDocument", () => {
-  it("offers both uploading a new document and choosing an existing one", () => {
-    render(<AddDocument allDocuments={[]} excludedIds={new Set()} onPick={() => {}} onUpload={() => {}} />);
+  it("is closed until the Add document button is clicked, then offers existing documents and Upload new together", async () => {
+    const user = userEvent.setup();
+    render(<AddDocument allDocuments={[doc()]} excludedIds={new Set()} onPick={() => {}} onUpload={() => {}} />);
 
-    expect(screen.getByLabelText("Upload new document")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Attach existing document" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Search documents")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Upload new")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Add document" }));
+
+    expect(screen.getByLabelText("Search documents")).toBeInTheDocument();
+    expect(screen.getByLabelText("Upload new")).toBeInTheDocument();
+    expect(screen.getByText("Blood test results")).toBeInTheDocument();
+  });
+
+  it("filters by search and leaves out excluded documents", async () => {
+    const user = userEvent.setup();
+    const referral = doc({ id: 2, title: "Cardiology referral" });
+    render(<AddDocument allDocuments={[doc(), referral, doc({ id: 3, title: "Excluded referral" })]} excludedIds={new Set([3])} onPick={() => {}} onUpload={() => {}} />);
+
+    await user.click(screen.getByRole("button", { name: "Add document" }));
+    expect(screen.queryByText("Excluded referral")).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Search documents"), "referral");
+    expect(screen.queryByText("Blood test results")).not.toBeInTheDocument();
+    expect(screen.getByText("Cardiology referral")).toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText("Search documents"));
+    await user.type(screen.getByLabelText("Search documents"), "nothing matches this");
+    expect(screen.getByText("No matching documents.")).toBeInTheDocument();
+  });
+
+  it("stays open after a pick, so several documents can be picked in a row", async () => {
+    const user = userEvent.setup();
+    render(<AddDocument allDocuments={[doc()]} excludedIds={new Set()} onPick={() => {}} onUpload={() => {}} />);
+
+    await user.click(screen.getByRole("button", { name: "Add document" }));
+    await user.click(screen.getByText("Blood test results"));
+
+    expect(screen.getByLabelText("Search documents")).toBeInTheDocument();
   });
 
   it("passes every selected file to onUpload", async () => {
@@ -36,7 +70,8 @@ describe("AddDocument", () => {
     const files = [new File(["a"], "a.pdf", { type: "application/pdf" }), new File(["b"], "b.pdf", { type: "application/pdf" })];
 
     render(<AddDocument allDocuments={[]} excludedIds={new Set()} onPick={() => {}} onUpload={onUpload} />);
-    await user.upload(screen.getByLabelText("Upload new document"), files);
+    await user.click(screen.getByRole("button", { name: "Add document" }));
+    await user.upload(screen.getByLabelText("Upload new"), files);
 
     expect(onUpload).toHaveBeenCalledWith(files);
   });
@@ -47,7 +82,7 @@ describe("AddDocument", () => {
     const bloodTest = doc();
 
     render(<AddDocument allDocuments={[bloodTest]} excludedIds={new Set()} onPick={onPick} onUpload={() => {}} />);
-    await user.click(screen.getByRole("button", { name: "Attach existing document" }));
+    await user.click(screen.getByRole("button", { name: "Add document" }));
     await user.click(screen.getByText("Blood test results"));
 
     expect(onPick).toHaveBeenCalledWith(bloodTest);

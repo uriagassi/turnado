@@ -1840,20 +1840,24 @@ html[dir="rtl"] .back-link-arrow {
   margin-block-end: 1.25rem;
 }
 
-.add-document {
+.add-document-panel {
+  margin-top: 0.5rem;
+}
+
+.add-document-panel-header {
   display: flex;
   gap: 0.5rem;
+  align-items: flex-end;
   flex-wrap: wrap;
+}
+
+.add-document-search {
+  flex: 1 1 12rem;
 }
 
 .add-document-upload {
   display: inline-flex;
   align-items: center;
-}
-
-/* The picker panel drops to its own full-width line inside the wrapping row. */
-.add-document .document-picker {
-  flex-basis: 100%;
 }
 
 .task-form-document-row {

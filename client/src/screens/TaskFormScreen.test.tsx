@@ -292,7 +292,7 @@ describe("TaskFormScreen", () => {
       );
 
       await user.type(screen.getByLabelText(/Title \/ Description/), "Blood test (CBC)");
-      await user.click(screen.getByRole("button", { name: "Attach existing document" }));
+      await user.click(screen.getByRole("button", { name: "Add document" }));
       await user.click(screen.getByText("Cardiology referral"));
 
       expect(screen.getByText("Cardiology referral")).toBeInTheDocument();
@@ -315,7 +315,7 @@ describe("TaskFormScreen", () => {
       );
 
       await user.type(screen.getByLabelText(/Title \/ Description/), "Blood test");
-      await user.click(screen.getByRole("button", { name: "Attach existing document" }));
+      await user.click(screen.getByRole("button", { name: "Add document" }));
       await user.click(screen.getByText("Cardiology referral"));
       const removeBtn = screen.getByRole("button", { name: /Remove Cardiology referral/i });
 
@@ -342,7 +342,8 @@ describe("TaskFormScreen", () => {
       await user.type(screen.getByLabelText(/Title \/ Description/), "Visit cardiologist");
 
       const file = new File(["dummy"], "letter.pdf", { type: "application/pdf" });
-      const fileInput = screen.getByLabelText(/Upload new document/i);
+      await user.click(screen.getByRole("button", { name: "Add document" }));
+      const fileInput = screen.getByLabelText(/Upload new/i);
       await user.upload(fileInput, file);
 
       expect(screen.getByText("letter")).toBeInTheDocument();
@@ -418,7 +419,7 @@ describe("TaskFormScreen", () => {
         <TaskFormScreen doctors={doctors} documents={[attached]} allDocuments={[attached, other]} onSubmit={() => {}} onCancel={() => {}} />
       );
 
-      await user.click(screen.getByRole("button", { name: "Attach existing document" }));
+      await user.click(screen.getByRole("button", { name: "Add document" }));
 
       expect(screen.queryByText("Old lab result", { selector: ".picker-result" })).not.toBeInTheDocument();
       expect(screen.getByText("New lab result")).toBeInTheDocument();

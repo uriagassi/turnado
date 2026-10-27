@@ -434,10 +434,11 @@ describe("TaskDetailScreen", () => {
       />,
     );
 
-    await user.upload(screen.getByLabelText("Upload new document"), file);
+    await user.click(screen.getByRole("button", { name: "Add document" }));
+    await user.upload(screen.getByLabelText("Upload new"), file);
     expect(onUploadDocuments).toHaveBeenCalledWith([file]);
 
-    await user.click(screen.getByRole("button", { name: "Attach existing document" }));
+    await user.click(screen.getByRole("button", { name: "Add document" }));
     await user.click(screen.getByText("Referral letter"));
     expect(onAttachDocument).toHaveBeenCalledWith(existing);
   });

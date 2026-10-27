@@ -171,7 +171,7 @@ describe("AppointmentDetailScreen", () => {
     expect(document.querySelector(".appointment-detail-date")).toHaveTextContent(/2020/);
   });
 
-  it("uploads new documents chosen through Upload new document", async () => {
+  it("uploads new documents chosen through Upload new", async () => {
     const user = userEvent.setup();
     const onUploadDocuments = vi.fn();
     const file = new File(["x"], "scan.pdf", { type: "application/pdf" });
@@ -187,7 +187,8 @@ describe("AppointmentDetailScreen", () => {
         onUploadDocuments={onUploadDocuments}
       />,
     );
-    await user.upload(screen.getByLabelText("Upload new document"), file);
+    await user.click(screen.getByRole("button", { name: "Add document" }));
+    await user.upload(screen.getByLabelText("Upload new"), file);
 
     expect(onUploadDocuments).toHaveBeenCalledWith([file]);
   });
@@ -210,7 +211,7 @@ describe("AppointmentDetailScreen", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Attach existing document" }));
+    await user.click(screen.getByRole("button", { name: "Add document" }));
     await user.type(screen.getByLabelText("Search documents"), "blood");
 
     expect(screen.getByText("Blood test results")).toBeInTheDocument();
@@ -238,7 +239,7 @@ describe("AppointmentDetailScreen", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Attach existing document" }));
+    await user.click(screen.getByRole("button", { name: "Add document" }));
 
     expect(screen.queryByText("Blood test results", { selector: ".picker-result" })).not.toBeInTheDocument();
     expect(screen.getByText("Cardiology referral")).toBeInTheDocument();
