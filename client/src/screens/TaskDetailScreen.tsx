@@ -7,23 +7,29 @@ import { TaskStatusBadge } from "../components/TaskStatusBadge";
 import { MissedReminderBadge } from "../components/MissedReminderBadge";
 import { SimilarTaskBadge } from "../components/SimilarTaskBadge";
 import { celebrateAfter } from "../celebration/celebrate";
+import { AddDocument } from "../components/AddDocument";
 
 export function TaskDetailScreen({
   task,
   doctors,
   appointments = [],
   documents = [],
+  allDocuments = [],
   similarTasks = [],
   onEdit,
   onStatusChange,
   onResolveToAppointment,
   onSelectDocument,
   onSelectTask,
+  onAttachDocument,
+  onUploadDocuments,
 }: {
   task: Task;
   doctors: Doctor[];
   appointments?: Appointment[];
   documents?: MedicalDocument[];
+  /** Every document in the system, for the "attach existing" picker to search across. */
+  allDocuments?: MedicalDocument[];
   /** Every current candidate this task looks like a possible duplicate of (issue #12) — resolved by the caller from `task.similarTaskIds` against its own already-loaded open items. */
   similarTasks?: Task[];
   onEdit: (task: Task) => void;
@@ -32,6 +38,8 @@ export function TaskDetailScreen({
   onSelectDocument?: (doc: MedicalDocument) => void;
   /** Navigates to one of `similarTasks`' own detail screen. */
   onSelectTask?: (task: Task) => void;
+  onAttachDocument: (document: MedicalDocument) => void;
+  onUploadDocuments: (files: File[]) => void;
 }) {
   const { t } = useTranslation();
   const formatRelative = useRelativeDateTime();
@@ -237,6 +245,12 @@ export function TaskDetailScreen({
           ) : (
             <p className="section-empty">{t("doctorDetail.documents.empty")}</p>
           )}
+          <AddDocument
+            allDocuments={allDocuments}
+            excludedIds={new Set(documents.map((d) => d.id))}
+            onPick={onAttachDocument}
+            onUpload={onUploadDocuments}
+          />
         </div>
       </div>
 

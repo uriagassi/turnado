@@ -106,16 +106,18 @@ export function AppointmentFormScreen({
             <textarea value={formData.notes} onChange={(e) => setField("notes", e.target.value)} />
           </label>
         </div>
-        <div className="form-field">
-          <label>
-            {t("appointmentForm.invitation.label")}
-            <input
-              type="file"
-              accept="image/*,application/pdf"
-              onChange={(e) => setInvitationFile(e.target.files?.[0] ?? null)}
-            />
-          </label>
-        </div>
+        {!appointment?.id && (
+          <div className="form-field">
+            <label>
+              {t("appointmentForm.invitation.label")}
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={(e) => setInvitationFile(e.target.files?.[0] ?? null)}
+              />
+            </label>
+          </div>
+        )}
         <div className="form-actions">
           <button type="submit" className="save-appointment" disabled={isSubmitting}>
             {t("appointmentForm.save")}

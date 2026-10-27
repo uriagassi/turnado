@@ -60,6 +60,22 @@ describe("AppointmentFormScreen", () => {
     expect(onSubmit.mock.calls[0][1]).toBe(invitation);
   });
 
+  it("offers no document input when editing an existing appointment", () => {
+    const existing: Appointment = {
+      id: 5,
+      doctorId: null,
+      dateTime: "2026-09-01T10:00",
+      location: undefined,
+      notes: "Annual checkup",
+      status: "planned",
+      summary: null,
+      missedReminder: null,
+    };
+    render(<AppointmentFormScreen appointment={existing} doctors={doctors} onSubmit={() => {}} onCancel={() => {}} />);
+
+    expect(screen.queryByLabelText("Accompanying documents")).not.toBeInTheDocument();
+  });
+
   it("fills the location from the selected doctor's address", async () => {
     const user = userEvent.setup();
     render(<AppointmentFormScreen doctors={doctors} onSubmit={() => {}} onCancel={() => {}} />);

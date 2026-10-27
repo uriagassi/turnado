@@ -1,11 +1,11 @@
-import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Doctor, DocumentType, MedicalDocument, Task, TaskInput, TaskStatus, TaskType } from "../api";
 import { isResolvableTask } from "../tasks/taskUtils";
 import { findSimilarTasks } from "../tasks/duplicateTasks";
 import { getDocumentIcon } from "./HomeScreen";
 import { getDocumentTypeForTask } from "./DocumentFormScreen";
-import { DocumentPicker } from "../components/DocumentPicker";
+import { AddDocument } from "../components/AddDocument";
 
 type RequiredFieldErrors = { title?: string; doctorId?: string };
 
@@ -114,8 +114,7 @@ export function TaskFormScreen({
     setStagedDocs((docs) => docs.filter((d) => !(d.kind === "upload" && d.uploadId === uploadId)));
   };
 
-  const onFilesSelected = (event: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files ?? []);
+  const stageUploads = (files: File[]) => {
     const uploads: StagedDoc[] = files.map((file) => ({
       kind: "upload",
       uploadId: ++uploadIdCounter.current,
@@ -124,7 +123,6 @@ export function TaskFormScreen({
       type: getDocumentTypeForTask(formData.type),
     }));
     setStagedDocs((docs) => [...docs, ...uploads]);
-    event.target.value = "";
   };
 
   const handleSubmit = (event: FormEvent) => {
@@ -423,19 +421,12 @@ export function TaskFormScreen({
             </ul>
           )}
 
-          <div className="task-form-documents-actions">
-            <DocumentPicker allDocuments={allDocuments} excludedIds={stagedExistingIds} onPick={attachExisting} />
-            <label className="btn-small btn-secondary task-form-upload-label">
-              {t("taskForm.documents.upload")}
-              <input
-                type="file"
-                multiple
-                accept="image/*,application/pdf"
-                className="visually-hidden"
-                onChange={onFilesSelected}
-              />
-            </label>
-          </div>
+          <AddDocument
+            allDocuments={allDocuments}
+            excludedIds={stagedExistingIds}
+            onPick={attachExisting}
+            onUpload={stageUploads}
+          />
         </div>
 
         {isResolvable && onResolveToAppointment && task && (

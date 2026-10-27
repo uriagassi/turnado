@@ -1,29 +1,20 @@
-import { useState } from "react";
+import { useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { MedicalDocument } from "../api";
 import { useRelativeDateTime } from "../hooks/useRelativeDateTime";
 
-/**
- * The searchable "attach an existing document" picker, shared by every
- * screen that lets you link an already-uploaded document to something
- * (an appointment's checklist, a task's own documents) — same toggle
- * button, same search-and-list panel, same excluded/picked behavior,
- * so the two don't drift into two different pickers for what is, to the
- * user, one and the same action. Renders as a fragment (button, then the
- * panel once open) rather than a wrapping element, so a caller can lay the
- * toggle button out next to its own other controls; give `.document-picker`
- * (below) a flex-basis of 100% wherever that matters so the panel still
- * drops to its own full-width line inside a flex-wrap row.
- */
-export function DocumentPicker({
+/** The one "add a document" action shared by every screen that manages documents: a button opening a searchable list of existing documents, with an "Upload new" button inside it. */
+export function AddDocument({
   allDocuments,
   excludedIds,
   onPick,
+  onUpload,
 }: {
   allDocuments: MedicalDocument[];
-  /** Documents to leave out of the results — already attached/staged elsewhere, so re-offering them would just invite a confusing duplicate pick. */
+  /** Documents already attached/staged, left out of the list so they can't be picked twice. */
   excludedIds: Set<number>;
   onPick: (document: MedicalDocument) => void;
+  onUpload: (files: File[]) => void;
 }) {
   const { t } = useTranslation();
   const formatRelative = useRelativeDateTime();
@@ -34,18 +25,32 @@ export function DocumentPicker({
     .filter((d) => !excludedIds.has(d.id))
     .filter((d) => d.title.toLowerCase().includes(query.trim().toLowerCase()));
 
+  const onFilesSelected = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (files.length === 0) return;
+    onUpload(files);
+    setOpen(false);
+  };
+
   return (
-    <>
+    <div className="add-document">
       <button type="button" className="btn-small btn-secondary" onClick={() => setOpen((o) => !o)}>
-        {t("documentPicker.toggle")}
+        {t("addDocument.toggle")}
       </button>
 
       {open && (
-        <div className="card document-picker">
-          <label>
-            {t("documentPicker.search.label")}
-            <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} />
-          </label>
+        <div className="card add-document-panel">
+          <div className="add-document-panel-header">
+            <label className="add-document-search">
+              {t("documentPicker.search.label")}
+              <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} />
+            </label>
+            <label className="btn-small btn-secondary add-document-upload">
+              {t("addDocument.upload")}
+              <input type="file" multiple accept="image/*,application/pdf" className="visually-hidden" onChange={onFilesSelected} />
+            </label>
+          </div>
           {results.length > 0 ? (
             <ul className="item-row-list">
               {results.map((document) => (
@@ -74,6 +79,6 @@ export function DocumentPicker({
           )}
         </div>
       )}
-    </>
+    </div>
   );
 }

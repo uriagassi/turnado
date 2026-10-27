@@ -2,7 +2,8 @@ import { type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { Appointment, Doctor, MedicalDocument, Task, TaskStatus } from "../api";
 import { MissedReminderBadge } from "../components/MissedReminderBadge";
-import { DocumentPicker } from "../components/DocumentPicker";
+import { AddDocument } from "../components/AddDocument";
+import { useRelativeDateTime } from "../hooks/useRelativeDateTime";
 import { celebrateAfter } from "../celebration/celebrate";
 
 /**
@@ -88,6 +89,7 @@ export function AppointmentDetailScreen({
   allDocuments = [],
   onEdit,
   onAttachDocument,
+  onUploadDocuments,
   onSelectDocument,
   onSelectTask,
   onTaskStatusChange,
@@ -100,6 +102,7 @@ export function AppointmentDetailScreen({
   allDocuments?: MedicalDocument[];
   onEdit: () => void;
   onAttachDocument: (document: MedicalDocument) => void;
+  onUploadDocuments: (files: File[]) => void;
   onSelectDocument?: (document: MedicalDocument) => void;
   onSelectTask?: (task: Task) => void;
   /** Checks/unchecks an open item straight from the checklist (see OpenItemRow) without leaving this screen. */
@@ -110,6 +113,7 @@ export function AppointmentDetailScreen({
   onSelectDoctor?: (doctor: Doctor) => void;
 }) {
   const { t } = useTranslation();
+  const formatRelative = useRelativeDateTime();
   const { ready, total } = computeReadiness(documents, openItems);
 
   // Already-attached documents are dropped from the picker's own candidate
@@ -128,6 +132,7 @@ export function AppointmentDetailScreen({
         ) : (
           <p className="appointment-detail-doctor">{doctor.name}</p>
         ))}
+      <p className="appointment-detail-date">{formatRelative(appointment.dateTime)}</p>
       {appointment.location && <p className="appointment-detail-location">{appointment.location}</p>}
       {appointment.missedReminder && <MissedReminderBadge reason={appointment.missedReminder} />}
       <button type="button" className="edit-appointment" onClick={onEdit}>
@@ -149,7 +154,7 @@ export function AppointmentDetailScreen({
           <p className="section-empty">{t("doctorDetail.documents.empty")}</p>
         )}
 
-        <DocumentPicker allDocuments={allDocuments} excludedIds={attachedIds} onPick={onAttachDocument} />
+        <AddDocument allDocuments={allDocuments} excludedIds={attachedIds} onPick={onAttachDocument} onUpload={onUploadDocuments} />
       </section>
 
       <section data-testid="appointment-openitems-section">

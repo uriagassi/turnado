@@ -111,7 +111,7 @@ describe("completion celebration entry points", () => {
   it("celebrates from the task detail screen's mark-done action", async () => {
     const user = userEvent.setup();
     const onStatusChange = vi.fn();
-    render(<TaskDetailScreen task={task} doctors={[]} onEdit={() => {}} onStatusChange={onStatusChange} />);
+    render(<TaskDetailScreen onAttachDocument={() => {}} onUploadDocuments={() => {}} task={task} doctors={[]} onEdit={() => {}} onStatusChange={onStatusChange} />);
 
     const button = screen.getByRole("button", { name: /Mark as completed/ });
     await user.click(button);
@@ -123,7 +123,7 @@ describe("completion celebration entry points", () => {
 
   it("does not celebrate reopening a done task", async () => {
     const user = userEvent.setup();
-    render(<TaskDetailScreen task={{ ...task, status: "done" }} doctors={[]} onEdit={() => {}} onStatusChange={() => {}} />);
+    render(<TaskDetailScreen onAttachDocument={() => {}} onUploadDocuments={() => {}} task={{ ...task, status: "done" }} doctors={[]} onEdit={() => {}} onStatusChange={() => {}} />);
 
     await user.click(screen.getByRole("button", { name: /Reopen task/ }));
 

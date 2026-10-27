@@ -1842,23 +1842,24 @@ html[dir="rtl"] .back-link-arrow {
   margin-block-end: 1.25rem;
 }
 
-.task-form-documents-actions {
+.add-document-panel {
+  margin-top: 0.5rem;
+}
+
+.add-document-panel-header {
   display: flex;
   gap: 0.5rem;
+  align-items: flex-end;
   flex-wrap: wrap;
 }
 
-.task-form-upload-label {
-  display: inline-flex;
-  align-items: center;
+.add-document-search {
+  flex: 1 1 12rem;
 }
 
-/* DocumentPicker's panel is a plain block by default (fine for
-   AppointmentDetailScreen, which has no flex row around it); this makes it
-   drop to its own full-width line when it lands inside a flex-wrap row
-   instead, as it does next to TaskFormScreen's upload button. */
-.task-form-documents-actions .document-picker {
-  flex-basis: 100%;
+.add-document-upload {
+  display: inline-flex;
+  align-items: center;
 }
 
 .task-form-document-row {
