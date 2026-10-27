@@ -679,14 +679,14 @@ export function App() {
         goTo({ phase: "task-detail", session: { ...session, taskDocuments }, task, returnTo: "home" });
       };
       const addDocument = () => setState({ phase: "document-form", session, returnTo: "home" });
+      const selectAppointment = async (appointment: Appointment) =>
+        goTo(await loadAppointmentDetail(session, appointment, "home"));
       const selectDocument = (doc: MedicalDocument) =>
         goTo({ phase: "document-detail", session, document: doc, returnTo: "home" });
       // A done task drops out of home.openItems, which only the server-side
       // selection knows — so re-fetch home, but apply it to whatever screen
       // is current by then (see applyFreshHome), never forcing a jump back
       // here if the user navigated away while the save was in flight.
-      const selectAppointment = async (appointment: Appointment) =>
-        goTo(await loadAppointmentDetail(session, appointment, "home"));
       const markTaskDone = (task: Task) =>
         saveThenRefresh(setTaskStatus(task.id, "done"), async () => applyFreshHome(await fetchHome()));
       return (
