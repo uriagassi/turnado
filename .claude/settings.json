@@ -1,0 +1,14 @@
+{
+  "extraKnownMarketplaces": {
+    "mattpocock": {
+      "source": { "source": "github", "repo": "mattpocock/skills" }
+    },
+    "open-pstack": {
+      "source": { "source": "github", "repo": "ericlitman/open-pstack" }
+    }
+  },
+  "enabledPlugins": {
+    "mattpocock-skills@mattpocock": true,
+    "pstack@open-pstack": true
+  }
+}
