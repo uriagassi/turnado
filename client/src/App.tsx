@@ -179,7 +179,7 @@ function selectAppointmentTasks(tasks: Task[], appointmentId: number): Task[] {
 async function loadAppointmentDetail(
   session: Session,
   appointment: Appointment,
-  returnTo: "appointment-upcoming" | "appointment-history",
+  returnTo: "home" | "appointment-upcoming" | "appointment-history",
 ): Promise<Extract<AppState, { phase: "appointment-detail" }>> {
   const [documents, allDocuments, allTasks] = await Promise.all([
     fetchDocuments({ appointmentId: appointment.id }),
@@ -362,7 +362,7 @@ export type AppState =
       openItems: Task[];
       /** Every document, for the checklist's "attach existing document" picker to search across. */
       allDocuments: MedicalDocument[];
-      returnTo: "appointment-upcoming" | "appointment-history";
+      returnTo: "home" | "appointment-upcoming" | "appointment-history";
     };
 
 const EMPTY_DOCUMENT_FILTERS: DocumentFilters = { query: "", type: "", doctorId: "", dateFrom: "", dateTo: "" };
@@ -679,6 +679,8 @@ export function App() {
         goTo({ phase: "task-detail", session: { ...session, taskDocuments }, task, returnTo: "home" });
       };
       const addDocument = () => setState({ phase: "document-form", session, returnTo: "home" });
+      const selectAppointment = async (appointment: Appointment) =>
+        goTo(await loadAppointmentDetail(session, appointment, "home"));
       const selectDocument = (doc: MedicalDocument) =>
         goTo({ phase: "document-detail", session, document: doc, returnTo: "home" });
       // A done task drops out of home.openItems, which only the server-side
@@ -692,7 +694,7 @@ export function App() {
           home={session.home}
           doctors={session.doctors}
           appointments={session.appointments}
-          onSelectDoctor={selectDoctor}
+          onSelectAppointment={selectAppointment}
           onAddAppointment={addAppointment}
           onSelectTask={selectTask}
           onMarkTaskDone={markTaskDone}
