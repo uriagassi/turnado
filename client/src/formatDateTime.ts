@@ -43,10 +43,38 @@ export function relativeDayLabel(
 ): string | null {
   const target = new Date(dateTime);
   const dayDiff = daysBetween(calendarDay(now, timeZone), calendarDay(target, timeZone));
+  return dayLabel(dayDiff, target, locale, todayLabel, tomorrowLabel, timeZone);
+}
+
+function dayLabel(
+  dayDiff: number,
+  target: Date,
+  locale: string,
+  todayLabel: string,
+  tomorrowLabel: string,
+  timeZone?: string,
+): string | null {
   if (dayDiff === 0) return todayLabel;
   if (dayDiff === 1) return tomorrowLabel;
   if (dayDiff > 1 && dayDiff < 7) return new Intl.DateTimeFormat(locale, { weekday: "long", timeZone }).format(target);
   return null;
+}
+
+/** formatRelativeDateTime for a date-only "YYYY-MM-DD" value: no time, no UTC-offset day shift. */
+export function formatRelativeDate(
+  date: string,
+  locale: string,
+  todayLabel: string,
+  tomorrowLabel: string,
+  now: Date = new Date(),
+  timeZone?: string,
+): string {
+  const target = new Date(date);
+  const dayDiff = daysBetween(calendarDay(now, timeZone), date);
+  return (
+    dayLabel(dayDiff, target, locale, todayLabel, tomorrowLabel, "UTC") ??
+    new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" }).format(target)
+  );
 }
 
 /**
