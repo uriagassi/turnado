@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DocumentPreview } from "./DocumentPreview";
 import type { UploadedFile } from "../api";
@@ -105,5 +105,51 @@ describe("DocumentPreview download", () => {
     await userEvent.click(screen.getByRole("button", { name: "Download file" }));
 
     expect(click).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the anchor save when sharing is rejected for a non-abort reason", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, blob: async () => blob }));
+    const denied = Object.assign(new Error("denied"), { name: "NotAllowedError" });
+    Object.defineProperty(navigator, "share", { value: vi.fn().mockRejectedValue(denied), configurable: true });
+    Object.defineProperty(navigator, "canShare", { value: () => true, configurable: true });
+    URL.createObjectURL = vi.fn().mockReturnValue("blob:x");
+    URL.revokeObjectURL = vi.fn();
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    render(<DocumentPreview file={file} />);
+    await userEvent.click(screen.getByRole("button", { name: "Download file" }));
+
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("shows an error message when the fetch fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500 }));
+
+    render(<DocumentPreview file={file} />);
+    await userEvent.click(screen.getByRole("button", { name: "Download file" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Download failed. Please try again.");
+  });
+
+  it("disables the button while the download is in flight", async () => {
+    let resolve!: (v: unknown) => void;
+    const fetchMock = vi.fn().mockReturnValue(new Promise((r) => (resolve = r)));
+    vi.stubGlobal("fetch", fetchMock);
+    URL.createObjectURL = vi.fn().mockReturnValue("blob:x");
+    URL.revokeObjectURL = vi.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    render(<DocumentPreview file={file} />);
+    const button = screen.getByRole("button", { name: "Download file" });
+    await userEvent.click(button);
+
+    expect(button).toBeDisabled();
+    await userEvent.click(button);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    resolve({ ok: true, blob: async () => blob });
+    await waitFor(() => expect(button).toBeEnabled());
   });
 });

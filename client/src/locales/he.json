@@ -51,6 +51,7 @@
   "documentForm.closeTaskModal.confirm": "כן, השלם משימה",
   "documentForm.closeTaskModal.cancel": "השאר פתוח",
   "documentPreview.download": "הורדת קובץ",
+  "documentPreview.downloadFailed": "ההורדה נכשלה. נסו שוב.",
   "documentDetail.title": "פרטי מסמך",
   "documentDetail.openFile": "פתיחת קובץ",
   "taskDetail.editDocuments": "עריכת מסמכים",
