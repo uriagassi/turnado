@@ -33,6 +33,7 @@ import {
   Doctor,
   DoctorInput,
   DocumentQueryFilter,
+  DocumentType,
   HomeData,
   MedicalDocument,
   Task,
@@ -46,6 +47,7 @@ import { SignInScreen } from "./screens/SignInScreen";
 import { DoctorsScreen } from "./screens/DoctorsScreen";
 import { DoctorDetailScreen } from "./screens/DoctorDetailScreen";
 import { DoctorFormScreen } from "./screens/DoctorFormScreen";
+import { getDocumentTypeForTask } from "./screens/DocumentFormScreen";
 import { AppointmentFormScreen } from "./screens/AppointmentFormScreen";
 import { AppointmentHistoryScreen } from "./screens/AppointmentHistoryScreen";
 import { UpcomingAppointmentsScreen } from "./screens/UpcomingAppointmentsScreen";
@@ -97,6 +99,26 @@ async function uploadInvitation(appointment: Appointment, file: File): Promise<v
   if (appointment.doctorId) formData.append("doctorId", String(appointment.doctorId));
   formData.append("appointmentIds", JSON.stringify([appointment.id]));
   await uploadDocument(formData);
+}
+
+/** Uploads files as new documents linked to an appointment or task — the detail screens' "Upload new" action. */
+async function uploadLinkedDocuments(
+  files: File[],
+  link: { appointmentIds: number[] } | { taskIds: number[] },
+  type: DocumentType,
+  doctorId: number | null | undefined,
+): Promise<void> {
+  await Promise.all(
+    files.map((file) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("title", file.name.replace(/\.[^/.]+$/, ""));
+      formData.append("type", type);
+      if (doctorId) formData.append("doctorId", String(doctorId));
+      for (const [key, ids] of Object.entries(link)) formData.append(key, JSON.stringify(ids));
+      return uploadDocument(formData);
+    }),
+  );
 }
 
 /** Folds a just-saved Doctor into the in-memory list: replaces it in place on edit, or inserts it in name order on create (list order matches the server's own `ORDER BY name`, see Doctors.ts). */
@@ -525,6 +547,8 @@ export function App() {
   const { t } = useTranslation();
   const [state, setState] = useState<AppState>({ phase: "loading" });
   const [pendingTaskPrompt, setPendingTaskPrompt] = useState<{ taskId: number } | null>(null);
+  const [taskDetailAllDocuments, setTaskDetailAllDocuments] = useState<MedicalDocument[]>([]);
+  const taskDetailId = state.phase === "task-detail" ? state.task.id : null;
   const documentsFilterTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
@@ -539,6 +563,11 @@ export function App() {
    * returning from an edit still resumes wherever the stack already had.
    */
   const [backStack, setBackStack] = useState<AppState[]>([]);
+
+  useEffect(() => {
+    if (taskDetailId === null) return;
+    void fetchDocuments().then(setTaskDetailAllDocuments, () => {});
+  }, [taskDetailId]);
 
   /**
    * Folds freshly-fetched home data into whatever screen is current *now*
@@ -906,6 +935,25 @@ export function App() {
         });
       const selectSimilarTask = (t: Task) => goTo({ phase: "task-detail", session, task: t, returnTo, doctor });
       const taskDocs = session.taskDocuments?.[task.id] ?? [];
+      const refreshTaskDocuments = async () => {
+        const [docs, all] = await Promise.all([fetchDocuments({ taskId: task.id }), fetchDocuments()]);
+        setTaskDetailAllDocuments(all);
+        setState({
+          phase: "task-detail",
+          session: { ...session, taskDocuments: { ...session.taskDocuments, [task.id]: docs } },
+          task,
+          returnTo,
+          doctor,
+        });
+      };
+      const attachDocument = async (document: MedicalDocument) => {
+        await attachTaskDocument(task.id, document.id);
+        await refreshTaskDocuments();
+      };
+      const uploadDocuments = async (files: File[]) => {
+        await uploadLinkedDocuments(files, { taskIds: [task.id] }, getDocumentTypeForTask(task.type), task.doctorId);
+        await refreshTaskDocuments();
+      };
       const similarTasks = session.home.openItems.filter((t) => task.similarTaskIds.includes(t.id));
       return (
         <TaskDetailScreen
@@ -913,6 +961,9 @@ export function App() {
           doctors={session.doctors}
           appointments={session.appointments}
           documents={taskDocs}
+          allDocuments={taskDetailAllDocuments}
+          onAttachDocument={attachDocument}
+          onUploadDocuments={uploadDocuments}
           similarTasks={similarTasks}
           onEdit={edit}
           onStatusChange={changeStatus}
@@ -1019,6 +1070,10 @@ export function App() {
         await attachAppointmentDocument(appointment.id, document.id);
         setState(await loadAppointmentDetail(session, appointment, returnTo));
       };
+      const uploadDocuments = async (files: File[]) => {
+        await uploadLinkedDocuments(files, { appointmentIds: [appointment.id] }, "other", appointment.doctorId);
+        setState(await loadAppointmentDetail(session, appointment, returnTo));
+      };
       // Checking/unchecking an open item straight from the checklist (see
       // OpenItemRow) — also refreshes home, same as task-detail's own
       // changeStatus, since a task's status change here can add/remove it
@@ -1037,6 +1092,7 @@ export function App() {
           allDocuments={allDocuments}
           onEdit={edit}
           onAttachDocument={attachDocument}
+          onUploadDocuments={uploadDocuments}
           onSelectDocument={selectDocument}
           onSelectTask={selectTask}
           onTaskStatusChange={changeTaskStatus}

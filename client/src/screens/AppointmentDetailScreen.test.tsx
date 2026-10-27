@@ -77,6 +77,7 @@ describe("AppointmentDetailScreen", () => {
         allDocuments={[]}
         onEdit={() => {}}
         onAttachDocument={() => {}}
+        onUploadDocuments={() => {}}
       />,
     );
 
@@ -95,6 +96,7 @@ describe("AppointmentDetailScreen", () => {
         allDocuments={[]}
         onEdit={() => {}}
         onAttachDocument={() => {}}
+        onUploadDocuments={() => {}}
       />,
     );
 
@@ -120,6 +122,7 @@ describe("AppointmentDetailScreen", () => {
         allDocuments={[]}
         onEdit={() => {}}
         onAttachDocument={() => {}}
+        onUploadDocuments={() => {}}
         onSelectDocument={onSelectDocument}
       />,
     );
@@ -142,6 +145,7 @@ describe("AppointmentDetailScreen", () => {
         allDocuments={[]}
         onEdit={() => {}}
         onAttachDocument={() => {}}
+        onUploadDocuments={() => {}}
         onSelectTask={onSelectTask}
       />,
     );
@@ -149,6 +153,43 @@ describe("AppointmentDetailScreen", () => {
     await user.click(screen.getByText("Form 17 for Dr. Cohen"));
 
     expect(onSelectTask).toHaveBeenCalledWith(openItem);
+  });
+
+  it("shows the appointment's date and time", () => {
+    render(
+      <AppointmentDetailScreen
+        appointment={appointment({ dateTime: "2020-09-01T10:00:00Z" })}
+        documents={[]}
+        openItems={[]}
+        allDocuments={[]}
+        onEdit={() => {}}
+        onAttachDocument={() => {}}
+        onUploadDocuments={() => {}}
+      />,
+    );
+
+    expect(document.querySelector(".appointment-detail-date")).toHaveTextContent(/2020/);
+  });
+
+  it("uploads new documents chosen through Upload new document", async () => {
+    const user = userEvent.setup();
+    const onUploadDocuments = vi.fn();
+    const file = new File(["x"], "scan.pdf", { type: "application/pdf" });
+
+    render(
+      <AppointmentDetailScreen
+        appointment={appointment()}
+        documents={[]}
+        openItems={[]}
+        allDocuments={[]}
+        onEdit={() => {}}
+        onAttachDocument={() => {}}
+        onUploadDocuments={onUploadDocuments}
+      />,
+    );
+    await user.upload(screen.getByLabelText("Upload new document"), file);
+
+    expect(onUploadDocuments).toHaveBeenCalledWith([file]);
   });
 
   it("attaches an existing document found through the searchable picker", async () => {
@@ -165,6 +206,7 @@ describe("AppointmentDetailScreen", () => {
         allDocuments={[bloodTest, referral]}
         onEdit={() => {}}
         onAttachDocument={onAttachDocument}
+        onUploadDocuments={() => {}}
       />,
     );
 
@@ -192,6 +234,7 @@ describe("AppointmentDetailScreen", () => {
         allDocuments={[attached, other]}
         onEdit={() => {}}
         onAttachDocument={() => {}}
+        onUploadDocuments={() => {}}
       />,
     );
 
@@ -215,6 +258,7 @@ describe("AppointmentDetailScreen", () => {
         allDocuments={[]}
         onEdit={onEdit}
         onAttachDocument={() => {}}
+        onUploadDocuments={() => {}}
       />,
     );
 
@@ -237,6 +281,7 @@ describe("AppointmentDetailScreen", () => {
         allDocuments={[]}
         onEdit={() => {}}
         onAttachDocument={() => {}}
+        onUploadDocuments={() => {}}
       />,
     );
 
@@ -261,6 +306,7 @@ describe("AppointmentDetailScreen", () => {
         allDocuments={[]}
         onEdit={() => {}}
         onAttachDocument={() => {}}
+        onUploadDocuments={() => {}}
         onSelectDoctor={onSelectDoctor}
       />,
     );
@@ -283,6 +329,7 @@ describe("AppointmentDetailScreen", () => {
         allDocuments={[]}
         onEdit={() => {}}
         onAttachDocument={() => {}}
+        onUploadDocuments={() => {}}
         onSelectDocument={onSelectDocument}
       />,
     );
@@ -307,6 +354,7 @@ describe("AppointmentDetailScreen", () => {
         allDocuments={[]}
         onEdit={() => {}}
         onAttachDocument={() => {}}
+        onUploadDocuments={() => {}}
       />,
     );
 
@@ -327,6 +375,7 @@ describe("AppointmentDetailScreen", () => {
         allDocuments={[]}
         onEdit={() => {}}
         onAttachDocument={() => {}}
+        onUploadDocuments={() => {}}
         onTaskStatusChange={onTaskStatusChange}
       />,
     );
@@ -349,6 +398,7 @@ describe("AppointmentDetailScreen", () => {
         allDocuments={[]}
         onEdit={() => {}}
         onAttachDocument={() => {}}
+        onUploadDocuments={() => {}}
         onTaskStatusChange={onTaskStatusChange}
       />,
     );
@@ -372,6 +422,7 @@ describe("AppointmentDetailScreen", () => {
         allDocuments={[]}
         onEdit={() => {}}
         onAttachDocument={() => {}}
+        onUploadDocuments={() => {}}
       />,
     );
 
@@ -392,6 +443,7 @@ describe("AppointmentDetailScreen", () => {
         allDocuments={[]}
         onEdit={() => {}}
         onAttachDocument={() => {}}
+        onUploadDocuments={() => {}}
         onSelectTask={onSelectTask}
         onTaskStatusChange={() => {}}
       />,

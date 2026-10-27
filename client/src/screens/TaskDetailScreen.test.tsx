@@ -402,6 +402,46 @@ describe("TaskDetailScreen", () => {
     expect(screen.getByRole("button", { name: /Edit documents/i })).toBeInTheDocument();
   });
 
+  it("offers upload-new and choose-existing, reporting each to the caller", async () => {
+    const user = userEvent.setup();
+    const onAttachDocument = vi.fn();
+    const onUploadDocuments = vi.fn();
+    const existing = {
+      id: 7,
+      notebookId: 0,
+      title: "Referral letter",
+      type: "referral" as const,
+      documentDate: null,
+      doctorId: null,
+      notes: null,
+      file: { fileName: "r.pdf", uniqueFilename: "r.pdf", mime: "application/pdf", hash: "h", size: 1 },
+      appointmentIds: [],
+      taskIds: [],
+      createdAt: "2026-08-01T00:00:00.000Z",
+      updatedAt: "2026-08-01T00:00:00.000Z",
+    };
+    const file = new File(["x"], "scan.pdf", { type: "application/pdf" });
+
+    render(
+      <TaskDetailScreen
+        task={makeTask()}
+        doctors={doctors}
+        allDocuments={[existing]}
+        onEdit={() => {}}
+        onStatusChange={() => {}}
+        onAttachDocument={onAttachDocument}
+        onUploadDocuments={onUploadDocuments}
+      />,
+    );
+
+    await user.upload(screen.getByLabelText("Upload new document"), file);
+    expect(onUploadDocuments).toHaveBeenCalledWith([file]);
+
+    await user.click(screen.getByRole("button", { name: "Attach existing document" }));
+    await user.click(screen.getByText("Referral letter"));
+    expect(onAttachDocument).toHaveBeenCalledWith(existing);
+  });
+
   describe("possibly-a-duplicate badge and candidate list (issue #12)", () => {
     it("shows the badge and lists every current candidate when the task has similarTaskIds", () => {
       const other = makeTask({ id: 2, title: "Other blood test", status: "in-progress" });
