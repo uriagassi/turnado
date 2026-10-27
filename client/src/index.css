@@ -1338,6 +1338,8 @@ html[dir="rtl"] .back-link-arrow {
   text-decoration: none;
   font-weight: 500;
   font-size: 0.875rem;
+  font-family: inherit;
+  cursor: pointer;
 }
 
 .checkbox-group {

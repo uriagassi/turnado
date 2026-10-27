@@ -51,6 +51,7 @@
   "documentForm.closeTaskModal.confirm": "Yes, complete item",
   "documentForm.closeTaskModal.cancel": "Keep open",
   "documentPreview.download": "Download file",
+  "documentPreview.downloadFailed": "Download failed. Please try again.",
   "documentDetail.title": "Document details",
   "taskDetail.editDocuments": "Edit documents",
   "doctorDetail.edit": "Edit",

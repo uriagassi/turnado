@@ -1,5 +1,30 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { UploadedFile } from "../api";
+
+function saveViaAnchor(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+async function saveOrShareBlob(blob: Blob, fileName: string, mime: string) {
+  const shareFile = new File([blob], fileName, { type: blob.type || mime });
+  if (navigator.canShare?.({ files: [shareFile] })) {
+    try {
+      await navigator.share({ files: [shareFile], title: fileName });
+      return;
+    } catch (err) {
+      if ((err as Error).name === "AbortError") return;
+    }
+  }
+  saveViaAnchor(blob, fileName);
+}
 
 export function DocumentPreview({ file }: { file: UploadedFile }) {
   const { t } = useTranslation();
@@ -15,6 +40,24 @@ export function DocumentPreview({ file }: { file: UploadedFile }) {
     (file.fileName || "").toLowerCase().endsWith(".pdf") ||
     (file.uniqueFilename || "").toLowerCase().endsWith(".pdf");
 
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const download = async () => {
+    setBusy(true);
+    setFailed(false);
+    try {
+      const res = await fetch(attachmentUrl);
+      if (!res.ok) throw new Error(String(res.status));
+      await saveOrShareBlob(await res.blob(), file.fileName, file.mime ?? "");
+    } catch (err) {
+      console.error("Download failed", err);
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="document-preview">
       {isImage && (
@@ -28,15 +71,10 @@ export function DocumentPreview({ file }: { file: UploadedFile }) {
         />
       )}
       <div className="document-preview-actions">
-        <a
-          href={attachmentUrl}
-          download={file.fileName}
-          className="btn-download"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
+        <button type="button" className="btn-download" onClick={download} disabled={busy}>
           {t("documentPreview.download")}
-        </a>
+        </button>
+        {failed && <p role="alert">{t("documentPreview.downloadFailed")}</p>}
       </div>
     </div>
   );
