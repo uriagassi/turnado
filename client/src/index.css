@@ -620,18 +620,6 @@ html[dir="rtl"] .back-link-arrow {
   font-weight: 700;
 }
 
-.hero-doctor-link {
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: none;
-  color: inherit;
-  font: inherit;
-  font-weight: inherit;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
 .hero-specialty {
   font-weight: 400;
 }

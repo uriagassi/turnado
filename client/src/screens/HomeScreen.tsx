@@ -47,7 +47,7 @@ export function HomeScreen({
   home,
   doctors,
   appointments = [],
-  onSelectDoctor,
+  onSelectAppointment,
   onAddAppointment,
   onSelectTask,
   onMarkTaskDone,
@@ -59,8 +59,8 @@ export function HomeScreen({
   home: HomeData;
   doctors: Doctor[];
   appointments?: Appointment[];
-  /** Follows the doctor-name link on the hero card into that doctor's detail view (see issue #4 AC). */
-  onSelectDoctor: (doctor: Doctor) => void;
+  /** Opens the appointment detail from the hero card (issue #68). */
+  onSelectAppointment?: (appointment: Appointment) => void;
   onAddAppointment: () => void;
   onSelectTask?: (task: Task) => void;
   /** The row's own "mark done" action — celebrates (issue #13) once the returned save resolves. */
@@ -146,12 +146,22 @@ export function HomeScreen({
           // hero-card prototype (05-home-screen.html, variant A): doctor +
           // specialty on one line, then a date/location meta line — see
           // medical/.scratch/medical-app-spec/prototypes.
-          <div className="hero-card">
+          <div
+            className="hero-card clickable"
+            role="button"
+            tabIndex={0}
+            onClick={() => onSelectAppointment?.(home.nextAppointment!)}
+            onKeyDown={(e) => {
+              if (e.target !== e.currentTarget) return;
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onSelectAppointment?.(home.nextAppointment!);
+              }
+            }}
+          >
             {heroDoctor && (
               <p className="hero-doctor-line">
-                <button type="button" className="hero-doctor-link" onClick={() => onSelectDoctor(heroDoctor)}>
-                  {heroDoctor.name}
-                </button>
+                <span>{heroDoctor.name}</span>
                 {heroDoctor.specialty && <span className="hero-specialty"> — {heroDoctor.specialty}</span>}
               </p>
             )}

@@ -179,7 +179,7 @@ function selectAppointmentTasks(tasks: Task[], appointmentId: number): Task[] {
 async function loadAppointmentDetail(
   session: Session,
   appointment: Appointment,
-  returnTo: "appointment-upcoming" | "appointment-history",
+  returnTo: "home" | "appointment-upcoming" | "appointment-history",
 ): Promise<Extract<AppState, { phase: "appointment-detail" }>> {
   const [documents, allDocuments, allTasks] = await Promise.all([
     fetchDocuments({ appointmentId: appointment.id }),
@@ -362,7 +362,7 @@ export type AppState =
       openItems: Task[];
       /** Every document, for the checklist's "attach existing document" picker to search across. */
       allDocuments: MedicalDocument[];
-      returnTo: "appointment-upcoming" | "appointment-history";
+      returnTo: "home" | "appointment-upcoming" | "appointment-history";
     };
 
 const EMPTY_DOCUMENT_FILTERS: DocumentFilters = { query: "", type: "", doctorId: "", dateFrom: "", dateTo: "" };
@@ -685,6 +685,8 @@ export function App() {
       // selection knows — so re-fetch home, but apply it to whatever screen
       // is current by then (see applyFreshHome), never forcing a jump back
       // here if the user navigated away while the save was in flight.
+      const selectAppointment = async (appointment: Appointment) =>
+        goTo(await loadAppointmentDetail(session, appointment, "home"));
       const markTaskDone = (task: Task) =>
         saveThenRefresh(setTaskStatus(task.id, "done"), async () => applyFreshHome(await fetchHome()));
       return (
@@ -692,7 +694,7 @@ export function App() {
           home={session.home}
           doctors={session.doctors}
           appointments={session.appointments}
-          onSelectDoctor={selectDoctor}
+          onSelectAppointment={selectAppointment}
           onAddAppointment={addAppointment}
           onSelectTask={selectTask}
           onMarkTaskDone={markTaskDone}

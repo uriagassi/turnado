@@ -8,7 +8,6 @@ const emptyHome: HomeData = { nextAppointment: null, openItems: [], recentDocume
 const noopProps = {
   onRefresh: () => {},
   doctors: [] as Doctor[],
-  onSelectDoctor: () => {},
   onAddAppointment: () => {},
 };
 
@@ -138,29 +137,61 @@ describe("HomeScreen", () => {
     expect(screen.getByRole("button", { name: "+ Add appointment" })).toBeInTheDocument();
   });
 
-  it("shows the appointment's doctor as a link that opens that doctor's detail view", async () => {
+  const heroHome = (doctorId: number | null, missedReminder: "send failed" | null = null): HomeData => ({
+    nextAppointment: {
+      id: 1,
+      doctorId,
+      dateTime: "2026-09-01T10:00:00Z",
+      location: undefined,
+      notes: "Annual checkup",
+      status: "planned",
+      summary: null,
+      missedReminder,
+    },
+    openItems: [],
+    recentDocuments: [],
+  });
+  const janeSmith: Doctor = { id: 7, name: "Dr. Jane Smith", notes: "", photoPath: null };
+
+  it("opens the appointment when the hero card is clicked anywhere", async () => {
     const user = userEvent.setup();
-    const onSelectDoctor = vi.fn();
-    const janeSmith: Doctor = { id: 7, name: "Dr. Jane Smith", notes: "", photoPath: null };
-    const home: HomeData = {
-      nextAppointment: {
-        id: 1,
-        doctorId: 7,
-        dateTime: "2026-09-01T10:00:00Z",
-        location: undefined,
-        notes: "Annual checkup",
-        status: "planned",
-        summary: null,
-        missedReminder: null,
-      },
-      openItems: [],
-      recentDocuments: [],
-    };
+    const onSelectAppointment = vi.fn();
+    const home = heroHome(7);
 
-    render(<HomeScreen home={home} {...noopProps} doctors={[janeSmith]} onSelectDoctor={onSelectDoctor} />);
-    await user.click(screen.getByRole("button", { name: "Dr. Jane Smith" }));
+    render(<HomeScreen home={home} {...noopProps} doctors={[janeSmith]} onSelectAppointment={onSelectAppointment} />);
+    await user.click(screen.getByText("Annual checkup"));
 
-    expect(onSelectDoctor).toHaveBeenCalledWith(janeSmith);
+    expect(onSelectAppointment).toHaveBeenCalledWith(home.nextAppointment);
+  });
+
+  it("opens the appointment when the hero card is activated with Enter or Space", async () => {
+    const user = userEvent.setup();
+    const onSelectAppointment = vi.fn();
+    render(<HomeScreen home={heroHome(7)} {...noopProps} doctors={[janeSmith]} onSelectAppointment={onSelectAppointment} />);
+
+    const card = screen.getByRole("button", { name: /Annual checkup/ });
+    card.focus();
+    await user.keyboard("{Enter}");
+    await user.keyboard(" ");
+
+    expect(onSelectAppointment).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows the doctor name on the hero card without a nested doctor link", () => {
+    render(<HomeScreen home={heroHome(7)} {...noopProps} doctors={[janeSmith]} />);
+
+    expect(screen.getByText("Dr. Jane Smith")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Dr. Jane Smith" })).not.toBeInTheDocument();
+  });
+
+  it("doesn't open the appointment when the missed-reminder badge is tapped", async () => {
+    const user = userEvent.setup();
+    const onSelectAppointment = vi.fn();
+    render(<HomeScreen home={heroHome(null, "send failed")} {...noopProps} onSelectAppointment={onSelectAppointment} />);
+
+    await user.click(screen.getByRole("button", { name: "Reminder missed" }));
+
+    expect(onSelectAppointment).not.toHaveBeenCalled();
   });
 
   it("calls onAddAppointment when the add-appointment control is activated", async () => {
@@ -171,27 +202,6 @@ describe("HomeScreen", () => {
     await user.click(screen.getByRole("button", { name: "+ Add appointment" }));
 
     expect(onAddAppointment).toHaveBeenCalledOnce();
-  });
-
-  it("omits the doctor link when the appointment has no doctor attached", () => {
-    const home: HomeData = {
-      nextAppointment: {
-        id: 1,
-        doctorId: null,
-        dateTime: "2026-09-01T10:00:00Z",
-        location: undefined,
-        notes: "MRI scan",
-        status: "planned",
-        summary: null,
-        missedReminder: null,
-      },
-      openItems: [],
-      recentDocuments: [],
-    };
-
-    render(<HomeScreen home={home} {...noopProps} />);
-
-    expect(screen.queryByRole("button", { name: /Dr\./ })).not.toBeInTheDocument();
   });
 
   it("renders open items in the feed with status badges and triggers onSelectTask", async () => {
