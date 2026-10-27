@@ -1013,6 +1013,15 @@ html[dir="rtl"] .back-link-arrow {
   transition: border-color 0.1s, background-color 0.1s;
 }
 
+.hero-card.clickable {
+  cursor: pointer;
+  transition: filter 0.1s;
+}
+
+.hero-card.clickable:hover {
+  filter: brightness(1.08);
+}
+
 .feed-row.clickable:hover,
 .item-row.clickable:hover {
   border-color: var(--color-primary);

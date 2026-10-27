@@ -93,6 +93,9 @@ export function HomeScreen({
       throw err;
     });
   }
+  const openHeroAppointment = () => {
+    if (home.nextAppointment) onSelectAppointment?.(home.nextAppointment);
+  };
   const heroDoctor = home.nextAppointment?.doctorId
     ? doctors.find((d) => d.id === home.nextAppointment?.doctorId)
     : undefined;
@@ -141,21 +144,17 @@ export function HomeScreen({
           </button>
         </div>
         {home.nextAppointment ? (
-          // Single-column, phone-legible per the AC — no side-by-side layout
-          // to squeeze on a narrow viewport. Structure follows the winning
-          // hero-card prototype (05-home-screen.html, variant A): doctor +
-          // specialty on one line, then a date/location meta line — see
-          // medical/.scratch/medical-app-spec/prototypes.
+          // Single-column, phone-legible; whole card opens the appointment (issue #68).
           <div
             className="hero-card clickable"
             role="button"
             tabIndex={0}
-            onClick={() => onSelectAppointment?.(home.nextAppointment!)}
+            onClick={openHeroAppointment}
             onKeyDown={(e) => {
               if (e.target !== e.currentTarget) return;
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
-                onSelectAppointment?.(home.nextAppointment!);
+                openHeroAppointment();
               }
             }}
           >
