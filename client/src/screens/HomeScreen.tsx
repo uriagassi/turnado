@@ -60,7 +60,7 @@ export function HomeScreen({
   doctors: Doctor[];
   appointments?: Appointment[];
   /** Opens the appointment detail from the hero card (issue #68). */
-  onSelectAppointment?: (appointment: Appointment) => void;
+  onSelectAppointment: (appointment: Appointment) => void;
   onAddAppointment: () => void;
   onSelectTask?: (task: Task) => void;
   /** The row's own "mark done" action — celebrates (issue #13) once the returned save resolves. */
@@ -94,7 +94,7 @@ export function HomeScreen({
     });
   }
   const openHeroAppointment = () => {
-    if (home.nextAppointment) onSelectAppointment?.(home.nextAppointment);
+    if (home.nextAppointment) onSelectAppointment(home.nextAppointment);
   };
   const heroDoctor = home.nextAppointment?.doctorId
     ? doctors.find((d) => d.id === home.nextAppointment?.doctorId)

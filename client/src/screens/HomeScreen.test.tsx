@@ -8,6 +8,7 @@ const emptyHome: HomeData = { nextAppointment: null, openItems: [], recentDocume
 const noopProps = {
   onRefresh: () => {},
   doctors: [] as Doctor[],
+  onSelectAppointment: () => {},
   onAddAppointment: () => {},
 };
 

@@ -53,6 +53,7 @@ describe("completion celebration entry points", () => {
       <HomeScreen
         home={{ nextAppointment: null, openItems: [task], recentDocuments: [] }}
         doctors={[]}
+        onSelectAppointment={() => {}}
         onAddAppointment={() => {}}
         onRefresh={() => {}}
         onSelectTask={onSelectTask}
@@ -78,6 +79,7 @@ describe("completion celebration entry points", () => {
       <HomeScreen
         home={home}
         doctors={[]}
+        onSelectAppointment={() => {}}
         onAddAppointment={() => {}}
         onRefresh={() => {}}
         onSelectTask={onSelectTask}
