@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import type { Appointment, Doctor, MedicalDocument, Task } from "../api";
 import { DoctorAvatar } from "../components/DoctorAvatar";
+import { useRelativeDate } from "../hooks/useRelativeDate";
 import { useRelativeDateTime } from "../hooks/useRelativeDateTime";
 import { TaskStatusBadge } from "../components/TaskStatusBadge";
 import { SimilarTaskBadge } from "../components/SimilarTaskBadge";
@@ -24,6 +25,7 @@ export function DoctorDetailScreen({
 }) {
   const { t } = useTranslation();
   const formatRelative = useRelativeDateTime();
+  const formatRelativeDay = useRelativeDate();
 
   return (
     <main className="screen doctor-detail-screen">
@@ -99,7 +101,7 @@ export function DoctorDetailScreen({
                 <div>
                   <p className="item-row-notes">{task.title}</p>
                   <p className="item-row-sub">
-                    {task.dueDate ? formatRelative(task.dueDate) : (task.approximateDateWindow ?? t("task.due.noDate"))}
+                    {task.dueDate ? formatRelativeDay(task.dueDate) : (task.approximateDateWindow ?? t("task.due.noDate"))}
                   </p>
                 </div>
                 <div className="item-row-badges">
