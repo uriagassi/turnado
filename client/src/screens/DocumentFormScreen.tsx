@@ -195,6 +195,7 @@ export function DocumentFormScreen({
             {t("documentForm.title.label")}
             <input
               type="text"
+              dir="auto"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
@@ -287,7 +288,7 @@ export function DocumentFormScreen({
         <div className="form-field">
           <label>
             {t("documentForm.notes.label")}
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <textarea dir="auto" value={notes} onChange={(e) => setNotes(e.target.value)} />
           </label>
         </div>
 

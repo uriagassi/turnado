@@ -200,6 +200,7 @@ export function TaskFormScreen({
             {t("taskForm.name.label")}
             <input
               type="text"
+              dir="auto"
               value={formData.title}
               onChange={(e) => setField("title", e.target.value)}
             />
@@ -284,6 +285,7 @@ export function TaskFormScreen({
                 {t("taskForm.recurrenceWindow.label")}
                 <input
                   type="text"
+                  dir="auto"
                   value={formData.recurrenceWindow ?? ""}
                   onChange={(e) => setField("recurrenceWindow", e.target.value)}
                 />
@@ -294,6 +296,7 @@ export function TaskFormScreen({
                 {t("taskForm.approximateDateWindow.label")}
                 <input
                   type="text"
+                  dir="auto"
                   value={formData.approximateDateWindow ?? ""}
                   onChange={(e) => setField("approximateDateWindow", e.target.value)}
                 />
@@ -309,6 +312,7 @@ export function TaskFormScreen({
                 {t("taskForm.institution.label")}
                 <input
                   type="text"
+                  dir="auto"
                   value={formData.institution ?? ""}
                   onChange={(e) => setField("institution", e.target.value)}
                 />
@@ -319,6 +323,7 @@ export function TaskFormScreen({
                 {t("taskForm.department.label")}
                 <input
                   type="text"
+                  dir="auto"
                   value={formData.department ?? ""}
                   onChange={(e) => setField("department", e.target.value)}
                 />
@@ -329,6 +334,7 @@ export function TaskFormScreen({
                 {t("taskForm.healthFund.label")}
                 <input
                   type="text"
+                  dir="auto"
                   value={formData.healthFund ?? ""}
                   onChange={(e) => setField("healthFund", e.target.value)}
                 />
@@ -339,6 +345,7 @@ export function TaskFormScreen({
                 {t("taskForm.codeNumber.label")}
                 <input
                   type="text"
+                  dir="auto"
                   value={formData.codeNumber ?? ""}
                   onChange={(e) => setField("codeNumber", e.target.value)}
                 />
@@ -349,6 +356,7 @@ export function TaskFormScreen({
                 {t("taskForm.codeName.label")}
                 <input
                   type="text"
+                  dir="auto"
                   value={formData.codeName ?? ""}
                   onChange={(e) => setField("codeName", e.target.value)}
                 />
@@ -364,6 +372,7 @@ export function TaskFormScreen({
                 {t("taskForm.issuingBody.label")}
                 <input
                   type="text"
+                  dir="auto"
                   value={formData.issuingBody ?? ""}
                   onChange={(e) => setField("issuingBody", e.target.value)}
                 />
@@ -374,6 +383,7 @@ export function TaskFormScreen({
                 {t("taskForm.purpose.label")}
                 <input
                   type="text"
+                  dir="auto"
                   value={formData.purpose ?? ""}
                   onChange={(e) => setField("purpose", e.target.value)}
                 />

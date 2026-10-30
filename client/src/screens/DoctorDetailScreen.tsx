@@ -43,9 +43,23 @@ export function DoctorDetailScreen({
       {(doctor.clinic || doctor.phone || doctor.address || doctor.email) && (
         <div className="card doctor-contact">
           {doctor.clinic && <p>{doctor.clinic}</p>}
-          {doctor.phone && <p>{doctor.phone}</p>}
-          {doctor.address && <p>{doctor.address}</p>}
-          {doctor.email && <p>{doctor.email}</p>}
+          {doctor.phone && (
+            <p>
+              <a href={`tel:${doctor.phone}`}>{doctor.phone}</a>
+            </p>
+          )}
+          {doctor.address && (
+            <p>
+              <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(doctor.address)}`} target="_blank" rel="noreferrer">
+                {doctor.address}
+              </a>
+            </p>
+          )}
+          {doctor.email && (
+            <p>
+              <a href={`mailto:${doctor.email}`}>{doctor.email}</a>
+            </p>
+          )}
         </div>
       )}
       <button type="button" className="edit-doctor" onClick={onEdit}>
@@ -62,7 +76,7 @@ export function DoctorDetailScreen({
           // appointment rather than just the soonest.
           <div className="item-row-list">
             {appointments.map((appointment) => (
-              <div className="card item-row" key={appointment.id}>
+              <div className="item-row item-row-static" key={appointment.id}>
                 <div>
                   <p className="item-row-notes">{appointment.notes}</p>
                   <p className="item-row-sub">{formatRelative(appointment.dateTime)}</p>

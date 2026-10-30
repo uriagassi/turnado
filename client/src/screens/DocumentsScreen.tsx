@@ -60,11 +60,6 @@ function groupByType(documents: MedicalDocument[]): DocumentTypeGroup[] {
   );
 }
 
-/** Human-readable name for a chip's remove-button aria-label — "query"/"type"/"dateFrom"/"dateTo" read fine as-is, "doctorId" reads as "doctor". */
-function chipFieldName(key: keyof DocumentFilters): string {
-  return key === "doctorId" ? "doctor" : key;
-}
-
 /** Resolves a document's linked appointments/tasks out of the full lists the screen was handed — the badge's expanded detail. */
 function selectLinkedItems(
   document: MedicalDocument,
@@ -163,6 +158,7 @@ export function DocumentsScreen({
               {t("documentsScreen.filters.query.label")}
               <input
                 type="text"
+                dir="auto"
                 value={filters.query}
                 onChange={(e) => onFiltersChange({ ...filters, query: e.target.value })}
               />
@@ -238,7 +234,7 @@ export function DocumentsScreen({
               {chip.label}
               <button
                 type="button"
-                aria-label={`Remove ${chipFieldName(chip.key)} filter`}
+                aria-label={t("documentsScreen.filters.removeChip", { filter: chip.label })}
                 onClick={() => onFiltersChange({ ...filters, [chip.key]: EMPTY_FILTER_VALUES[chip.key] })}
               >
                 ×

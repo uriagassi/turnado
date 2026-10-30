@@ -202,14 +202,11 @@ export function TaskDetailScreen({
         <div className="card task-detail-section">
           <div className="section-header">
             <h2 className="section-title">{t("doctorDetail.documents.title")}</h2>
-            <button
-              type="button"
-              className="btn-icon-edit"
-              aria-label={t("taskDetail.editDocuments")}
-              onClick={() => onEdit(task)}
-            >
-              {documents.length > 0 ? "✎" : "+"}
-            </button>
+            {documents.length > 0 && (
+              <button type="button" className="btn-icon-edit" aria-label={t("taskDetail.editDocuments")} onClick={() => onEdit(task)}>
+                ✎
+              </button>
+            )}
           </div>
           {documents.length > 0 ? (
             <div className="task-documents-list">
