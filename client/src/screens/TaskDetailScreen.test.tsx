@@ -386,7 +386,7 @@ describe("TaskDetailScreen", () => {
     expect(onEdit).toHaveBeenCalledWith(task);
   });
 
-  it("still offers the documents edit shortcut when the task has no documents yet", () => {
+  it("leaves attaching to the inline add control, with no edit shortcut, when the task has no documents yet", () => {
     const task: Task = {
       id: 21,
       type: "test",
@@ -414,7 +414,7 @@ describe("TaskDetailScreen", () => {
 
     render(<TaskDetailScreen onAttachDocument={() => {}} onUploadDocuments={() => {}} task={task} doctors={doctors} onEdit={() => {}} onStatusChange={() => {}} />);
 
-    expect(screen.getByRole("button", { name: /Edit documents/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Edit documents/i })).not.toBeInTheDocument();
   });
 
   it("offers upload-new and choose-existing, reporting each to the caller", async () => {

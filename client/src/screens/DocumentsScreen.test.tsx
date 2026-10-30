@@ -151,7 +151,7 @@ describe("DocumentsScreen", () => {
       filters: { ...emptyFilters(), query: "blood", type: "referral" },
     });
 
-    await user.click(screen.getByRole("button", { name: "Remove query filter" }));
+    await user.click(screen.getByRole("button", { name: "Remove filter: blood" }));
 
     expect(onFiltersChange).toHaveBeenCalledWith({ ...emptyFilters(), type: "referral" });
   });

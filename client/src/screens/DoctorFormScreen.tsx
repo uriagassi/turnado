@@ -107,7 +107,7 @@ export function DoctorFormScreen({
         <div className="form-field">
           <label>
             {t("doctorForm.name.label")}
-            <input type="text" value={formData.name} onChange={(e) => setField("name", e.target.value)} />
+            <input type="text" dir="auto" value={formData.name} onChange={(e) => setField("name", e.target.value)} />
           </label>
           {errors.name && <p className="field-error">{errors.name}</p>}
         </div>
@@ -123,7 +123,7 @@ export function DoctorFormScreen({
         <div className="form-field">
           <label>
             {t("doctorForm.notes.label")}
-            <textarea value={formData.notes ?? ""} onChange={(e) => setField("notes", e.target.value)} />
+            <textarea dir="auto" value={formData.notes ?? ""} onChange={(e) => setField("notes", e.target.value)} />
           </label>
         </div>
         <div className="form-field">

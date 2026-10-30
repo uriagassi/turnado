@@ -87,7 +87,7 @@ export function AppointmentCard({
         <div className="appointment-summary-field">
           <label>
             {t("appointmentCard.summary.label")}
-            <textarea value={summaryDraft} onChange={(e) => setSummaryDraft(e.target.value)} />
+            <textarea dir="auto" value={summaryDraft} onChange={(e) => setSummaryDraft(e.target.value)} />
           </label>
           <button
             type="button"

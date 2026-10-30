@@ -97,13 +97,13 @@ export function AppointmentFormScreen({
         <div className="form-field">
           <label>
             {t("appointmentForm.location.label")}
-            <input type="text" value={location.value} onChange={(e) => handleLocationChange(e.target.value)} />
+            <input type="text" dir="auto" value={location.value} onChange={(e) => handleLocationChange(e.target.value)} />
           </label>
         </div>
         <div className="form-field">
           <label>
             {t("appointmentForm.notes.label")}
-            <textarea value={formData.notes} onChange={(e) => setField("notes", e.target.value)} />
+            <textarea dir="auto" value={formData.notes} onChange={(e) => setField("notes", e.target.value)} />
           </label>
         </div>
         {!appointment?.id && (

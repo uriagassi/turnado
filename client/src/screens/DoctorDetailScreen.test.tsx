@@ -32,6 +32,14 @@ describe("DoctorDetailScreen", () => {
     expect(screen.getByText("Prefers morning appointments")).toBeInTheDocument();
   });
 
+  it("links the phone, address and email", () => {
+    render(<DoctorDetailScreen doctor={doctor()} onEdit={() => {}} />);
+
+    expect(screen.getByRole("link", { name: "555-1234" })).toHaveAttribute("href", "tel:555-1234");
+    expect(screen.getByRole("link", { name: "jane.smith@example.com" })).toHaveAttribute("href", "mailto:jane.smith@example.com");
+    expect(screen.getByRole("link", { name: "12 Elm St" })).toHaveAttribute("href", expect.stringContaining("12%20Elm%20St"));
+  });
+
   it("omits the notes paragraph entirely when the doctor has no notes", () => {
     const { container } = render(<DoctorDetailScreen doctor={doctor({ notes: undefined })} onEdit={() => {}} />);
 

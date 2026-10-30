@@ -224,7 +224,7 @@ export function HomeScreen({
                       <span className="feed-when">{formatTaskDue(task)}</span>
                     </div>
                     <div className="feed-meta">
-                      <TaskStatusBadge status={task.status} />
+                      {task.status !== "open" && <TaskStatusBadge status={task.status} />}
                       {pendingLabel && <span className="badge type-tag">{pendingLabel}</span>}
                       {task.missedReminder && <MissedReminderBadge reason={task.missedReminder} />}
                       {task.similarTaskIds.length > 0 && <SimilarTaskBadge />}

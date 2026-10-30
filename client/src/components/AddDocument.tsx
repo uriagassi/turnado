@@ -44,7 +44,7 @@ export function AddDocument({
           <div className="add-document-panel-header">
             <label className="add-document-search">
               {t("documentPicker.search.label")}
-              <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} />
+              <input type="text" dir="auto" value={query} onChange={(e) => setQuery(e.target.value)} />
             </label>
             <label className="btn-small btn-secondary add-document-upload">
               {t("addDocument.upload")}

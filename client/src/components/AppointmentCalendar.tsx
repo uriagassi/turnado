@@ -123,6 +123,7 @@ export function AppointmentCalendar({
                 "calendar-day" +
                 (cell.inMonth ? "" : " outside-month") +
                 (isToday ? " today" : "") +
+                (cell.appointments.length > 0 ? " has-appointments" : "") +
                 (selectedDay === cell.dateKey ? " selected" : "")
               }
               aria-pressed={selectedDay === cell.dateKey}

@@ -17,15 +17,15 @@
   --color-card-bg: light-dark(#ffffff, #1c1f26);
   --color-border: light-dark(#e2e5ea, #343a45);
   --color-text: light-dark(#1c2128, #e5e7eb);
-  --color-text-dim: light-dark(#6b7280, #9ca3af);
+  --color-text-dim: light-dark(#646b78, #9ca3af);
   --color-primary: #2563eb;
-  --color-primary-text: light-dark(#2563eb, #60a5fa);
+  --color-primary-text: light-dark(#1d4ed8, #60a5fa);
   --color-primary-dim: light-dark(#dbeafe, #1e293b);
   --color-green: light-dark(#15803d, #4ade80);
   --color-green-bg: light-dark(#dcfce7, #14532d);
   --color-amber: light-dark(#b45309, #fbbf24);
   --color-amber-bg: light-dark(#fef3c7, #78350f);
-  --color-gray: light-dark(#6b7280, #9ca3af);
+  --color-gray: light-dark(#646b78, #9ca3af);
   --color-gray-bg: light-dark(#eef0f3, #262b34);
   --color-red: light-dark(#b91c1c, #f87171);
   --color-red-bg: light-dark(#fee2e2, #450a0a);
@@ -39,7 +39,7 @@
      the same four pairs. "postponed" is the prototypes' "deferred"
      (purple); "cancelled" reuses the neutral gray. */
   --status-planned-bg: var(--color-primary-dim);
-  --status-planned-fg: var(--color-primary);
+  --status-planned-fg: var(--color-primary-text);
   --status-done-bg: var(--color-green-bg);
   --status-done-fg: var(--color-green);
   --status-cancelled-bg: var(--color-gray-bg);
@@ -174,7 +174,7 @@ h1 {
    something coming up stands out from one who doesn't. */
 .doctor-row-next {
   font-size: 0.8125rem;
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 
 /* Static tap-hint pill — always visible rather than hover-only, since touch
@@ -183,7 +183,7 @@ h1 {
   flex-shrink: 0;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   background: var(--color-primary-dim);
   border-radius: 999px;
   padding: 0.3rem 0.625rem;
@@ -295,6 +295,20 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Read-only rows (nothing opens on tap): no card chrome, so they don't
+   look like the tappable .card rows. */
+.item-row-static {
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.doctor-contact a {
+  color: var(--color-primary-text);
 }
 
 .item-row-sub {
@@ -319,6 +333,7 @@ h1 {
    space-between layout, so checking one off reads as ticking a list, not
    as two unrelated ends of a card. */
 .checklist-item {
+  min-height: 2.75rem;
   justify-content: flex-start;
   align-items: center;
   gap: 0.625rem;
@@ -326,8 +341,8 @@ h1 {
 
 .checklist-checkbox {
   flex-shrink: 0;
-  width: 1.125rem;
-  height: 1.125rem;
+  width: 1.5rem;
+  height: 1.5rem;
   cursor: pointer;
   accent-color: var(--color-primary);
 }
@@ -695,11 +710,12 @@ html[dir="rtl"] .back-link-arrow {
 
 .appointment-doctor-link {
   align-self: flex-start;
+  min-height: 2.75rem;
   margin: 0;
   padding: 0;
   border: none;
   background: none;
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   font: inherit;
   font-weight: 600;
   text-decoration: underline;
@@ -921,10 +937,19 @@ html[dir="rtl"] .back-link-arrow {
   font-weight: 600;
 }
 
+.calendar-day.has-appointments {
+  background: var(--color-primary-dim);
+}
+
 .calendar-day.selected {
   border-color: var(--color-primary);
-  background: var(--color-primary-dim);
+  background: var(--color-primary);
+  color: white;
   font-weight: 600;
+}
+
+.calendar-day.selected .calendar-day-marker {
+  background: white;
 }
 
 .calendar-day-number {
@@ -934,8 +959,8 @@ html[dir="rtl"] .back-link-arrow {
 .calendar-day-marker {
   position: absolute;
   bottom: 0.25rem;
-  width: 0.3rem;
-  height: 0.3rem;
+  width: 0.4rem;
+  height: 0.4rem;
   border-radius: 50%;
   background: var(--color-primary);
 }
@@ -985,7 +1010,7 @@ html[dir="rtl"] .back-link-arrow {
 
 .btn-small {
   font-size: 0.8125rem;
-  min-height: 2.25rem;
+  min-height: 2.75rem;
   padding: 0.25rem 0.75rem;
   border-radius: var(--radius);
   cursor: pointer;
@@ -1350,7 +1375,7 @@ html[dir="rtl"] .back-link-arrow {
   border-radius: var(--radius);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   text-decoration: none;
   font-weight: 500;
   font-size: 0.875rem;
@@ -1512,7 +1537,7 @@ html[dir="rtl"] .back-link-arrow {
   gap: 0.375rem;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   background: var(--color-primary-dim);
   border-radius: 999px;
   padding-block: 0.3rem;
@@ -1551,7 +1576,7 @@ html[dir="rtl"] .back-link-arrow {
 }
 
 .clear-all:hover {
-  color: var(--color-primary);
+  color: var(--color-primary-text);
 }
 
 .document-results section + section {
@@ -1611,7 +1636,7 @@ html[dir="rtl"] .back-link-arrow {
 }
 
 .linked-badge:hover {
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   background: var(--color-primary-dim);
 }
 
@@ -1690,6 +1715,8 @@ html[dir="rtl"] .back-link-arrow {
   border: none;
   font-size: 1.25rem;
   line-height: 1;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
   padding: 0.375rem 0.5rem;
   border-radius: var(--radius);
   cursor: pointer;
@@ -1885,8 +1912,8 @@ html[dir="rtl"] .back-link-arrow {
 .btn-icon-remove,
 .btn-icon-edit {
   flex: 0 0 auto;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 2.75rem;
+  height: 2.75rem;
   border: none;
   border-radius: 50%;
   background: transparent;
@@ -1989,8 +2016,9 @@ html[dir="rtl"] .back-link-arrow {
 .feed-done {
   flex: 0 0 auto;
   align-self: center;
-  width: 2rem;
-  height: 2rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-inline-start: 0.25rem;
   border: 1px solid var(--color-green);
   border-radius: 50%;
   background: transparent;

@@ -173,6 +173,7 @@
   "documentsScreen.filters.dateFrom.label": "מתאריך",
   "documentsScreen.filters.dateTo.label": "עד תאריך",
   "documentsScreen.filters.clearAll": "ניקוי הכל",
+  "documentsScreen.filters.removeChip": "הסרת סינון: {{filter}}",
   "documentsScreen.linkedBadge_one": "מקושר לפריט אחד",
   "documentsScreen.linkedBadge_other": "מקושר ל-{{count}} פריטים",
   "appointmentDetail.readiness": "{{ready}} מתוך {{total}} מוכנים",
