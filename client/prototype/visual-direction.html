@@ -1,0 +1,235 @@
+<!doctype html>
+<!-- PROTOTYPE (issue #78) - throwaway. Open in a browser; icons load from unpkg CDN. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PROTOTYPE - turnado visual direction (#78)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css">
+<style>
+:root {
+  color-scheme: light dark;
+  --color-bg: light-dark(#f5f6f8, #101215);
+  --color-card-bg: light-dark(#ffffff, #1c1f26);
+  --color-card-tint: light-dark(#ffffff, #232731);
+  --color-border: light-dark(#e2e5ea, #343a45);
+  --color-text: light-dark(#1c2128, #e5e7eb);
+  --color-text-dim: light-dark(#646b78, #9ca3af);
+  --color-primary: #2563eb;
+  --color-primary-text: light-dark(#1d4ed8, #60a5fa);
+  --color-primary-dim: light-dark(#dbeafe, #1e293b);
+  --color-green: light-dark(#15803d, #4ade80);
+  --color-green-bg: light-dark(#dcfce7, #14532d);
+  --color-amber: light-dark(#b45309, #fbbf24);
+  --color-amber-bg: light-dark(#fef3c7, #78350f);
+}
+:root[data-theme=light] { color-scheme: light; }
+:root[data-theme=dark] { color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; font: 15px system-ui, sans-serif; background: var(--color-bg); color: var(--color-text); padding-bottom: 60px; }
+header.bar { position: sticky; top: 0; z-index: 5; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 10px 16px; background: var(--color-card-bg); border-bottom: 1px solid var(--color-border); }
+header.bar b { margin-inline-end: 8px; }
+button.tab, button.theme { font: inherit; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--color-border); background: transparent; color: var(--color-text); cursor: pointer; }
+button.tab[aria-selected=true] { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+.spacer { flex: 1; }
+section { display: none; padding: 16px; max-width: 1100px; margin: 0 auto; }
+section.on { display: block; }
+h2 { margin: 8px 0 4px; } p.note { color: var(--color-text-dim); margin: 0 0 16px; }
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.panel { background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-border); border-radius: 10px; padding: 14px; }
+.panel h3 { margin: 0 0 10px; font-size: 14px; color: var(--color-text-dim); font-weight: 600; }
+.panel.forcelight { color-scheme: light; } .panel.forcedark { color-scheme: dark; }
+table { border-collapse: collapse; width: 100%; background: var(--color-card-bg); }
+th, td { padding: 10px 8px; border-bottom: 1px solid var(--color-border); text-align: center; font-size: 13px; }
+th:first-child, td:first-child { text-align: start; }
+td code { color: var(--color-text-dim); }
+.ico { font-size: 26px; line-height: 1; display: inline-flex; color: var(--color-primary-text); }
+.ico svg { width: 26px; height: 26px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ico svg.lucide { width: 26px; height: 26px; }
+.ico.emoji { color: inherit; }
+.ico.green { color: var(--color-green); }
+/* Q2/Q3 sample task card */
+.task { display: flex; gap: 10px; align-items: center; padding: 12px; margin-bottom: 10px; background: var(--color-card-bg); border: 1px solid var(--color-border); }
+.task .t { font-weight: 600; } .task .m { color: var(--color-text-dim); }
+.badge { margin-inline-start: auto; padding: 2px 8px; border-radius: 999px; background: var(--color-amber-bg); color: var(--color-amber); }
+.btn { font: inherit; border: 0; background: var(--color-primary); color: #fff; padding: 8px 14px; cursor: pointer; }
+/* Q2 variants */
+.q2a .task { border-radius: 10px; box-shadow: none; } .q2a .btn { border-radius: 10px; }
+.q2b .task { border-radius: 14px; border-color: transparent; background: var(--color-card-tint); box-shadow: 0 1px 2px rgb(0 0 0 / .06), 0 2px 8px rgb(0 0 0 / .06); }
+.q2b .btn { border-radius: 8px; }
+:root[data-theme=dark] .q2b .task, .panel.forcedark .q2b .task { box-shadow: none; border: 1px solid transparent; }
+.q2c .task { border-radius: 14px; border-width: 1.5px; box-shadow: none; } .q2c .btn { border-radius: 999px; }
+.drawer { margin-top: 12px; padding: 14px; background: var(--color-card-bg); border: 1px solid var(--color-border); }
+.q2b .drawer { border-radius: 14px; border-color: transparent; box-shadow: 0 8px 24px rgb(0 0 0 / .18); }
+.q2a .drawer { border-radius: 10px; } .q2c .drawer { border-radius: 14px; border-width: 1.5px; }
+/* Q3 type scale */
+.cur .h { font-size: 24px; } .cur .t { font-size: 17px; } .cur .m { font-size: 13px; } .cur .b { font-size: 15px; } .cur .badge { font-size: 12px; } .cur .sec { font-size: 20px; } .cur .btn { font-size: 14px; }
+.new .h { font-size: 24px; } .new .t { font-size: 16px; } .new .m { font-size: 14px; } .new .b { font-size: 16px; } .new .badge { font-size: 12px; } .new .sec { font-size: 18px; } .new .btn { font-size: 14px; }
+.scale .h, .scale .sec { margin: 6px 0; font-weight: 700; } .scale .b { margin: 6px 0 12px; color: var(--color-text-dim); }
+.scale .task { border-radius: 10px; }
+/* Q4 heroes */
+.hero { border-radius: 14px; padding: 18px; color: #fff; }
+.hero .k { opacity: .85; font-size: 13px; } .hero .v { font-size: 28px; font-weight: 700; margin: 4px 0 10px; }
+.hero .btn { background: #fff; color: #1d4ed8; border-radius: 8px; }
+.h-stock { background: linear-gradient(135deg, var(--color-primary), #1d4ed8); }
+.h-flat { background: var(--color-primary); box-shadow: 0 2px 8px rgb(37 99 235 / .3); }
+.h-muted { background: linear-gradient(160deg, #1e3a8a, #0f766e); }
+.h-soft { background: var(--color-primary-dim); color: var(--color-primary-text); border: 1px solid var(--color-border); }
+.h-soft .btn { background: var(--color-primary); color: #fff; }
+
+/* Q6 phone frames */
+.phone { width: 280px; height: 400px; margin: 0 auto; border: 1px solid var(--color-border); border-radius: 18px; background: var(--color-bg); overflow: hidden; display: flex; flex-direction: column; }
+.pnav { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--color-card-bg); border-bottom: 1px solid var(--color-border); font-weight: 600; min-height: 44px; }
+.pnav .burger { font-size: 18px; } .pnav .ttl { font-size: 16px; }
+.pnav .app { font-size: 14px; color: var(--color-text-dim); }
+.pbody { padding: 12px; } .pbody h1 { font-size: 24px; margin: 4px 0 10px; } .pbody .task { border-radius: 14px; border-width: 1.5px; font-size: 14px; }
+.pbody .dim { color: var(--color-text-dim); font-size: 12px; margin-bottom: 8px; }
+.sr { font-size: 11px; color: var(--color-text-dim); padding: 8px 12px 0; text-align: center; } code.k { background: var(--color-primary-dim); color: var(--color-primary-text); padding: 0 4px; border-radius: 4px; }
+/* Q7 wide frames */
+.wide { height: 360px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-bg); overflow: hidden; display: flex; font-size: 13px; }
+.wide .side { width: 200px; background: var(--color-card-bg); border-inline-end: 1px solid var(--color-border); padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+.wide .side .logo { font-weight: 700; margin-bottom: 10px; }
+.wide .side a { padding: 8px 10px; border-radius: 999px; color: var(--color-text); display: flex; gap: 8px; align-items: center; }
+.wide .side a.cur { background: var(--color-primary-dim); color: var(--color-primary-text); font-weight: 600; }
+.wide .side svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.wide .main { flex: 1; overflow: hidden; padding: 14px; }
+.wide .col { max-width: 340px; margin: 0 auto; } .wide .col.w720 { max-width: 460px; }
+.wide .card { background: var(--color-card-bg); border: 1.5px solid var(--color-border); border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; }
+.wide .card.sel { border-color: var(--color-primary); background: var(--color-primary-dim); }
+.wide h4 { margin: 0 0 10px; font-size: 18px; }
+.wide.centered { justify-content: center; padding: 14px 0; background: var(--color-bg); }
+.wide.centered .phoneish { width: 300px; background: var(--color-card-bg); border: 1.5px solid var(--color-border); border-radius: 14px; box-shadow: 0 8px 24px rgb(0 0 0 / .15); overflow: hidden; }
+.wide.centered .phoneish .pnav { border-radius: 0; }
+.split { display: grid; grid-template-columns: 220px 1fr; gap: 12px; height: 100%; } .split .detail { background: var(--color-card-bg); border: 1.5px solid var(--color-border); border-radius: 14px; padding: 12px; }
+
+.ctl { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center; margin-bottom: 12px; font-size: 13px; }
+.ctl label { display: flex; gap: 6px; align-items: center; } .ctl select, .ctl input[type=range] { font: inherit; }
+#simwrap { overflow: hidden; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-bg); }
+#sim { height: 420px; display: flex; transform-origin: top left; background: var(--color-bg); font-size: 14px; }
+#sim .side { width: var(--sw); background: var(--color-card-bg); border-inline-end: 1px solid var(--color-border); padding: 14px 12px; display: flex; flex-direction: column; gap: 4px; flex: none; }
+#sim .side .logo { font-weight: 700; margin-bottom: 10px; }
+#sim .side a { padding: 8px 12px; border-radius: 999px; } #sim .side a.cur { background: var(--color-primary-dim); color: var(--color-primary-text); font-weight: 600; }
+#sim .right { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+#sim .topbar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--color-card-bg); border-bottom: 1px solid var(--color-border); font-weight: 600; font-size: 18px; flex: none; }
+#sim .topbar .burger { font-size: 18px; }
+#sim .scroll { flex: 1; overflow: hidden; padding: 14px; } #sim .col { max-width: var(--cw); margin: 0 auto; }
+#sim .col h1 { font-size: 18px; margin: 0 0 10px; }
+#sim .card { background: var(--color-card-bg); border: 1.5px solid var(--color-border); border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; }
+#simstate { font: 12px ui-monospace, monospace; color: var(--color-text-dim); margin-top: 8px; }
+</style>
+</head>
+<body>
+<header class="bar">
+  <b>PROTOTYPE #78</b>
+  <button class="tab" data-tab="q1" aria-selected="true">Q1 Icons</button>
+  <button class="tab" data-tab="q2">Q2 Elevation/radius</button>
+  <button class="tab" data-tab="q3">Q3 Type scale</button>
+  <button class="tab" data-tab="q4">Q4 Hero</button>
+  <button class="tab" data-tab="q6">Q6 Page titles</button>
+  <button class="tab" data-tab="q7">Q7 Wide layout</button>
+  <button class="tab" data-tab="q8">Q8/9 Widths + bar</button>
+  <span class="spacer"></span>
+  <button class="theme" id="theme">Theme: system</button>
+</header>
+
+<section id="q1" class="on">
+  <h2>Q1 - Task-type icons</h2>
+  <p class="note">Same 5 task types, 4 renderings, shown in light and dark side by side. SVG sets inherit the text colour (here the app's primary text blue). Phosphor "duotone" has a soft second layer.</p>
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(480px,1fr))">
+    <div class="panel forcelight"><h3>Light</h3><div data-icons></div></div>
+    <div class="panel forcedark"><h3>Dark</h3><div data-icons></div></div>
+  </div>
+</section>
+
+<section id="q2">
+  <h2>Q2 - Elevation and radius</h2>
+  <p class="note">A: today (10px, flat). B: 14px cards / 8px controls, soft shadow in light, tinted surface in dark, drawer raised. C: 14px, flat, thicker border, pill buttons.</p>
+  <div class="grid" id="q2grid"></div>
+</section>
+
+<section id="q3">
+  <h2>Q3 - Type scale</h2>
+  <p class="note">Left: today's sizes (24/21/20/17/15/14/13/12). Right: 24 / 18 / 16 / 14 / 12.</p>
+  <div class="grid">
+    <div class="panel scale cur"><h3>Current</h3><div class="h">Today</div><div class="b">Two tasks need attention this week.</div><div class="sec">Upcoming</div><div data-tasks></div></div>
+    <div class="panel scale new"><h3>Proposed 12/14/16/18/24</h3><div class="h">Today</div><div class="b">Two tasks need attention this week.</div><div class="sec">Upcoming</div><div data-tasks></div></div>
+  </div>
+</section>
+
+<section id="q4">
+  <h2>Q4 - Hero</h2>
+  <p class="note">Stock gradient (today), flat primary with shadow, muted two-tone, and a quiet tinted card.</p>
+  <div class="grid">
+    <div class="panel"><h3>Stock gradient (today)</h3><div class="hero h-stock"></div></div>
+    <div class="panel"><h3>Flat primary + shadow</h3><div class="hero h-flat"></div></div>
+    <div class="panel"><h3>Muted two-tone</h3><div class="hero h-muted"></div></div>
+    <div class="panel"><h3>Quiet tinted card</h3><div class="hero h-soft"></div></div>
+  </div>
+</section>
+
+<section id="q6"><h2>Q6 - Page titles</h2><p class="note">Same Tasks screen, three ways of showing the title once. Screen-reader note under each phone.</p><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))"><div class="panel"><h3>A - Nav bar title is the h1</h3><div class="phone"><div class="pnav"><span class="burger">☰</span><h1 class="ttl" style="margin:0;font-size:16px">Tasks</h1></div><div class="pbody"><div class="dim">3 open</div><div class="task"><span>Blood test</span><span class="badge">Open</span></div><div class="task"><span>Cardiologist visit</span><span class="badge">Open</span></div></div></div><div class="sr">One visible title, announced once. In-page h1 removed; detail screens put the entity name in the bar.</div></div><div class="panel"><h3>B - App name in bar, h1 in page</h3><div class="phone"><div class="pnav"><span class="burger">☰</span><span class="app">turnado</span></div><div class="pbody"><h1>Tasks</h1><div class="dim">3 open</div><div class="task"><span>Blood test</span><span class="badge">Open</span></div><div class="task"><span>Cardiologist visit</span><span class="badge">Open</span></div></div></div><div class="sr">Bar becomes branding only; the page h1 is the single title.</div></div><div class="panel"><h3>C - Large title that collapses</h3><div class="phone"><div class="pnav"><span class="burger">☰</span><span class="ttl" style="opacity:.0">Tasks</span></div><div class="pbody"><h1>Tasks</h1><div class="dim">3 open</div><div class="task"><span>Blood test</span><span class="badge">Open</span></div><div class="task"><span>Cardiologist visit</span><span class="badge">Open</span></div><div class="dim" style="margin-top:8px">⇣ on scroll the big title shrinks into the bar</div></div></div><div class="sr">Title large at the top, moves into the bar once scrolled (shown at scroll 0). Most motion to build.</div></div></div></section><section id="q7"><h2>Q7 - Wide-screen layout</h2><p class="note">Mockups at a desktop width. Current page is marked in the nav in B and C.</p><div class="panel"><h3>A - Centred phone column with a visible card edge</h3><div class="wide centered"><div class="phoneish"><div class="pnav"><span class="burger">☰</span><span class="ttl">Tasks</span></div><div class="pbody"><div class="card"><b>Blood test</b><div class="dim" style="color:var(--color-text-dim)">Tue 4 Nov</div></div><div class="card"><b>Cardiologist visit</b><div class="dim" style="color:var(--color-text-dim)">Thu 6 Nov</div></div></div></div></div></div><div class="panel" style="margin-top:16px"><h3>B - Persistent sidebar + content column</h3><div class="wide"><div class="side"><div class="logo">turnado</div><a class=""><svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8M5 10v10h14V10"/></svg>Home</a><a class="cur"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>Tasks</a><a><svg viewBox="0 0 24 24"><path d="M5 2v2M11 2v2M5 3H4a2 2 0 0 0-2 2v4a6 6 0 0 0 12 0V5a2 2 0 0 0-2-2h-1M8 15a6 6 0 0 0 12 0v-3"/></svg>Doctors</a><a><svg viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/></svg>Documents</a></div><div class="main"><div class="col w720"><h4>Tasks</h4><div class="card"><b>Blood test</b><div class="dim" style="color:var(--color-text-dim)">Tue 4 Nov</div></div><div class="card"><b>Cardiologist visit</b><div class="dim" style="color:var(--color-text-dim)">Thu 6 Nov</div></div><div class="card"><b>Blood test</b><div class="dim" style="color:var(--color-text-dim)">Tue 4 Nov</div></div><div class="card"><b>Cardiologist visit</b><div class="dim" style="color:var(--color-text-dim)">Thu 6 Nov</div></div></div></div></div></div><div class="panel" style="margin-top:16px"><h3>C - Sidebar + master/detail</h3><div class="wide"><div class="side"><div class="logo">turnado</div><a class=""><svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8M5 10v10h14V10"/></svg>Home</a><a class="cur"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>Tasks</a><a><svg viewBox="0 0 24 24"><path d="M5 2v2M11 2v2M5 3H4a2 2 0 0 0-2 2v4a6 6 0 0 0 12 0V5a2 2 0 0 0-2-2h-1M8 15a6 6 0 0 0 12 0v-3"/></svg>Doctors</a><a><svg viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/></svg>Documents</a></div><div class="main"><div class="split"><div><h4>Tasks</h4><div class="card sel"><b>Blood test</b></div><div class="card"><b>Cardiologist visit</b></div><div class="card"><b>Form 17</b></div></div><div class="detail"><h4>Blood test</h4><div style="color:var(--color-text-dim)">Tue 4 Nov · Clinic<br><br>Fasting 8h before.</div></div></div></div></div></div></section><section id="q8"><h2>Q8/Q9 - Breakpoint, widths, top bar</h2><p class="note">Drag the width. Below the breakpoint it is the mobile layout (hamburger drawer); above it, sidebar + content column.</p>
+<div class="ctl"><label>Viewport <input type="range" id="vw" min="360" max="1440" value="1100" step="10"><b id="vwv"></b></label>
+<label>Breakpoint <select id="bp"><option>768</option><option selected>900</option><option>1024</option></select></label>
+<label>Sidebar <select id="sw"><option>200</option><option selected>220</option><option>240</option></select></label>
+<label>Content max <select id="cw"><option>560</option><option>640</option><option selected>720</option><option>840</option></select></label>
+<label>Top bar <select id="tb"><option value="a" selected>a: bar keeps title + back</option><option value="b">b: no bar, title in content</option></select></label></div>
+<div id="simwrap"><div id="sim"></div></div><div id="simstate"></div></section><script>
+const LU = {"droplet":"<path d=\"M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z\"/>","stethoscope":"<path d=\"M11 2v2M5 2v2\"/><path d=\"M5 3H4a2 2 0 0 0-2 2v4a6 6 0 0 0 12 0V5a2 2 0 0 0-2-2h-1\"/><path d=\"M8 15a6 6 0 0 0 12 0v-3\"/><circle cx=\"20\" cy=\"10\" r=\"2\"/>","file-text":"<path d=\"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z\"/><path d=\"M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8\"/>","check-circle":"<circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"m9 12 2 2 4-4\"/>","pin":"<path d=\"M12 17v5\"/><path d=\"M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z\"/>"};
+const luIcon = n => `<svg viewBox="0 0 24 24">${LU[n]}</svg>`;
+const types = [
+  ['test', '🩸', 'droplet', 'ph-drop', '<path d="M12 2.7S5 10 5 14.5a7 7 0 0 0 14 0C19 10 12 2.7 12 2.7z"/>'],
+  ['doctor_visit', '🩺', 'stethoscope', 'ph-stethoscope', '<path d="M5 3v6a4 4 0 0 0 8 0V3M9 13v2a5 5 0 0 0 10 0v-2"/><circle cx="19" cy="11" r="2"/>'],
+  ['form_17', '📄', 'file-text', 'ph-file-text', '<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>'],
+  ['general_approval', '✅', 'check-circle', 'ph-check-circle', '<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>'],
+  ['default', '📌', 'pin', 'ph-push-pin', '<path d="M12 17v5M8 3h8l-1 7 3 4H6l3-4z"/>'],
+];
+const iconTable = `<table><tr><th>Type</th><th>Emoji (today)</th><th>Lucide</th><th>Phosphor</th><th>Phosphor duotone</th><th>Hand-drawn SVG</th></tr>${
+  types.map(([t, e, l, p, svg]) => `<tr><td><code>${t}</code></td>
+  <td><span class="ico emoji">${e}</span></td>
+  <td><span class="ico">${luIcon(l)}</span></td>
+  <td><span class="ico"><i class="ph ${p}"></i></span></td>
+  <td><span class="ico"><i class="ph-duotone ${p}"></i></span></td>
+  <td><span class="ico"><svg viewBox="0 0 24 24">${svg}</svg></span></td></tr>`).join('')}</table>
+  <p class="note" style="margin-top:8px">Lucide: ~1 KB per icon, tree-shaken, one stroke style. Phosphor: 6 weights. Hand-drawn: zero dependency, but every new type means drawing one.</p>`;
+document.querySelectorAll('[data-icons]').forEach(el => el.innerHTML = iconTable);
+
+const tasks = `<div class="task"><span class="ico">${luIcon("droplet")}</span><div><div class="t">Blood test</div><div class="m">Tue 4 Nov · Clinic</div></div><span class="badge">Open</span></div>
+<div class="task"><span class="ico">${luIcon("stethoscope")}</span><div><div class="t">Cardiologist visit</div><div class="m">Thu 6 Nov, 10:30</div></div><span class="badge">Open</span></div>
+<button class="btn">Add task</button>`;
+document.querySelectorAll('[data-tasks]').forEach(el => el.innerHTML = tasks);
+document.getElementById('q2grid').innerHTML = [['a','A - Today'],['b','B - 14/8 + shadow'],['c','C - 14, flat, pill']].map(([k,n]) =>
+  `<div class="panel q2${k}"><h3>${n}</h3>${tasks}<div class="drawer"><b>Drawer / modal</b><div class="m" style="color:var(--color-text-dim)">Raised surface</div></div></div>`).join('');
+document.querySelectorAll('.hero').forEach(h => h.innerHTML = `<div class="k">Next up</div><div class="v">Cardiologist visit</div><button class="btn">Open</button>`);
+
+
+document.querySelectorAll('button.tab').forEach(b => b.onclick = () => {
+  document.querySelectorAll('button.tab').forEach(x => x.setAttribute('aria-selected', x === b));
+  document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === b.dataset.tab));
+});
+function sim(){
+  const g=id=>document.getElementById(id).value, vw=+g("vw"), bp=+g("bp"), sw=+g("sw"), cw=+g("cw"), tb=g("tb");
+  const wide=vw>=bp, wrap=document.getElementById("simwrap"), el=document.getElementById("sim");
+  const fit=Math.min(1,(wrap.clientWidth||900)/vw);
+  el.style.width=vw+"px"; el.style.transform="scale("+fit+")"; wrap.style.height=(420*fit)+"px";
+  el.style.setProperty("--sw",sw+"px"); el.style.setProperty("--cw",cw+"px");
+  const cards=["Blood test","Cardiologist visit","Form 17","Dentist"].map(t=>"<div class=card><b>"+t+"</b><span style=color:var(--color-text-dim)>Open</span></div>").join("");
+  const nav=["Home","Tasks","Doctors","Documents"].map((n,i)=>"<a class="+(i==1?"cur":"")+">"+n+"</a>").join("");
+  const bar="<div class=topbar>"+(wide?"":"<span class=burger>☰</span>")+"<span>Tasks</span></div>";
+  const h1=(wide&&tb=="b")?"<h1>Tasks</h1>":"";
+  el.innerHTML=(wide?"<div class=side><div class=logo>turnado</div>"+nav+"</div>":"")+"<div class=right>"+((wide&&tb=="b")?"":bar)+"<div class=scroll><div class=col>"+h1+cards+"</div></div></div>";
+  document.getElementById("vwv").textContent=vw+"px";
+  document.getElementById("simstate").textContent="viewport "+vw+"px · "+(wide?"WIDE: sidebar "+sw+"px, content "+Math.min(cw,vw-sw-28)+"px (max "+cw+"), top bar "+(tb=="a"?"kept":"removed"):"NARROW: drawer + hamburger, full width")+" · scale "+fit.toFixed(2);
+}
+["vw","bp","sw","cw","tb"].forEach(i=>document.getElementById(i).oninput=sim);
+document.querySelector("[data-tab=q8]").addEventListener("click",sim);
+window.addEventListener("resize",sim);
+const modes = ['system', 'light', 'dark']; let m = 0;
+document.getElementById('theme').onclick = e => {
+  m = (m + 1) % 3;
+  if (modes[m] === 'system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.dataset.theme = modes[m];
+  e.target.textContent = 'Theme: ' + modes[m];
+};
+</script>
+</body>
+</html>
