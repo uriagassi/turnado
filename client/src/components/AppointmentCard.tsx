@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Appointment, AppointmentStatus, Doctor } from "../api";
-import { formatDateTime } from "../formatDateTime";
+import { useRelativeDateTime } from "../hooks/useRelativeDateTime";
 import { MissedReminderBadge } from "./MissedReminderBadge";
 import { celebrateAfter } from "../celebration/celebrate";
 
@@ -34,14 +34,15 @@ export function AppointmentCard({
   /** Opens the appointment's own detail/checklist screen (issue #9). */
   onSelect?: (appointment: Appointment) => void;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const formatRelative = useRelativeDateTime();
   // Local draft so typing doesn't round-trip through the parent on every
   // keystroke — reset per appointment since the card is keyed by id.
   const [summaryDraft, setSummaryDraft] = useState(appointment.summary ?? "");
 
   return (
     <li className="appointment-row">
-      <span className="appointment-date">{formatDateTime(appointment.dateTime, i18n.language)}</span>
+      <span className="appointment-date">{formatRelative(appointment.dateTime)}</span>
       {doctor && <span className="appointment-doctor-name">{doctor.name}</span>}
       <span className="appointment-notes">{appointment.notes}</span>
       {appointment.location && <span className="appointment-location">{appointment.location}</span>}

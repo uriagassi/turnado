@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import type { Appointment, Doctor, MedicalDocument, Task, TaskStatus } from "../api";
+import { useRelativeDate } from "../hooks/useRelativeDate";
 import { useRelativeDateTime } from "../hooks/useRelativeDateTime";
 import { getTaskIcon, isResolvableTask } from "../tasks/taskUtils";
 import { getDocumentIcon } from "./HomeScreen";
@@ -43,6 +44,7 @@ export function TaskDetailScreen({
 }) {
   const { t } = useTranslation();
   const formatRelative = useRelativeDateTime();
+  const formatRelativeDay = useRelativeDate();
 
   const doctor = task.doctorId ? doctors.find((d) => d.id === task.doctorId) : undefined;
   const pendingAppointment = task.pendingAppointmentId
@@ -88,7 +90,7 @@ export function TaskDetailScreen({
             {task.dueDate && (
               <p className="task-detail-row">
                 <span className="label-dim">{t("taskDetail.dueDate")}:</span>{" "}
-                {formatRelative(task.dueDate)} ({task.dueDate})
+                {formatRelativeDay(task.dueDate)}
               </p>
             )}
             {task.approximateDateWindow && (
@@ -139,7 +141,7 @@ export function TaskDetailScreen({
             <p className="task-detail-value">{pendingAppointment.notes || t("appointmentCard.title")}</p>
             <p className="task-detail-row">
               <span className="label-dim">{t("taskDetail.dueDate")}:</span>{" "}
-              {formatRelative(pendingAppointment.dateTime)} ({new Date(pendingAppointment.dateTime).toLocaleDateString()})
+              {formatRelative(pendingAppointment.dateTime)}
             </p>
             {pendingAppointment.location && (
               <p className="task-detail-row">

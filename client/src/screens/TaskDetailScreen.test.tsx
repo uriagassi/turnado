@@ -38,6 +38,21 @@ function makeTask(overrides: Partial<Task> = {}): Task {
 }
 
 describe("TaskDetailScreen", () => {
+  it("shows a date-only due date without an invented time or the raw ISO date", () => {
+    render(
+      <TaskDetailScreen onAttachDocument={() => {}} onUploadDocuments={() => {}}
+        task={makeTask({ dueDate: "2030-09-01" })}
+        doctors={doctors}
+        onEdit={() => {}}
+        onStatusChange={() => {}}
+      />
+    );
+
+    const row = screen.getByText("Due date:").closest("p")!;
+    expect(row).toHaveTextContent("Sep 1, 2030");
+    expect(row).not.toHaveTextContent(/AM|PM|2030-09-01/);
+  });
+
   it("renders task information, status badge, and kind-specific fields", () => {
     const task: Task = {
       id: 10,
