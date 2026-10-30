@@ -4,7 +4,7 @@ import type { Appointment, Doctor, DocumentType, HomeData, MedicalDocument, Task
 import { calendarDay } from "../formatDateTime";
 import { useRelativeDate } from "../hooks/useRelativeDate";
 import { useRelativeDateTime } from "../hooks/useRelativeDateTime";
-import { getTaskIcon } from "../tasks/taskUtils";
+import { TaskIcon } from "../components/TaskIcon";
 import { TaskStatusBadge } from "../components/TaskStatusBadge";
 import { MissedReminderBadge } from "../components/MissedReminderBadge";
 import { SimilarTaskBadge } from "../components/SimilarTaskBadge";
@@ -127,7 +127,6 @@ export function HomeScreen({
   return (
     <main className="screen home-screen">
       <div className="home-header">
-        <h1>{t("home.title")}</h1>
         <button type="button" className="refresh-home" onClick={onRefresh}>
           {t("home.refresh")}
         </button>
@@ -216,7 +215,7 @@ export function HomeScreen({
                   }}
                 >
                   <div className="feed-icon" aria-hidden="true">
-                    {getTaskIcon(task.type)}
+                    <TaskIcon type={task.type} />
                   </div>
                   <div className="feed-body">
                     <div className="feed-top">

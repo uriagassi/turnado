@@ -88,7 +88,7 @@ describe("TaskDetailScreen", () => {
       />
     );
 
-    expect(screen.getByText("Get Form 17 for MRI")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
     expect(screen.getByText("In progress")).toBeInTheDocument();
     expect(screen.getByText("Assuta Hospital")).toBeInTheDocument();
     expect(screen.getByText("Dr. John Doe (Neurology)")).toBeInTheDocument();

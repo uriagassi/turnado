@@ -22,7 +22,6 @@ export function AppointmentHistoryScreen({
 
   return (
     <main className="screen appointment-history-screen">
-      <h1>{t("appointmentHistory.title")}</h1>
       {appointments.length === 0 ? (
         <p className="empty-state">{t("appointmentHistory.empty")}</p>
       ) : (

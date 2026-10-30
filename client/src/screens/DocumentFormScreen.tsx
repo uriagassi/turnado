@@ -130,7 +130,6 @@ export function DocumentFormScreen({
 
   return (
     <main className="screen document-form-screen">
-      <h1>{t("documentForm.title")}</h1>
       <form onSubmit={handleSubmit} noValidate>
         <div className="form-field">
           <label>

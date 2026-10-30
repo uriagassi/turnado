@@ -443,6 +443,35 @@ export function screenTitle(state: AppState, t: (key: string) => string): string
   }
 }
 
+/** The top-level destination the menu marks as current for this screen. */
+export function screenDestination(state: AppState): NavDestination | undefined {
+  switch (state.phase) {
+    case "home":
+      return "home";
+    case "doctors":
+    case "doctor-form":
+    case "doctor-detail":
+      return "doctors";
+    case "documents":
+    case "document-form":
+    case "document-detail":
+      return "documents";
+    case "appointment-upcoming":
+      return "appointment-upcoming";
+    case "appointment-history":
+      return "appointment-history";
+    case "appointment-form":
+      return state.returnTo === "appointment-upcoming" || state.returnTo === "appointment-history"
+        ? state.returnTo
+        : "home";
+    case "task-detail":
+    case "task-form":
+      return "home";
+    default:
+      return undefined;
+  }
+}
+
 /**
  * The title bar's back control, used only as a fallback for when the
  * App()-level back-stack (see `backStack`/`goTo`/`goBack`) has nothing to
@@ -1101,7 +1130,7 @@ export function App() {
 
   return (
     <>
-      {showNavBar && <NavBar title={screenTitle(state, t)} onNavigate={navigateTo} onBack={onBack} />}
+      {showNavBar && <NavBar title={screenTitle(state, t)} current={screenDestination(state)} onNavigate={navigateTo} onBack={onBack} />}
       {renderScreen()}
       {pendingTaskPrompt && (
         <ConfirmationModal

@@ -178,7 +178,6 @@ export function TaskFormScreen({
 
   return (
     <main className="screen task-form-screen">
-      <h1>{task ? t("taskForm.title.edit") : t("taskForm.title.new")}</h1>
       <form onSubmit={handleSubmit}>
         <div className="form-field">
           <label>

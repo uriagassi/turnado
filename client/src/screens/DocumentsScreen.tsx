@@ -141,7 +141,6 @@ export function DocumentsScreen({
 
   return (
     <main className="screen documents-screen">
-      <h1>{t("documentsScreen.title")}</h1>
 
       <button
         type="button"

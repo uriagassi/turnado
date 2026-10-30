@@ -123,7 +123,6 @@ export function AppointmentDetailScreen({
 
   return (
     <main className="screen appointment-detail-screen">
-      <h1>{appointment.notes}</h1>
       {doctor &&
         (onSelectDoctor ? (
           <button type="button" className="appointment-detail-doctor appointment-doctor-link" onClick={() => onSelectDoctor(doctor)}>

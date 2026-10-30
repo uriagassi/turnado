@@ -38,7 +38,6 @@ export function DoctorDetailScreen({
       <div className="detail-head">
         <DoctorAvatar doctor={doctor} />
         <div className="detail-titles">
-          <h1>{doctor.name}</h1>
           {doctor.specialty && <p className="detail-specialty">{doctor.specialty}</p>}
         </div>
       </div>

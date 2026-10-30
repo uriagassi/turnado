@@ -23,7 +23,7 @@ describe("DoctorDetailScreen", () => {
   it("renders the doctor's fields", () => {
     render(<DoctorDetailScreen doctor={doctor()} onEdit={() => {}} />);
 
-    expect(screen.getByText("Dr. Jane Smith")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
     expect(screen.getByText("Cardiology")).toBeInTheDocument();
     expect(screen.getByText("Riverside Clinic")).toBeInTheDocument();
     expect(screen.getByText("555-1234")).toBeInTheDocument();

@@ -37,7 +37,7 @@ describe("DocumentDetailScreen", () => {
       />,
     );
 
-    expect(screen.getByRole("heading", { level: 1, name: "MRI Scan Brain" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
     expect(screen.getByText("Test result")).toBeInTheDocument();
     expect(screen.getByText("2026-08-01")).toBeInTheDocument();
     expect(screen.getByText("Dr. Jane Smith")).toBeInTheDocument();
