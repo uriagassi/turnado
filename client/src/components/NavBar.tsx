@@ -1,5 +1,7 @@
+import { ArrowLeft, Menu, Moon, Stethoscope, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useWideLayout } from "../hooks/useWideLayout";
 import { applyTheme, getStoredTheme, type Theme } from "../theme";
 
 /** Every top-level destination the nav drawer can jump to — matches the AppState phases App.tsx wires this into (see App.tsx). */
@@ -17,9 +19,12 @@ const DESTINATIONS: { id: NavDestination; titleKey: string }[] = [
 
 export function NavBar({
   title,
+  current,
   onNavigate,
   onBack,
 }: {
+  /** The top-level destination the current screen belongs to, marked in the menu. */
+  current?: NavDestination;
   /** The current screen's title, shown in the title bar (AC: "showing at least the current screen's title"). */
   title: string;
   onNavigate: (destination: NavDestination) => void;
@@ -34,6 +39,7 @@ export function NavBar({
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const wide = useWideLayout();
   const [theme, setTheme] = useState<Theme>(() => getStoredTheme());
 
   const toggleTheme = () => {
@@ -59,65 +65,70 @@ export function NavBar({
     onNavigate(destination);
   };
 
-  return (
-    <header className="nav-bar">
+  const themeToggle = (
+    <div className="nav-drawer-footer">
+      <span className="nav-drawer-footer-label">{t("nav.theme.label")}</span>
       <button
         type="button"
-        className="nav-bar-menu-toggle"
-        aria-label={t("nav.menu")}
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
+        role="switch"
+        aria-checked={theme === "dark"}
+        aria-label={t("nav.theme.toggle")}
+        className="theme-toggle"
+        onClick={toggleTheme}
       >
-        ☰
+        <span className="theme-toggle-thumb" aria-hidden="true">
+          {theme === "dark" ? <Moon size={14} /> : <Sun size={14} />}
+        </span>
       </button>
-      {/* Reuses .back-link-arrow, the same glyph + RTL-mirror rule the
-          former per-screen back-links used (see index.css) — the arrow
-          itself isn't translatable text, so this is the one part of the
-          old back-link markup worth keeping verbatim. */}
-      {onBack && (
-        <button type="button" className="nav-bar-back" aria-label={t("nav.back")} onClick={onBack}>
-          <span className="back-link-arrow" aria-hidden="true">
-            ←
-          </span>
+    </div>
+  );
+
+  const menu = (onSelect: (d: NavDestination) => void, className: string) => (
+    <nav className={className} aria-label={t("nav.menu")}>
+      <div className="nav-drawer-header">
+        <span className="nav-drawer-logo" aria-hidden="true">
+          <Stethoscope size={24} />
+        </span>
+        <span className="nav-drawer-app-name">{t("app.title")}</span>
+      </div>
+      <ul>
+        {DESTINATIONS.map((d) => (
+          <li key={d.id}>
+            <button type="button" aria-current={d.id === current ? "page" : undefined} onClick={() => onSelect(d.id)}>
+              {t(d.titleKey)}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {themeToggle}
+    </nav>
+  );
+
+  return (
+    <header className="nav-bar">
+      {!wide && (
+        <button
+          type="button"
+          className="nav-bar-menu-toggle"
+          aria-label={t("nav.menu")}
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+        >
+          <Menu aria-hidden="true" />
         </button>
       )}
-      <span className="nav-bar-title">{title}</span>
-      {open && (
+      {onBack && (
+        <button type="button" className="nav-bar-back" aria-label={t("nav.back")} onClick={onBack}>
+          <ArrowLeft className="back-link-arrow" aria-hidden="true" />
+        </button>
+      )}
+      <h1 className="nav-bar-title">{title}</h1>
+      {wide && menu(onNavigate, "nav-sidebar")}
+      {!wide && open && (
         <>
           {/* Click-outside-to-dismiss, same pattern as ConfirmationModal's backdrop. */}
           <div className="nav-drawer-backdrop" onClick={() => setOpen(false)} role="presentation" />
-          <nav className="nav-drawer" aria-label={t("nav.menu")}>
-            <div className="nav-drawer-header">
-              <span className="nav-drawer-logo" aria-hidden="true">
-                🩺
-              </span>
-              <span className="nav-drawer-app-name">{t("app.title")}</span>
-            </div>
-            <ul>
-              {DESTINATIONS.map((d) => (
-                <li key={d.id}>
-                  <button type="button" onClick={() => selectDestination(d.id)}>
-                    {t(d.titleKey)}
-                  </button>
-                </li>
-              ))}
-            </ul>
-            <div className="nav-drawer-footer">
-              <span className="nav-drawer-footer-label">{t("nav.theme.label")}</span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={theme === "dark"}
-                aria-label={t("nav.theme.toggle")}
-                className="theme-toggle"
-                onClick={toggleTheme}
-              >
-                <span className="theme-toggle-thumb" aria-hidden="true">
-                  {theme === "dark" ? "🌙" : "☀️"}
-                </span>
-              </button>
-            </div>
-          </nav>
+          {menu(selectDestination, "nav-drawer")}
         </>
       )}
     </header>

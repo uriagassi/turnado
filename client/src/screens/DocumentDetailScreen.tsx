@@ -39,7 +39,6 @@ export function DocumentDetailScreen({
     <main className="screen document-detail-screen">
       <div className="detail-head">
         <div className="detail-titles">
-          <h1>{document.title}</h1>
           <span className="badge type-tag">{t(`document.type.${document.type}`)}</span>
         </div>
       </div>

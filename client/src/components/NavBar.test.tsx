@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NavBar } from "./NavBar";
 import { STORAGE_KEY } from "../theme";
@@ -145,5 +145,54 @@ describe("NavBar", () => {
     await user.click(screen.getByRole("button", { name: "Menu" }));
 
     expect(screen.getByRole("switch", { name: "Toggle dark theme" })).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("renders the title as the page's single h1", () => {
+    render(<NavBar title="Doctors" onNavigate={vi.fn()} />);
+
+    expect(screen.getByRole("heading", { level: 1, name: "Doctors" })).toBeInTheDocument();
+  });
+
+  describe("on a wide viewport", () => {
+    beforeEach(() => {
+      vi.stubGlobal("matchMedia", (query: string) => ({
+        matches: query === "(min-width: 768px)",
+        media: query,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }));
+    });
+    afterEach(() => vi.unstubAllGlobals());
+
+    it("shows a persistent sidebar with every destination and no hamburger", () => {
+      render(<NavBar title="Home" current="home" onNavigate={vi.fn()} />);
+
+      expect(screen.queryByRole("button", { name: "Menu" })).not.toBeInTheDocument();
+      const nav = screen.getByRole("navigation");
+      for (const name of ["Home", "Doctors", "Documents", "Upcoming appointments", "Appointment history"]) {
+        expect(within(nav).getByRole("button", { name })).toBeInTheDocument();
+      }
+    });
+
+    it("marks the current page and navigates on click", async () => {
+      const user = userEvent.setup();
+      const onNavigate = vi.fn();
+      render(<NavBar title="Doctors" current="doctors" onNavigate={onNavigate} />);
+
+      expect(screen.getByRole("button", { name: "Doctors" })).toHaveAttribute("aria-current", "page");
+      expect(screen.getByRole("button", { name: "Home" })).not.toHaveAttribute("aria-current");
+
+      await user.click(screen.getByRole("button", { name: "Documents" }));
+      expect(onNavigate).toHaveBeenCalledWith("documents");
+    });
+  });
+
+  it("marks the current page in the drawer too", async () => {
+    const user = userEvent.setup();
+    render(<NavBar title="Doctors" current="doctors" onNavigate={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: "Menu" }));
+
+    expect(screen.getByRole("button", { name: "Doctors" })).toHaveAttribute("aria-current", "page");
   });
 });

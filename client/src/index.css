@@ -31,7 +31,15 @@
   --color-red-bg: light-dark(#fee2e2, #450a0a);
   --color-purple: light-dark(#7e22ce, #c084fc);
   --color-purple-bg: light-dark(#f3e8ff, #3b0764);
-  --radius: 10px;
+  --radius: 14px;
+  --border-width: 1.5px;
+  --radius-pill: 999px;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
 
   /* One status→color mapping, shared by every place an appointment status
      is shown — the interactive select in .appointment-status-field and the
@@ -61,7 +69,7 @@
      centered with margin on both sides, so the drawer must offset by that
      same margin or it renders flush against the browser window instead of
      under the title bar. */
-  --content-max-width: 480px;
+  --content-max-width: 480px; /* mobile only; see the 768px block at the end */
 }
 
 :root[data-theme="dark"] {
@@ -80,7 +88,7 @@ body {
      in this app shell — see spec's "Mobile-first UI baseline". */
   max-width: var(--content-max-width);
   margin-inline: auto;
-  font-size: 1rem;
+  font-size: var(--text-md);
   line-height: 1.5;
   background: var(--color-bg);
   color: var(--color-text);
@@ -90,11 +98,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-}
-
-h1 {
-  font-size: 1.5rem;
-  margin-block-end: 0.5rem;
 }
 
 .status,
@@ -112,7 +115,7 @@ h1 {
 /* Small dim label above a block of content — matches the prototypes'
    `.section-title` (see 05-home-screen.html / 06-doctor-view.html). */
 .section-title {
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   color: var(--color-text-dim);
   font-weight: 600;
   margin-block: 0 0.5rem;
@@ -137,7 +140,7 @@ h1 {
   gap: 0.75rem;
   width: 100%;
   padding: 0.875rem 1rem;
-  border: 1px solid var(--color-border);
+  border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius);
   background: var(--color-card-bg);
   color: inherit;
@@ -165,7 +168,7 @@ h1 {
 }
 
 .doctor-row-specialty {
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   color: var(--color-text-dim);
 }
 
@@ -173,7 +176,7 @@ h1 {
    (06-doctor-view.html) — primary-colored rather than dim, so a doctor with
    something coming up stands out from one who doesn't. */
 .doctor-row-next {
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   color: var(--color-primary-text);
 }
 
@@ -181,7 +184,7 @@ h1 {
    devices have no hover state to reveal it. */
 .doctor-row-hint {
   flex-shrink: 0;
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--color-primary-text);
   background: var(--color-primary-dim);
@@ -214,7 +217,7 @@ h1 {
   background: var(--color-gray-bg);
   color: #fff;
   font-weight: 600;
-  font-size: 1.0625rem;
+  font-size: var(--text-lg);
 }
 
 .doctor-avatar img {
@@ -227,7 +230,7 @@ h1 {
    (see medical/.scratch/medical-app-spec/prototypes) — used wherever a
    block doesn't already have its own more specific card treatment. */
 .card {
-  border: 1px solid var(--color-border);
+  border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius);
   background: var(--color-card-bg);
   padding: 1rem;
@@ -246,7 +249,7 @@ h1 {
 .detail-head .doctor-avatar {
   width: 2.75rem;
   height: 2.75rem;
-  font-size: 1rem;
+  font-size: var(--text-md);
 }
 
 .detail-titles h1 {
@@ -256,7 +259,7 @@ h1 {
 .detail-specialty {
   margin: 0;
   color: var(--color-text-dim);
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
 }
 
 /* Contact details (clinic/phone/address/email) — the prototype's detail
@@ -268,7 +271,7 @@ h1 {
   flex-direction: column;
   gap: 0.375rem;
   color: var(--color-text-dim);
-  font-size: 0.9375rem;
+  font-size: var(--text-md);
 }
 
 .doctor-contact p {
@@ -313,7 +316,7 @@ h1 {
 
 .item-row-sub {
   margin: 0.125rem 0 0;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   color: var(--color-text-dim);
 }
 
@@ -359,7 +362,7 @@ h1 {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   font-weight: 600;
   padding: 0.2rem 0.625rem;
   border-radius: 999px;
@@ -409,7 +412,7 @@ h1 {
    prototype's `.empty-note`. */
 .section-empty {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   color: var(--color-text-dim);
   padding-block: 0.25rem;
 }
@@ -419,7 +422,7 @@ h1 {
   display: block;
   width: 100%;
   padding-block: 0.75rem;
-  border: 1px solid var(--color-border);
+  border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius);
   background: none;
   color: inherit;
@@ -442,7 +445,7 @@ h1 {
    i18n.ts already sets on <html>, rather than shipping two glyphs through
    the locale files. */
 .back-link-arrow {
-  font-size: 1.125rem;
+  font-size: var(--text-lg);
 }
 
 html[dir="rtl"] .back-link-arrow {
@@ -469,7 +472,7 @@ html[dir="rtl"] .back-link-arrow {
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--color-text-dim);
 }
@@ -481,7 +484,7 @@ html[dir="rtl"] .back-link-arrow {
   font-weight: normal;
   color: inherit;
   padding: 0.625rem 0.75rem;
-  border: 1px solid var(--color-border);
+  border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius);
   background: var(--color-card-bg);
 }
@@ -502,7 +505,7 @@ html[dir="rtl"] .back-link-arrow {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--color-text-dim);
 }
@@ -510,13 +513,13 @@ html[dir="rtl"] .back-link-arrow {
 .current-photo .doctor-avatar {
   width: 3rem;
   height: 3rem;
-  font-size: 1rem;
+  font-size: var(--text-md);
 }
 
 .field-error {
   margin: 0;
   color: var(--color-red);
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
 }
 
 /* Issue #12: the live "possibly a duplicate" heads-up in TaskFormScreen —
@@ -533,7 +536,7 @@ html[dir="rtl"] .back-link-arrow {
 
 .duplicate-warning-message {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
 }
 
 .duplicate-warning-dismiss {
@@ -597,12 +600,12 @@ html[dir="rtl"] .back-link-arrow {
 .refresh-home {
   flex-shrink: 0;
   padding: 0.4rem 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-pill);
   background: none;
   color: inherit;
   font: inherit;
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   cursor: pointer;
 }
 
@@ -626,13 +629,13 @@ html[dir="rtl"] .back-link-arrow {
   gap: 0.25rem;
   padding: 1.125rem 1.25rem 1.25rem;
   border-radius: var(--radius);
-  background: linear-gradient(135deg, var(--color-primary), #1d4ed8);
+  background: linear-gradient(160deg, #1e3a8a, #0f766e);
   color: #fff;
 }
 
 .hero-doctor-line {
   margin: 0 0 0.125rem;
-  font-size: 1.3125rem;
+  font-size: var(--text-lg);
   font-weight: 700;
 }
 
@@ -642,13 +645,13 @@ html[dir="rtl"] .back-link-arrow {
 
 .hero-date {
   margin: 0;
-  font-size: 0.9375rem;
+  font-size: var(--text-md);
   color: rgb(255 255 255 / 90%);
 }
 
 .hero-notes {
   margin: 0.25rem 0 0;
-  font-size: 1.0625rem;
+  font-size: var(--text-lg);
   font-weight: 600;
 }
 
@@ -671,13 +674,13 @@ html[dir="rtl"] .back-link-arrow {
   flex-direction: column;
   gap: 0.125rem;
   padding: 0.75rem;
-  border: 1px solid var(--color-border);
+  border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius);
   background: var(--color-card-bg);
 }
 
 .appointment-date {
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   color: var(--color-text-dim);
 }
 
@@ -698,7 +701,7 @@ html[dir="rtl"] .back-link-arrow {
 }
 
 .appointment-location {
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   color: var(--color-text-dim);
 }
 
@@ -733,12 +736,12 @@ html[dir="rtl"] .back-link-arrow {
 
 .edit-appointment {
   padding: 0.4rem 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-pill);
   background: none;
   color: inherit;
   font: inherit;
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   cursor: pointer;
 }
 
@@ -751,7 +754,7 @@ html[dir="rtl"] .back-link-arrow {
   display: flex;
   align-items: center;
   gap: 0.375rem;
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--color-text-dim);
 }
@@ -810,7 +813,7 @@ html[dir="rtl"] .back-link-arrow {
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--color-text-dim);
 }
@@ -819,7 +822,7 @@ html[dir="rtl"] .back-link-arrow {
   font: inherit;
   font-weight: normal;
   padding: 0.5rem 0.625rem;
-  border: 1px solid var(--color-border);
+  border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius);
   background: var(--color-card-bg);
   min-height: 4rem;
@@ -834,7 +837,7 @@ html[dir="rtl"] .back-link-arrow {
   background: var(--color-primary);
   color: white;
   font: inherit;
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   cursor: pointer;
 }
 
@@ -870,7 +873,7 @@ html[dir="rtl"] .back-link-arrow {
 
 .calendar-month-label {
   font-weight: 600;
-  font-size: 1.0625rem;
+  font-size: var(--text-lg);
 }
 
 .calendar-nav-button {
@@ -880,7 +883,7 @@ html[dir="rtl"] .back-link-arrow {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.125rem;
+  font-size: var(--text-lg);
   line-height: 1;
 }
 
@@ -902,7 +905,7 @@ html[dir="rtl"] .back-link-arrow {
 
 .calendar-weekdays span {
   text-align: center;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   color: var(--color-text-dim);
 }
@@ -953,7 +956,7 @@ html[dir="rtl"] .back-link-arrow {
 }
 
 .calendar-day-number {
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
 }
 
 .calendar-day-marker {
@@ -997,7 +1000,7 @@ html[dir="rtl"] .back-link-arrow {
 }
 
 .home-screen .section-title {
-  font-size: 1.0625rem;
+  font-size: var(--text-lg);
   font-weight: 700;
   color: var(--color-text);
 }
@@ -1009,18 +1012,18 @@ html[dir="rtl"] .back-link-arrow {
 }
 
 .btn-small {
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   min-height: 2.75rem;
   padding: 0.25rem 0.75rem;
-  border-radius: var(--radius);
+  border-radius: var(--radius-pill);
   cursor: pointer;
 }
 
 .btn-secondary {
   background: var(--color-card-bg);
   color: var(--color-primary-text);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-pill);
   font-weight: 600;
   cursor: pointer;
 }
@@ -1041,7 +1044,7 @@ html[dir="rtl"] .back-link-arrow {
   align-items: flex-start;
   gap: 0.625rem;
   padding: 0.75rem 0.875rem;
-  border: 1px solid var(--color-border);
+  border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius);
   background: var(--color-card-bg);
 }
@@ -1073,10 +1076,16 @@ html[dir="rtl"] .back-link-arrow {
   height: 2.125rem;
   border-radius: 8px;
   background: var(--color-primary-dim);
+  color: var(--color-primary-text);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
+  font-size: var(--text-md);
+}
+
+.feed-icon svg {
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
 .feed-body {
@@ -1096,16 +1105,16 @@ html[dir="rtl"] .back-link-arrow {
   flex: 1 1 8rem;
   min-width: 0;
   font-weight: 600;
-  font-size: 0.9375rem;
+  font-size: var(--text-md);
 }
 
 .feed-when {
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   color: var(--color-text-dim);
 }
 
 .feed-meta {
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   color: var(--color-text-dim);
   margin-top: 0.25rem;
   display: flex;
@@ -1127,7 +1136,7 @@ html[dir="rtl"] .back-link-arrow {
   gap: 0.625rem !important;
   cursor: pointer;
   font-weight: 600;
-  font-size: 0.9375rem;
+  font-size: var(--text-md);
   color: var(--color-text);
 }
 
@@ -1154,14 +1163,14 @@ html[dir="rtl"] .back-link-arrow {
 .form-resolve-action button {
   width: 100%;
   padding: 0.625rem 1rem;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
 }
 
 .btn-primary {
   background: var(--color-primary);
   color: white;
   border: none;
-  border-radius: var(--radius);
+  border-radius: var(--radius-pill);
   font: inherit;
   font-weight: 600;
   padding: 0.625rem 1.25rem;
@@ -1185,7 +1194,7 @@ html[dir="rtl"] .back-link-arrow {
 
 .cancel-task {
   padding: 0.625rem 1.25rem;
-  border: 1px solid var(--color-border);
+  border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius);
   background: none;
   color: inherit;
@@ -1216,7 +1225,7 @@ html[dir="rtl"] .back-link-arrow {
 }
 
 .task-type-label {
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   color: var(--color-text-dim);
   font-weight: 600;
   display: block;
@@ -1225,7 +1234,7 @@ html[dir="rtl"] .back-link-arrow {
 
 .task-detail-title-area h1 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: var(--text-lg);
   line-height: 1.3;
 }
 
@@ -1251,12 +1260,12 @@ html[dir="rtl"] .back-link-arrow {
 .task-detail-value {
   margin: 0;
   font-weight: 600;
-  font-size: 0.9375rem;
+  font-size: var(--text-md);
 }
 
 .task-detail-row {
   margin: 0;
-  font-size: 0.9375rem;
+  font-size: var(--text-md);
 }
 
 .label-dim {
@@ -1273,7 +1282,7 @@ html[dir="rtl"] .back-link-arrow {
 
 .task-detail-actions button {
   padding: 0.75rem 1rem;
-  font-size: 0.9375rem;
+  font-size: var(--text-md);
 }
 
 /* Documents */
@@ -1288,11 +1297,11 @@ html[dir="rtl"] .back-link-arrow {
 .doc-thumb {
   flex: 0 0 auto;
   width: 115px;
-  border: 1px solid var(--color-border);
+  border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius);
   background: var(--color-card-bg);
   padding: 0.5rem;
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   cursor: pointer;
   transition: transform 0.1s, border-color 0.1s;
 }
@@ -1313,7 +1322,7 @@ html[dir="rtl"] .back-link-arrow {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.35rem;
+  font-size: var(--text-lg);
   margin-bottom: 0.375rem;
 }
 
@@ -1327,7 +1336,7 @@ html[dir="rtl"] .back-link-arrow {
 
 .doc-thumb .doc-date {
   color: var(--color-text-dim);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
 }
 
 .document-meta-card {
@@ -1339,7 +1348,7 @@ html[dir="rtl"] .back-link-arrow {
 
 .document-notes {
   margin: 0;
-  font-size: 0.9375rem;
+  font-size: var(--text-md);
   color: var(--color-text-dim);
 }
 
@@ -1372,19 +1381,19 @@ html[dir="rtl"] .back-link-arrow {
 .btn-download {
   display: inline-block;
   padding: 0.5rem 1rem;
-  border-radius: var(--radius);
+  border-radius: var(--radius-pill);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   color: var(--color-primary-text);
   text-decoration: none;
   font-weight: 500;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   font-family: inherit;
   cursor: pointer;
 }
 
 .checkbox-group {
-  border: 1px solid var(--color-border);
+  border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius);
   padding: 0.75rem;
   display: flex;
@@ -1393,7 +1402,7 @@ html[dir="rtl"] .back-link-arrow {
 }
 
 .checkbox-group legend {
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   font-weight: 600;
   padding: 0 0.25rem;
 }
@@ -1402,7 +1411,7 @@ html[dir="rtl"] .back-link-arrow {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   cursor: pointer;
 }
 
@@ -1424,7 +1433,6 @@ html[dir="rtl"] .back-link-arrow {
   background: var(--color-card-bg);
   border: 1px solid var(--color-border);
   border-radius: calc(var(--radius) + 2px);
-  box-shadow: 0 10px 25px -5px light-dark(rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.6));
   max-width: 400px;
   width: 100%;
   padding: 1.5rem;
@@ -1436,14 +1444,14 @@ html[dir="rtl"] .back-link-arrow {
 
 .modal-title {
   margin: 0;
-  font-size: 1.125rem;
+  font-size: var(--text-lg);
   font-weight: 700;
   color: var(--color-text);
 }
 
 .modal-message {
   margin: 0;
-  font-size: 0.9375rem;
+  font-size: var(--text-md);
   color: var(--color-text-dim);
   line-height: 1.5;
 }
@@ -1460,7 +1468,7 @@ html[dir="rtl"] .back-link-arrow {
   display: block;
   width: 100%;
   padding-block: 0.75rem;
-  border-radius: var(--radius);
+  border-radius: var(--radius-pill);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
@@ -1508,7 +1516,7 @@ html[dir="rtl"] .back-link-arrow {
   gap: 0.875rem;
   padding: 1rem;
   margin-block-end: 1rem;
-  border: 1px solid var(--color-border);
+  border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius);
   background: var(--color-card-bg);
 }
@@ -1535,7 +1543,7 @@ html[dir="rtl"] .back-link-arrow {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   font-weight: 500;
   color: var(--color-primary-text);
   background: var(--color-primary-dim);
@@ -1555,7 +1563,7 @@ html[dir="rtl"] .back-link-arrow {
   border-radius: 50%;
   background: none;
   color: inherit;
-  font-size: 0.9375rem;
+  font-size: var(--text-md);
   line-height: 1;
   cursor: pointer;
 }
@@ -1566,7 +1574,7 @@ html[dir="rtl"] .back-link-arrow {
 }
 
 .clear-all {
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--color-text-dim);
   background: none;
@@ -1604,7 +1612,7 @@ html[dir="rtl"] .back-link-arrow {
   align-items: center;
   width: 100%;
   padding: 0.875rem 1rem;
-  border: 1px solid var(--color-border);
+  border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius);
   background: var(--color-card-bg);
   color: inherit;
@@ -1625,7 +1633,7 @@ html[dir="rtl"] .back-link-arrow {
 
 .linked-badge {
   align-self: flex-start;
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   font-weight: 500;
   color: var(--color-text-dim);
   background: var(--color-gray-bg);
@@ -1663,7 +1671,7 @@ html[dir="rtl"] .back-link-arrow {
 
 .missed-reminder-detail {
   display: block;
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   color: var(--color-red);
   margin-top: 0.25rem;
 }
@@ -1673,7 +1681,7 @@ html[dir="rtl"] .back-link-arrow {
    calmer than .missed-reminder-badge's red. */
 .similar-task-detail {
   display: block;
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   color: var(--color-text-dim);
   margin-top: 0.25rem;
 }
@@ -1711,9 +1719,12 @@ html[dir="rtl"] .back-link-arrow {
 
 .nav-bar-menu-toggle,
 .nav-bar-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
-  font-size: 1.25rem;
+  font-size: var(--text-lg);
   line-height: 1;
   min-width: 2.75rem;
   min-height: 2.75rem;
@@ -1729,7 +1740,8 @@ html[dir="rtl"] .back-link-arrow {
 }
 
 .nav-bar-title {
-  font-size: 1.125rem;
+  margin: 0;
+  font-size: var(--text-lg);
   font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1761,7 +1773,6 @@ html[dir="rtl"] .back-link-arrow {
   width: min(80vw, 320px);
   background: var(--color-card-bg);
   border-inline-end: 1px solid var(--color-border);
-  box-shadow: 0 10px 25px -5px light-dark(rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.6));
   padding: 1rem;
   overflow-y: auto;
 }
@@ -1776,11 +1787,11 @@ html[dir="rtl"] .back-link-arrow {
 }
 
 .nav-drawer-logo {
-  font-size: 1.5rem;
+  font-size: var(--text-xl);
 }
 
 .nav-drawer-app-name {
-  font-size: 1.125rem;
+  font-size: var(--text-lg);
   font-weight: 700;
 }
 
@@ -1800,7 +1811,7 @@ html[dir="rtl"] .back-link-arrow {
   border: none;
   padding: 0.75rem;
   border-radius: var(--radius);
-  font-size: 1rem;
+  font-size: var(--text-md);
   color: var(--color-text);
   cursor: pointer;
 }
@@ -1820,7 +1831,7 @@ html[dir="rtl"] .back-link-arrow {
 }
 
 .nav-drawer-footer-label {
-  font-size: 1rem;
+  font-size: var(--text-md);
   color: var(--color-text);
 }
 
@@ -1848,7 +1859,7 @@ html[dir="rtl"] .back-link-arrow {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   line-height: 1;
   transition: left 0.15s ease;
 }
@@ -1918,7 +1929,7 @@ html[dir="rtl"] .back-link-arrow {
   border-radius: 50%;
   background: transparent;
   color: var(--color-text-dim);
-  font-size: 1.25rem;
+  font-size: var(--text-lg);
   line-height: 1;
   cursor: pointer;
 }
@@ -2023,7 +2034,7 @@ html[dir="rtl"] .back-link-arrow {
   border-radius: 50%;
   background: transparent;
   color: var(--color-green);
-  font-size: 1rem;
+  font-size: var(--text-md);
   line-height: 1;
   cursor: pointer;
 }
@@ -2035,4 +2046,68 @@ html[dir="rtl"] .back-link-arrow {
 .feed-done[aria-disabled="true"] {
   opacity: 0.5;
   cursor: progress;
+}
+
+/* Wide layout (>=768px): persistent sidebar and 720px column replace the drawer. */
+.nav-sidebar {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-start: 0;
+  z-index: 950;
+  width: 200px;
+  background: var(--color-card-bg);
+  border-inline-end: var(--border-width) solid var(--color-border);
+  padding: 1rem 0.75rem;
+  overflow-y: auto;
+}
+
+.nav-sidebar ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.nav-sidebar button:not(.theme-toggle) {
+  width: 100%;
+  text-align: start;
+  background: none;
+  border: none;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-md);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.nav-sidebar button:not(.theme-toggle):hover {
+  background: var(--color-primary-dim);
+}
+
+.nav-sidebar button[aria-current="page"],
+.nav-drawer button[aria-current="page"] {
+  background: var(--color-primary-dim);
+  color: var(--color-primary-text);
+  font-weight: 600;
+}
+
+.nav-sidebar .nav-drawer-header {
+  padding-block-end: 0.75rem;
+  margin-block-end: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  body {
+    --gutter: max(1rem, calc((100vw - 200px - 720px) / 2));
+    max-width: none;
+    margin-inline: 200px 0;
+    padding-inline: var(--gutter);
+  }
+
+  .nav-bar {
+    margin-inline: calc(var(--gutter) * -1);
+    padding-inline: var(--gutter);
+  }
 }

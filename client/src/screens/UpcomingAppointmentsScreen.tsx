@@ -31,7 +31,6 @@ export function UpcomingAppointmentsScreen({
 
   return (
     <main className="screen upcoming-appointments-screen">
-      <h1>{t("upcomingAppointments.title")}</h1>
 
       <div className="view-toggle" role="group" aria-label={t("upcomingAppointments.view.label")}>
         <button

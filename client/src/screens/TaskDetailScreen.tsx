@@ -2,7 +2,8 @@ import { useTranslation } from "react-i18next";
 import type { Appointment, Doctor, MedicalDocument, Task, TaskStatus } from "../api";
 import { useRelativeDate } from "../hooks/useRelativeDate";
 import { useRelativeDateTime } from "../hooks/useRelativeDateTime";
-import { getTaskIcon, isResolvableTask } from "../tasks/taskUtils";
+import { isResolvableTask } from "../tasks/taskUtils";
+import { TaskIcon } from "../components/TaskIcon";
 import { getDocumentIcon } from "./HomeScreen";
 import { TaskStatusBadge } from "../components/TaskStatusBadge";
 import { MissedReminderBadge } from "../components/MissedReminderBadge";
@@ -57,11 +58,10 @@ export function TaskDetailScreen({
       <div className="task-detail-header card">
         <div className="task-detail-top">
           <div className="feed-icon" aria-hidden="true">
-            {getTaskIcon(task.type)}
+            <TaskIcon type={task.type} />
           </div>
           <div className="task-detail-title-area">
             <span className="task-type-label">{t(`task.type.${task.type}`)}</span>
-            <h1>{task.title}</h1>
           </div>
         </div>
         <div className="task-detail-meta">
@@ -187,7 +187,7 @@ export function TaskDetailScreen({
                   }}
                 >
                   <div className="feed-icon" aria-hidden="true">
-                    {getTaskIcon(similar.type)}
+                    <TaskIcon type={similar.type} />
                   </div>
                   <div className="feed-body">
                     <span className="feed-name">{similar.title}</span>

@@ -20,7 +20,6 @@ export function DoctorsScreen({
 
   return (
     <main className="screen doctors-screen">
-      <h1>{t("doctors.title")}</h1>
       <button type="button" className="add-doctor" onClick={onAddDoctor}>
         {t("doctors.add")}
       </button>
