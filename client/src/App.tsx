@@ -336,7 +336,7 @@ export type AppState =
   | {
       phase: "document-form";
       session: Session;
-      returnTo: "home" | "doctor-detail";
+      returnTo: "home" | "doctor-detail" | "documents";
       doctor?: Doctor;
       initialDoctorId?: number;
     }
@@ -805,6 +805,8 @@ export function App() {
       const cancel = () => {
         if (returnTo === "doctor-detail" && doctor) {
           setState({ phase: "doctor-detail", session, doctors: session.doctors, doctor });
+        } else if (returnTo === "documents") {
+          void loadDocumentsScreen(session, EMPTY_DOCUMENT_FILTERS).then(setState);
         } else {
           setState({ phase: "home", session });
         }
@@ -876,6 +878,7 @@ export function App() {
           filters={filters}
           onFiltersChange={changeFilters}
           onSelectDocument={selectDocument}
+          onAddDocument={() => setState({ phase: "document-form", session, returnTo: "documents" })}
         />
       );
     }

@@ -164,6 +164,8 @@
   "taskForm.duplicateWarning.message": "זה דומה לפריט פתוח קיים: {{titles}}.",
   "taskForm.duplicateWarning.dismiss": "התעלמות",
   "documentsScreen.title": "מסמכים",
+  "documentsScreen.empty": "אין מסמכים עדיין.",
+  "documentsScreen.emptyFiltered": "אין מסמכים התואמים לסינון.",
   "documentsScreen.filters.toggle": "סינון",
   "documentsScreen.filters.query.label": "חיפוש לפי כותרת",
   "documentsScreen.filters.type.label": "סוג מסמך",
