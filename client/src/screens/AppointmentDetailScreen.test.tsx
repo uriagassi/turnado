@@ -386,6 +386,55 @@ describe("AppointmentDetailScreen", () => {
     expect(onTaskStatusChange).toHaveBeenCalledWith(openItem, "done");
   });
 
+  it("opens the task when its row is clicked or activated by keyboard, like the Home screen's rows", async () => {
+    const user = userEvent.setup();
+    const onSelectTask = vi.fn();
+    const openItem = task({ id: 1, title: "Obtain Form 17", status: "open" });
+
+    render(
+      <AppointmentDetailScreen
+        appointment={appointment()}
+        documents={[]}
+        openItems={[openItem]}
+        allDocuments={[]}
+        onEdit={() => {}}
+        onAttachDocument={() => {}}
+        onUploadDocuments={() => {}}
+        onSelectTask={onSelectTask}
+      />,
+    );
+
+    await user.click(screen.getByText("Obtain Form 17"));
+    expect(onSelectTask).toHaveBeenCalledTimes(1);
+
+    screen.getByRole("button", { name: /Obtain Form 17/ }).focus();
+    await user.keyboard("{Enter}");
+    expect(onSelectTask).toHaveBeenCalledTimes(2);
+    expect(onSelectTask).toHaveBeenCalledWith(openItem);
+  });
+
+  it("shows each open item's due date, or the no-date fallback, under the title row", () => {
+    const openItems = [
+      task({ id: 1, title: "Obtain Form 17", approximateDateWindow: "Early March" }),
+      task({ id: 2, title: "Bring blood test results" }),
+    ];
+
+    render(
+      <AppointmentDetailScreen
+        appointment={appointment()}
+        documents={[]}
+        openItems={openItems}
+        allDocuments={[]}
+        onEdit={() => {}}
+        onAttachDocument={() => {}}
+        onUploadDocuments={() => {}}
+      />,
+    );
+
+    expect(screen.getByText("Early March")).toBeInTheDocument();
+    expect(screen.getByText("No fixed date")).toBeInTheDocument();
+  });
+
   it("unchecking a done item's checkbox reopens it, same as TaskDetailScreen's own reopen action", async () => {
     const user = userEvent.setup();
     const onTaskStatusChange = vi.fn();

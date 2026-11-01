@@ -331,28 +331,20 @@ body {
   gap: 0.375rem;
 }
 
-/* Open items on the appointment checklist (issue #9 follow-up): a real
-   checkbox beside the title rather than the plain .item-row's
-   space-between layout, so checking one off reads as ticking a list, not
-   as two unrelated ends of a card. */
-.checklist-item {
-  min-height: 2.75rem;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 0.625rem;
-}
-
-.checklist-checkbox {
-  flex-shrink: 0;
-  width: 1.5rem;
-  height: 1.5rem;
-  cursor: pointer;
-  accent-color: var(--color-primary);
-}
-
-.checklist-item-title.done {
+/* A done checklist item: struck-through title, filled round control. */
+.feed-name.done {
   text-decoration: line-through;
   color: var(--color-text-dim);
+}
+
+.feed-done.is-done {
+  background: var(--color-green);
+  color: var(--color-card-bg);
+}
+
+.feed-done.is-done:hover {
+  background: var(--color-green);
+  opacity: 0.85;
 }
 
 /* Read-only status pill — same palette as the interactive
@@ -686,18 +678,6 @@ html[dir="rtl"] .back-link-arrow {
 
 .appointment-notes {
   font-weight: 600;
-}
-
-.appointment-open-link {
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: none;
-  color: inherit;
-  font: inherit;
-  font-weight: 600;
-  text-align: start;
-  cursor: pointer;
 }
 
 .appointment-location {
@@ -1037,6 +1017,9 @@ html[dir="rtl"] .back-link-arrow {
   display: flex;
   flex-direction: column;
   gap: 0.625rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .feed-row {
