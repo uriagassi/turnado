@@ -59,6 +59,42 @@ function renderScreen(
 }
 
 describe("DocumentsScreen", () => {
+  it("shows an empty state with an Add document action when there are no documents", async () => {
+    const user = userEvent.setup();
+    const onAddDocument = vi.fn();
+    render(
+      <DocumentsScreen
+        documents={[]}
+        doctors={[]}
+        filters={emptyFilters()}
+        onFiltersChange={() => {}}
+        onSelectDocument={() => {}}
+        onAddDocument={onAddDocument}
+      />,
+    );
+
+    expect(screen.getByText("No documents yet.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add document" }));
+    expect(onAddDocument).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a distinct no-matches message, without the Add action, when filters match nothing", () => {
+    render(
+      <DocumentsScreen
+        documents={[]}
+        doctors={[]}
+        filters={{ ...emptyFilters(), query: "zzz" }}
+        onFiltersChange={() => {}}
+        onSelectDocument={() => {}}
+        onAddDocument={() => {}}
+      />,
+    );
+
+    expect(screen.getByText("No documents match these filters.")).toBeInTheDocument();
+    expect(screen.queryByText("No documents yet.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add document" })).not.toBeInTheDocument();
+  });
+
   it("keeps the filter controls tucked away until the toggle is activated", async () => {
     const user = userEvent.setup();
     renderScreen([doc()]);

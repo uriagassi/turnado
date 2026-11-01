@@ -18,6 +18,7 @@ interface DocumentsScreenProps {
   filters: DocumentFilters;
   onFiltersChange: (filters: DocumentFilters) => void;
   onSelectDocument: (document: MedicalDocument) => void;
+  onAddDocument?: () => void;
 }
 
 interface FilterChip {
@@ -132,6 +133,7 @@ export function DocumentsScreen({
   filters,
   onFiltersChange,
   onSelectDocument,
+  onAddDocument,
 }: DocumentsScreenProps) {
   const { t } = useTranslation();
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -245,6 +247,20 @@ export function DocumentsScreen({
           </button>
         </div>
       )}
+
+      {documents.length === 0 &&
+        (chips.length > 0 ? (
+          <p className="empty-state">{t("documentsScreen.emptyFiltered")}</p>
+        ) : (
+          <div className="empty-state">
+            <p>{t("documentsScreen.empty")}</p>
+            {onAddDocument && (
+              <button type="button" className="btn-small btn-secondary" onClick={onAddDocument}>
+                {t("home.addDocument")}
+              </button>
+            )}
+          </div>
+        ))}
 
       <div className="document-results">
         {groups.map((group) => (

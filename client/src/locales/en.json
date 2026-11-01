@@ -163,6 +163,8 @@
   "taskForm.duplicateWarning.message": "This looks similar to an existing open item: {{titles}}.",
   "taskForm.duplicateWarning.dismiss": "Dismiss",
   "documentsScreen.title": "Documents",
+  "documentsScreen.empty": "No documents yet.",
+  "documentsScreen.emptyFiltered": "No documents match these filters.",
   "documentsScreen.filters.toggle": "Filters",
   "documentsScreen.filters.query.label": "Search by title",
   "documentsScreen.filters.type.label": "Document type",
