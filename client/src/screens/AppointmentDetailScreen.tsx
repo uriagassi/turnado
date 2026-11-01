@@ -4,6 +4,8 @@ import type { Appointment, Doctor, MedicalDocument, Task, TaskStatus } from "../
 import { MissedReminderBadge } from "../components/MissedReminderBadge";
 import { AddDocument } from "../components/AddDocument";
 import { useRelativeDateTime } from "../hooks/useRelativeDateTime";
+import { useRelativeDate } from "../hooks/useRelativeDate";
+import { TaskIcon } from "../components/TaskIcon";
 import { celebrateAfter } from "../celebration/celebrate";
 
 /**
@@ -40,13 +42,11 @@ function ClickableRow({ className, onClick, children }: { className: string; onC
 }
 
 /**
- * One open item as a checklist row: a real checkbox toggling its done state
- * directly (no need to leave the checklist), plus its title as a separate
- * clickable control into the task's own detail screen — two independent
- * controls side by side rather than one row fighting itself over what a
- * click means. Checking always sets "done"; unchecking always sets "open"
- * (not whatever status it had before), matching TaskDetailScreen's own
- * reopen action.
+ * One open item as a checklist row, laid out like HomeScreen's open-item
+ * rows: the whole row opens the task, and a round control on the end toggles
+ * its done state in place. Checking always sets "done"; unchecking always
+ * sets "open" (not whatever status it had before), matching
+ * TaskDetailScreen's own reopen action.
  */
 function OpenItemRow({
   item,
@@ -57,25 +57,50 @@ function OpenItemRow({
   onToggle: (item: Task, status: TaskStatus) => void | Promise<void>;
   onSelect?: (item: Task) => void;
 }) {
+  const { t } = useTranslation();
+  const formatRelativeDay = useRelativeDate();
   const done = item.status === "done";
+  const open = () => onSelect?.(item);
 
   return (
-    <li className={`card item-row checklist-item${done ? " done" : ""}`}>
-      <input
-        type="checkbox"
-        className="checklist-checkbox"
-        checked={done}
-        aria-label={item.title}
-        onChange={(e) =>
-          done ? onToggle(item, "open") : void celebrateAfter(e.currentTarget, undefined, () => onToggle(item, "done"))
+    <li
+      className="card feed-row clickable"
+      role="button"
+      tabIndex={0}
+      onClick={open}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          open();
         }
-      />
+      }}
+    >
+      <div className="feed-icon" aria-hidden="true">
+        <TaskIcon type={item.type} />
+      </div>
+      <div className="feed-body">
+        <div className="feed-top">
+          <span className={`feed-name${done ? " done" : ""}`}>{item.title}</span>
+          <span className="feed-when">
+            {item.dueDate ? formatRelativeDay(item.dueDate) : (item.approximateDateWindow ?? t("task.due.noDate"))}
+          </span>
+        </div>
+      </div>
       <button
         type="button"
-        className={`checklist-item-title appointment-open-link${done ? " done" : ""}`}
-        onClick={() => onSelect?.(item)}
+        role="checkbox"
+        aria-checked={done}
+        className={`feed-done${done ? " is-done" : ""}`}
+        aria-label={item.title}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (done) void onToggle(item, "open");
+          else void celebrateAfter(e.currentTarget, e, () => onToggle(item, "done"));
+        }}
+        onKeyDown={(e) => e.stopPropagation()}
       >
-        {item.title}
+        ✓
       </button>
     </li>
   );
@@ -159,7 +184,7 @@ export function AppointmentDetailScreen({
       <section data-testid="appointment-openitems-section">
         <h2 className="section-title">{t("doctorDetail.openItems.title")}</h2>
         {openItems.length > 0 ? (
-          <ul className="item-row-list checklist">
+          <ul className="feed">
             {openItems.map((item) => (
               <OpenItemRow
                 key={item.id}
